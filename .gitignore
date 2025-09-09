@@ -1,0 +1,30 @@
+# ---- Python (backend) ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+.env
+venv/
+.env.*
+
+# Alembic
+alembic.ini
+alembic/versions/*.py
+
+# ---- Node/React (frontend) ----
+node_modules/
+dist/
+build/
+.react-router/
+.npm/
+.yarn/
+*.log
+
+# ---- Common ----
+.DS_Store
+*.swp
+.idea/
+.vscode/
+.cursor/
+*.local
