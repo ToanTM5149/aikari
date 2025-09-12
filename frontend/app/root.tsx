@@ -9,7 +9,14 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
-import { Provider } from "~/components/ui/provider";
+import { Provider } from "~/components/shared/provider";
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "AIKARI" },
+    { name: "description", content: "Welcome to AIKARI!" },
+  ];
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

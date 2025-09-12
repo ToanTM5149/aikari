@@ -1,11 +1,8 @@
 import type { Route } from "./+types/home";
 import { Welcome } from "../welcome/welcome";
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "AIKARI" },
-    { name: "description", content: "Welcome to AIKARI!" },
-  ];
+export function loader() {
+  return null;
 }
 
 export default function Home() {
