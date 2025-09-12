@@ -2,8 +2,7 @@
 export default {
     content: [
       "./app/**/*.{js,ts,jsx,tsx}",
-      "./index.html",
-      "node_modules/flowbite-react/**/*.{js,jsx,ts,tsx}"
+      "./index.html"
     ],
     theme: {
       extend: {
