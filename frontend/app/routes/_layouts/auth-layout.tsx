@@ -1,7 +1,6 @@
-import React from 'react';
 import { Outlet } from 'react-router';
 
-function AuthLayout() {
+export default function AuthLayout() {
   return (
     <div className="auth-container">
       <header>
@@ -14,4 +13,4 @@ function AuthLayout() {
   );
 }
 
-export default AuthLayout;
+ 

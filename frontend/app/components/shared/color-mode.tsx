@@ -1,7 +1,7 @@
 "use client"
 
-import type { IconButtonProps, SpanProps } from "@chakra-ui/react"
-import { ClientOnly, IconButton, Skeleton, Span } from "@chakra-ui/react"
+import type { IconButtonProps } from "@chakra-ui/react"
+import { IconButton, Skeleton, chakra } from "@chakra-ui/react"
 import { ThemeProvider, useTheme } from "next-themes"
 import type { ThemeProviderProps } from "next-themes"
 import * as React from "react"
@@ -62,10 +62,10 @@ export const ColorModeButton = React.forwardRef<
         size="sm"
         ref={ref}
         {...props}
-        css={{
-          _icon: {
-            width: "5",
-            height: "5",
+        sx={{
+          "& > svg": {
+            width: "1.25rem",
+            height: "1.25rem",
           },
         }}
       >
@@ -75,15 +75,15 @@ export const ColorModeButton = React.forwardRef<
   )
 })
 
-export const LightMode = React.forwardRef<HTMLSpanElement, SpanProps>(
+const ChakraSpan = chakra('span')
+
+export const LightMode = React.forwardRef<HTMLSpanElement, any>(
   function LightMode(props, ref) {
     return (
-      <Span
+      <ChakraSpan
         color="fg"
         display="contents"
         className="chakra-theme light"
-        colorPalette="gray"
-        colorScheme="light"
         ref={ref}
         {...props}
       />
@@ -91,18 +91,22 @@ export const LightMode = React.forwardRef<HTMLSpanElement, SpanProps>(
   },
 )
 
-export const DarkMode = React.forwardRef<HTMLSpanElement, SpanProps>(
+export const DarkMode = React.forwardRef<HTMLSpanElement, any>(
   function DarkMode(props, ref) {
     return (
-      <Span
+      <ChakraSpan
         color="fg"
         display="contents"
         className="chakra-theme dark"
-        colorPalette="gray"
-        colorScheme="dark"
         ref={ref}
         {...props}
       />
     )
   },
 )
+
+function ClientOnly({ children, fallback = null }: { children: React.ReactNode; fallback?: React.ReactNode }) {
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => setMounted(true), [])
+  return mounted ? <>{children}</> : <>{fallback}</>
+}

@@ -1,9 +1,4 @@
-import {
-  Button,
-  Input,
-  InputGroup,
-  InputElement,
-} from "@chakra-ui/react";
+import { Button, Input, InputGroup } from "@chakra-ui/react";
 
 
 export function loader() {
