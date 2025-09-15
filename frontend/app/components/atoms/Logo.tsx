@@ -14,10 +14,10 @@ export const Logo: React.FC<LogoProps> = ({
   className = "",
 }) => {
   const sizeMap: Record<string, string> = {
-    sm: "2rem", // 8
-    md: "3rem", // 12
-    lg: "4rem", // 16
-    xl: "6rem", // 24
+    sm: "2rem",
+    md: "3rem", 
+    lg: "4rem", 
+    xl: "6rem", 
   };
 
   const textSizeMap: Record<string, string> = {
