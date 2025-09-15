@@ -45,8 +45,8 @@ export const Logo: React.FC<LogoProps> = ({
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          width="60%"
-          height="60%"
+          width="80%"
+          height="80%"
           style={{ color: "white" }}
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -54,12 +54,11 @@ export const Logo: React.FC<LogoProps> = ({
           <path
             d="M12 2L13.5 6.5L18 8L13.5 9.5L12 14L10.5 9.5L6 8L10.5 6.5L12 2Z"
             fill="currentColor"
-            opacity="0.9"
           />
           {/* Neural Network Nodes */}
-          <circle cx="7" cy="17" r="1.5" fill="currentColor" opacity="0.7" />
-          <circle cx="12" cy="19" r="1.5" fill="currentColor" opacity="0.7" />
-          <circle cx="17" cy="17" r="1.5" fill="currentColor" opacity="0.7" />
+          <circle cx="7" cy="17" r="1.5" fill="currentColor" />
+          <circle cx="12" cy="19" r="1.5" fill="currentColor" />
+          <circle cx="17" cy="17" r="1.5" fill="currentColor" />
           {/* Connecting Lines */}
           <path
             d="M7 17L12 14M12 14L17 17M7 17L12 19M12 19L17 17"
@@ -70,7 +69,6 @@ export const Logo: React.FC<LogoProps> = ({
         </svg>
       </Flex>
 
-      {/* App Name */}
       {showText && (
         <Flex direction="column">
           <Text
