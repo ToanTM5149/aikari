@@ -1,3 +1,7 @@
+import { SignupCarousel } from "~/components/common/signup/SignupCarousel";
+import { SignupForm } from "~/components/common/signup/SignupForm";
+import { Flex } from "@chakra-ui/react";
+
 export function loader() {
   return null;
 }
@@ -5,7 +9,10 @@ export function loader() {
 export default function Signup() {
   return (
     <>
-      <div>Signup</div>
+    <Flex justifyContent="center" alignItems="center" h="screen">
+      <SignupCarousel />
+      <SignupForm />
+    </Flex>
     </>
   );
 }
