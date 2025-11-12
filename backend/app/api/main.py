@@ -10,4 +10,4 @@ api_router.include_router(utils.router)
 
 
 if settings.ENVIRONMENT == "local":
-    api_router.include_router(private.router)
+    api_router.include_router(private.router, prefix="/private", tags=["private"])

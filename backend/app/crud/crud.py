@@ -1,7 +1,8 @@
 import uuid
-from typing import Any
+from typing import Any, Optional
+from datetime import datetime, timedelta
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, and_, or_
 
 from app.core.security import get_password_hash, verify_password
 from app.models import User, UserCreate, UserUpdate
