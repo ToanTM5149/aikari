@@ -1,8 +1,14 @@
 import os
+import sys
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+# ensure project root is on sys.path so "app" package is importable
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -18,8 +24,24 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
 
-from app.models import SQLModel  # noqa
+from sqlmodel import SQLModel  # noqa
 from app.core.config import settings # noqa
+
+# Import all models to ensure they are registered with SQLModel.metadata
+from app.models import (  # noqa
+    User,
+    AIGeneratedContents,
+    Class,
+    ClassMember,
+    Paragraph,
+    ProgressSummary,
+    Quizz,
+    StudyActivity,
+    StudySet,
+    Term,
+    Test,
+    TestResult,
+)
 
 target_metadata = SQLModel.metadata
 
