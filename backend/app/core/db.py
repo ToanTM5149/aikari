@@ -4,7 +4,7 @@ from app.crud.crud import (
     create_user,
 )
 from app.core.config import settings
-from app.models.models import User, UserCreate
+from app.models import User, UserCreate, UserRole
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
@@ -27,9 +27,12 @@ def init_db(session: Session) -> None:
         select(User).where(User.email == settings.FIRST_SUPERUSER)
     ).first()
     if not user:
+        # Tạo superuser với role Admin
         user_in = UserCreate(
+            username="admin",
             email=settings.FIRST_SUPERUSER,
             password=settings.FIRST_SUPERUSER_PASSWORD,
-            is_superuser=True,
+            full_name="Administrator",
+            role=UserRole.ADMIN,
         )
         user = create_user(session=session, user_create=user_in)

@@ -22,6 +22,7 @@ build/
 .npm/
 .yarn/
 *.log
+/build
 
 # ---- Common ----
 .DS_Store
