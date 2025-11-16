@@ -1,15 +1,2 @@
 @import "tailwindcss";
-
-html,
-body {
-  background-color: white;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  html,
-  body {
-    background-color: #030712;
-    color-scheme: dark;
-  }
-}
+@import "./styles/globals.css";
