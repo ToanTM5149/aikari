@@ -1,24 +1,21 @@
-import { Button, Stack, Text, Box, Flex} from "@chakra-ui/react";
-import LogoWithText  from "../../atoms/LogoWithText";
-
+import { Button } from "~/components/ui/button";
+import { Logo } from "~/components/atoms/Logo";
 
 export default function Header() {
   return (
-    <>
-      <Box>
-        <Flex>
-          <Stack direction="row" gap={4} align="center">
-            <LogoWithText />
-            <Text fontSize="xl" fontWeight="bold" color="blue.600">
-              Aikari
-            </Text>
-            <Button colorScheme="blue" variant="outline" size="sm">
+    <header className="border-b">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center gap-4">
+            <Logo size="sm" showText={true} />
+          </div>
+          <nav className="flex items-center gap-4">
+            <Button variant="outline" size="sm">
               Sign In
             </Button>
-          </Stack>
-        </Flex>
-      </Box>
-    </>
-  )
-
+          </nav>
+        </div>
+      </div>
+    </header>
+  );
 }

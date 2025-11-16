@@ -1,18 +1,15 @@
-"use client"
+import { Toaster } from "sonner"
+import { TooltipProvider } from "~/components/ui/tooltip"
 
-import { ChakraProvider } from "@chakra-ui/react"
-import {
-  ColorModeProvider,
-  type ColorModeProviderProps,
-} from "./color-mode"
+export interface ProviderProps {
+  children?: React.ReactNode
+}
 
-export function Provider(props: ColorModeProviderProps & { children?: React.ReactNode }) {
-  const { children, ...rest } = props
+export function Provider({ children }: ProviderProps) {
   return (
-    <ChakraProvider>
-      <ColorModeProvider {...(rest as ColorModeProviderProps)}>
-        {children}
-      </ColorModeProvider>
-    </ChakraProvider>
+    <TooltipProvider>
+      {children}
+      <Toaster richColors position="top-right" />
+    </TooltipProvider>
   )
 }
