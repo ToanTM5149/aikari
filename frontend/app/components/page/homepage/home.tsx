@@ -1,6 +1,6 @@
-import type { Route } from "./+types/home";
 import { Logo } from "~/components/atoms/Logo";
 import { Button } from "~/components/ui/button";
+import { ReduxExamplesCard } from "~/components/shared/ReduxExamplesCard";
 
 export function loader() {
   return null;
@@ -20,6 +20,11 @@ export default function Home() {
         <div className="flex gap-4">
           <Button size="lg">Get Started</Button>
           <Button size="lg" variant="outline">Learn More</Button>
+        </div>
+
+        {/* Redux Examples Card */}
+        <div className="mt-12 w-full max-w-xl">
+          <ReduxExamplesCard />
         </div>
       </div>
     </div>

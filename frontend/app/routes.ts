@@ -8,6 +8,6 @@ export default [
         route("reset-password", "routes/auth/reset-password.tsx"),
     ]),
     route("/", "routes/_layouts/main-layout.tsx", [
-        route("home", "routes/home.tsx")
+        route("redux-examples", "routes/redux-examples.tsx"),
     ]),
 ] satisfies RouteConfig;

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
-import { LoginPage } from "~/components/auth/LoginPage"
-import { SignupPage } from "~/components/auth/SignupPage"
+import { LoginPage } from "~/components/page/auth/LoginPage"
+import { SignupPage } from "~/components/page/auth/SignupPage"
 
 export function loader() {
   return null

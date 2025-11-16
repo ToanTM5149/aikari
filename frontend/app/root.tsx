@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { Provider } from "~/components/shared/provider";
+import { ReduxProvider } from "~/store/Provider";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -53,9 +54,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Provider>
-      <Outlet />
-    </Provider>
+    <ReduxProvider>
+      <Provider>
+        <Outlet />
+      </Provider>
+    </ReduxProvider>
   );
 }
 
