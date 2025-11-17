@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router"
-import { LoginPage } from "~/components/page/auth/LoginPage"
+import { LoginPage } from "~/pages/auth/login"
 
 export function loader() {
   return null

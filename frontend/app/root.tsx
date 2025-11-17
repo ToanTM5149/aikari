@@ -10,7 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { Provider } from "~/components/shared/provider";
-import { ReduxProvider } from "~/store/Provider";
+import { ReduxProvider } from "~/redux/store/Provider";
 
 export function meta({}: Route.MetaArgs) {
   return [

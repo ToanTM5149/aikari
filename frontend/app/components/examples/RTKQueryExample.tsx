@@ -4,7 +4,7 @@
  * Component này demo cách sử dụng RTK Query hooks
  */
 
-import { useGetClassesQuery, useCreateClassMutation } from '~/store/services/apiService';
+import { useGetClassesQuery, useCreateClassMutation } from '~/redux/features/class';
 import { Button } from '~/components/ui/button';
 import { Card } from '~/components/ui/card';
 

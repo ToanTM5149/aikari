@@ -5,19 +5,21 @@
  * 1. Kết hợp tất cả reducers (rootReducer)
  * 2. Cấu hình middleware (RTK Query, logger, etc.)
  * 3. Setup DevTools cho development
- * 4. Export hooks typed (useAppDispatch, useAppSelector)
  */
 
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import type { TypedUseSelectorHook } from 'react-redux';
-import { useDispatch, useSelector } from 'react-redux';
 
-// Import các slice reducers
-import authReducer from './slices/authSlice';
-import userReducer from './slices/userSlice';
+// Import các slice reducers từ features
+import authReducer from '../features/auth/slice';
+import userReducer from '../features/user/slice';
 
-// Import RTK Query API services
-import { apiService } from './services/apiService';
+// Import RTK Query base API
+import { baseApi } from './api/baseApi';
+
+// Import các API endpoints để inject vào baseApi
+import '../features/auth/api';
+import '../features/user/api';
+import '../features/class/api';
 
 /**
  * Root Reducer - Kết hợp tất cả reducers
@@ -29,7 +31,7 @@ const rootReducer = combineReducers({
   auth: authReducer,
   user: userReducer,
   // RTK Query reducer - tự động quản lý cache, loading states
-  [apiService.reducerPath]: apiService.reducer,
+  [baseApi.reducerPath]: baseApi.reducer,
 });
 
 /**
@@ -54,7 +56,7 @@ export const store = configureStore({
       },
     }).concat(
       // Thêm RTK Query middleware để enable caching, invalidation, polling, etc.
-      apiService.middleware
+      baseApi.middleware
     ),
   
   // Enable Redux DevTools trong development mode
@@ -73,25 +75,6 @@ export type RootState = ReturnType<typeof store.getState>;
 
 // AppDispatch type - Mô tả type của dispatch function (bao gồm async actions)
 export type AppDispatch = typeof store.dispatch;
-
-/**
- * Typed Hooks - Pre-typed versions of useDispatch and useSelector
- * 
- * Thay vì dùng useDispatch và useSelector thông thường,
- * dùng các hooks này để có type safety và autocomplete
- * 
- * Usage:
- * ```tsx
- * const dispatch = useAppDispatch();
- * const user = useAppSelector((state) => state.user.currentUser);
- * ```
- */
-
-// useAppDispatch - Typed version of useDispatch
-export const useAppDispatch: () => AppDispatch = useDispatch;
-
-// useAppSelector - Typed version of useSelector
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 /**
  * Store Setup Status Hook
