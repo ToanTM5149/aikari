@@ -1,14 +1,11 @@
-import { useState } from "react"
 import { useNavigate } from "react-router"
 import { LoginPage } from "~/components/page/auth/LoginPage"
-import { SignupPage } from "~/components/page/auth/SignupPage"
 
 export function loader() {
   return null
 }
 
-export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true)
+export default function LoginRoute() {
   const navigate = useNavigate()
 
   const handleLogin = (data?: any) => {
@@ -17,25 +14,14 @@ export default function AuthPage() {
     navigate("/")
   }
 
-  const handleSignup = (data?: any) => {
-    console.log("Signup data:", data)
-    // Navigate to home or dashboard after signup
-    navigate("/")
+  const handleSwitchToSignup = () => {
+    navigate("/signup")
   }
 
   return (
-    <>
-      {isLogin ? (
-        <LoginPage
-          onLogin={handleLogin}
-          onSwitchToSignup={() => setIsLogin(false)}
-        />
-      ) : (
-        <SignupPage
-          onSignup={handleSignup}
-          onSwitchToLogin={() => setIsLogin(true)}
-        />
-      )}
-    </>
+    <LoginPage
+      onLogin={handleLogin}
+      onSwitchToSignup={handleSwitchToSignup}
+    />
   )
 }
