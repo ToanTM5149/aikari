@@ -1,8 +1,6 @@
 from sqlmodel import Session, create_engine, select
 
-from app.crud.crud import (
-    create_user,
-)
+from app.crud.crud import create_user
 from app.core.config import settings
 from app.models import User, UserRole
 from app.schemas import UserCreate
@@ -16,24 +14,24 @@ engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 
 def init_db(session: Session) -> None:
-    # Tables should be created with Alembic migrations
-    # But if you don't want to use migrations, create
-    # the tables un-commenting the next lines
-    # from sqlmodel import SQLModel
+  # Tables should be created with Alembic migrations
+  # But if you don't want to use migrations, create
+  # the tables un-commenting the next lines
+  # from sqlmodel import SQLModel
 
-    # This works because the models are already imported and registered from app.models
-    # SQLModel.metadata.create_all(engine)
+  # This works because the models are already imported and registered from app.models
+  # SQLModel.metadata.create_all(engine)
 
-    user = session.exec(
-        select(User).where(User.email == settings.FIRST_SUPERUSER)
-    ).first()
-    if not user:
-        # Tạo superuser với role Admin
-        user_in = UserCreate(
-            username="admin",
-            email=settings.FIRST_SUPERUSER,
-            password=settings.FIRST_SUPERUSER_PASSWORD,
-            full_name="Administrator",
-            role=UserRole.ADMIN,
-        )
-        user = create_user(session=session, user_create=user_in)
+  user = session.exec(
+    select(User).where(User.email == settings.FIRST_SUPERUSER)
+  ).first()
+  if not user:
+    # Create superuser with Admin role
+    user_in = UserCreate(
+      username="admin",
+      email=settings.FIRST_SUPERUSER,
+      password=settings.FIRST_SUPERUSER_PASSWORD,
+      full_name="Administrator",
+      role=UserRole.ADMIN,
+    )
+    user = create_user(session=session, user_create=user_in)
