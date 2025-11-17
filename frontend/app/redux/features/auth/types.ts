@@ -35,12 +35,25 @@ export interface LoginCredentials {
 }
 
 /**
- * Register Credentials Type
+ * Register Credentials
+ * 
+ * Data cần thiết để đăng ký tài khoản
+ * Step 1: username, email, password, role (required)
+ * Step 2: full_name, phone_numbers, address, city, country (optional)
  */
 export interface RegisterCredentials {
+  // Step 1 - Required
+  username: string;
   email: string;
   password: string;
-  full_name: string;
+  role: 'STUDENT' | 'TEACHER';
+  
+  // Step 2 - Optional
+  full_name?: string;
+  phone_numbers?: string;
+  address?: string;
+  city?: string;
+  country?: string;
 }
 
 /**

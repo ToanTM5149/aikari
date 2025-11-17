@@ -13,8 +13,8 @@ from app.crud.crud import (
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
 from app.core import security
 from app.core.config import settings
-from app.core.security import get_password_hash
-from app.schemas import Message, NewPassword, Token, UserPublic
+from app.core.security import get_password_hash, verify_token
+from app.schemas import Message, NewPassword, RefreshTokenRequest, Token, TokenResponse, UserPublic
 from app.services import (
   generate_password_reset_token,
   generate_reset_password_email,
@@ -28,20 +28,30 @@ router = APIRouter(tags=["login"])
 @router.post("/login/access-token")
 def login_access_token(
   session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
-) -> Token:
+) -> TokenResponse:
   """
-  OAuth2 compatible token login, get an access token for future requests
+  OAuth2 compatible token login, get access token and refresh token for future requests
   """
   user = authenticate(
     session=session, email=form_data.username, password=form_data.password
   )
   if not user:
     raise HTTPException(status_code=400, detail="Incorrect email or password")
+  
+  # Tạo access token và refresh token
   access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-  return Token(
-    access_token=security.create_access_token(
-      user.user_id, expires_delta=access_token_expires
-    )
+  access_token = security.create_access_token(
+    user.user_id, expires_delta=access_token_expires
+  )
+  refresh_token = security.create_refresh_token(user.user_id)
+  
+  # Convert user to UserPublic using model_validate with from_attributes
+  user_public = UserPublic.model_validate(user, from_attributes=True)
+  
+  return TokenResponse(
+    access_token=access_token,
+    refresh_token=refresh_token,
+    user=user_public
   )
 
 
@@ -51,6 +61,26 @@ def test_token(current_user: CurrentUser) -> Any:
   Test access token
   """
   return current_user
+
+
+@router.post("/login/refresh-token")
+def refresh_token(session: SessionDep, body: RefreshTokenRequest) -> Token:
+  """
+  Refresh access token using refresh token
+  """
+  # Verify refresh token
+  user_id = verify_token(body.refresh_token, token_type="refresh")
+  
+  if not user_id:
+    raise HTTPException(status_code=401, detail="Invalid refresh token")
+  
+  # Tạo access token mới
+  access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+  access_token = security.create_access_token(
+    user_id, expires_delta=access_token_expires
+  )
+  
+  return Token(access_token=access_token)
 
 
 @router.post("/password-recovery/{email}")

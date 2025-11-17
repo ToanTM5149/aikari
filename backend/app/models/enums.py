@@ -2,30 +2,30 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    STUDENT = "Student"
-    TEACHER = "Teacher"
-    ADMIN = "Admin"
+    STUDENT = "STUDENT"
+    TEACHER = "TEACHER"
+    ADMIN = "ADMIN"
 
 
 class ClassRole(str, Enum):
-    OWNER = "Owner"
-    MEMBER = "Member"
-    CO_TEACHER = "Co-teacher"
+    OWNER = "OWNER"
+    MEMBER = "MEMBER"
+    CO_TEACHER = "CO_TEACHER"
 
 
 class ContentType(str, Enum):
-    DEFAULT = "default"
-    AI_GENERATED = "ai_generated"
+    DEFAULT = "DEFAULT"
+    AI_GENERATED = "AI_GENERATED"
 
 
 class GenerateType(str, Enum):
-    QUIZZ = "quizz"
-    TEST = "test"
-    PARAGRAPH = "paragraph"
+    QUIZZ = "QUIZZ"
+    TEST = "TEST"
+    PARAGRAPH = "PARAGRAPH"
 
 
 class TestType(str, Enum):
-    MULTIPLE_CHOICE = "multiple_choice"
-    WRITTEN = "written"
-    MIXED = "mixed"
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
+    WRITTEN = "WRITTEN"
+    MIXED = "MIXED"
 

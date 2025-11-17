@@ -6,20 +6,22 @@ from sqlmodel import func, select
 
 from app.crud.crud import (
   authenticate,
-  create_user,
+  create_user as crud_create_user,
   get_user_by_email,
-  update_user,
+  update_user as crud_update_user,
 )
 from app.api.deps import (
   CurrentUser,
   SessionDep,
   get_current_active_superuser,
 )
+from app.core import security
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.models import User
 from app.schemas import (
   Message,
+  TokenResponse,
   UpdatePassword,
   UserCreate,
   UserPublic,
@@ -66,7 +68,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
       detail="The user with this email already exists in the system.",
     )
 
-  user = create_user(session=session, user_create=user_in)
+  user = crud_create_user(session=session, user_create=user_in)
   if settings.emails_enabled and user_in.email:
     email_data = generate_new_account_email(
       email_to=user_in.email, username=user_in.email, password=user_in.password
@@ -143,10 +145,11 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
   return Message(message="User deleted successfully")
 
 
-@router.post("/signup", response_model=UserPublic)
+@router.post("/signup", response_model=TokenResponse)
 def register_user(session: SessionDep, user_in: UserRegister) -> Any:
   """
   Create new user without the need to be logged in.
+  Returns access token and refresh token for immediate login.
   """
   user = get_user_by_email(session=session, email=user_in.email)
   if user:
@@ -154,9 +157,31 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
       status_code=400,
       detail="The user with this email already exists in the system",
     )
-  user_create = UserCreate.model_validate(user_in)
-  user = create_user(session=session, user_create=user_create)
-  return user
+  
+  # Convert UserRegister to UserCreate - set full_name = username if not provided
+  user_create_data = user_in.model_dump()
+  if not user_create_data.get("full_name"):
+    user_create_data["full_name"] = user_in.username
+  
+  user_create = UserCreate.model_validate(user_create_data)
+  user = crud_create_user(session=session, user_create=user_create)
+  
+  # Tạo access token và refresh token
+  from datetime import timedelta
+  access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+  access_token = security.create_access_token(
+    user.user_id, expires_delta=access_token_expires
+  )
+  refresh_token = security.create_refresh_token(user.user_id)
+  
+  # Convert user to UserPublic using model_validate with from_attributes
+  user_public = UserPublic.model_validate(user, from_attributes=True)
+  
+  return TokenResponse(
+    access_token=access_token,
+    refresh_token=refresh_token,
+    user=user_public
+  )
 
 
 @router.get("/{user_id}", response_model=UserPublic)
@@ -205,7 +230,7 @@ def update_user(
         status_code=409, detail="User with this email already exists"
       )
 
-  db_user = update_user(session=session, db_user=db_user, user_in=user_in)
+  db_user = crud_update_user(session=session, db_user=db_user, user_in=user_in)
   return db_user
 
 
