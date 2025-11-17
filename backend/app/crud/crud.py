@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 from sqlmodel import Session, select, and_, or_
 
 from app.core.security import get_password_hash, verify_password
-from app.models import User, UserCreate, UserUpdate
+from app.models import User
+from app.schemas import UserCreate, UserUpdate
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:

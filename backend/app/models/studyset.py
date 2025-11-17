@@ -28,26 +28,3 @@ class StudySet(SQLModel, table=True):
     progress_summaries: list["ProgressSummary"] = Relationship(back_populates="study_set")
 
 
-# StudySet Schemas
-class StudySetBase(SQLModel):
-    title: str
-    description: str | None = None
-    content_type: ContentType = ContentType.DEFAULT
-
-
-class StudySetCreate(StudySetBase):
-    pass
-
-
-class StudySetUpdate(SQLModel):
-    title: str | None = None
-    description: str | None = None
-    content_type: ContentType | None = None
-
-
-class StudySetPublic(StudySetBase):
-    studyset_id: uuid.UUID
-    owner_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-
