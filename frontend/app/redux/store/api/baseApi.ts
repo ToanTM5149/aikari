@@ -25,7 +25,7 @@ type RootState = {
  * Tự động thêm Authorization header vào mọi request
  */
 const baseQuery = fetchBaseQuery({
-  baseUrl: 'http://localhost:8000/api/v1',
+  baseUrl: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1`,
   
   /**
    * Prepare Headers
