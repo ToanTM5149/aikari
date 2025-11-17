@@ -4,7 +4,8 @@ from app.crud.crud import (
     create_user,
 )
 from app.core.config import settings
-from app.models import User, UserCreate, UserRole
+from app.models import User, UserRole
+from app.schemas import UserCreate
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 

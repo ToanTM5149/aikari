@@ -21,26 +21,3 @@ class Term(SQLModel, table=True):
     study_activities: list["StudyActivity"] = Relationship(back_populates="term")
 
 
-# Term Schemas
-class TermBase(SQLModel):
-    term_text: str
-    definition: str
-    example: str | None = None
-
-
-class TermCreate(TermBase):
-    studyset_id: uuid.UUID
-
-
-class TermUpdate(SQLModel):
-    term_text: str | None = None
-    definition: str | None = None
-    example: str | None = None
-
-
-class TermPublic(TermBase):
-    term_id: uuid.UUID
-    studyset_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-
