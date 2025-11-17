@@ -1,29 +1,24 @@
 /**
- * Custom Redux Hooks
+ * Auth Feature Hooks
  * 
- * File này chứa các custom hooks để work với Redux state
- * Giúp code cleaner và reusable
+ * Custom hooks cho authentication
  */
 
 import { useEffect, useCallback } from 'react';
-import { useAppDispatch, useAppSelector } from './index';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
-  loginUser,
-  logoutUser,
-  registerUser,
   selectIsAuthenticated,
   selectCurrentUser,
   selectAuthLoading,
   selectAuthError,
   setCredentials,
-} from './slices/authSlice';
+  logout,
+} from './slice';
 import {
-  updatePreferences,
-  loadPreferences,
-  selectUserPreferences,
-  selectUserTheme,
-  selectUserLanguage,
-} from './slices/userSlice';
+  useLoginMutation,
+  useRegisterMutation,
+  useLogoutMutation,
+} from './api';
 import type { LoginCredentials, RegisterCredentials } from './types';
 
 /**
@@ -48,28 +43,45 @@ export function useAuth() {
   const user = useAppSelector(selectCurrentUser);
   const loading = useAppSelector(selectAuthLoading);
   const error = useAppSelector(selectAuthError);
+  
+  const [loginMutation, { isLoading: isLoggingIn }] = useLoginMutation();
+  const [registerMutation, { isLoading: isRegistering }] = useRegisterMutation();
+  const [logoutMutation] = useLogoutMutation();
 
   // Login function
   const login = useCallback(
     async (credentials: LoginCredentials) => {
-      const result = await dispatch(loginUser(credentials));
-      return result;
+      try {
+        const result = await loginMutation(credentials).unwrap();
+        return { success: true, data: result };
+      } catch (error: any) {
+        return { success: false, error: error?.data?.detail || 'Login failed' };
+      }
     },
-    [dispatch]
+    [loginMutation]
   );
 
   // Logout function
-  const logout = useCallback(() => {
-    dispatch(logoutUser());
-  }, [dispatch]);
+  const handleLogout = useCallback(async () => {
+    try {
+      await logoutMutation().unwrap();
+    } catch (error) {
+      // Even if API call fails, clear local state
+      dispatch(logout());
+    }
+  }, [logoutMutation, dispatch]);
 
   // Register function
   const register = useCallback(
     async (credentials: RegisterCredentials) => {
-      const result = await dispatch(registerUser(credentials));
-      return result;
+      try {
+        const result = await registerMutation(credentials).unwrap();
+        return { success: true, data: result };
+      } catch (error: any) {
+        return { success: false, error: error?.data?.detail || 'Registration failed' };
+      }
     },
-    [dispatch]
+    [registerMutation]
   );
 
   // Restore auth state từ localStorage khi mount
@@ -91,72 +103,11 @@ export function useAuth() {
   return {
     isAuthenticated,
     user,
-    loading,
+    loading: loading || isLoggingIn || isRegistering,
     error,
     login,
-    logout,
+    logout: handleLogout,
     register,
-  };
-}
-
-/**
- * useUserPreferences Hook
- * 
- * Hook để work với user preferences
- * 
- * Usage:
- * ```tsx
- * const { preferences, theme, language, updateTheme, updateLanguage } = useUserPreferences();
- * 
- * // Update theme
- * updateTheme('dark');
- * 
- * // Update language
- * updateLanguage('vi');
- * ```
- */
-export function useUserPreferences() {
-  const dispatch = useAppDispatch();
-  const preferences = useAppSelector(selectUserPreferences);
-  const theme = useAppSelector(selectUserTheme);
-  const language = useAppSelector(selectUserLanguage);
-
-  // Load preferences từ localStorage khi mount
-  useEffect(() => {
-    dispatch(loadPreferences());
-  }, [dispatch]);
-
-  // Update theme
-  const updateTheme = useCallback(
-    (theme: 'light' | 'dark' | 'system') => {
-      dispatch(updatePreferences({ theme }));
-    },
-    [dispatch]
-  );
-
-  // Update language
-  const updateLanguage = useCallback(
-    (language: 'en' | 'vi' | 'ja') => {
-      dispatch(updatePreferences({ language }));
-    },
-    [dispatch]
-  );
-
-  // Update all preferences
-  const updateAllPreferences = useCallback(
-    (prefs: Partial<typeof preferences>) => {
-      dispatch(updatePreferences(prefs));
-    },
-    [dispatch]
-  );
-
-  return {
-    preferences,
-    theme,
-    language,
-    updateTheme,
-    updateLanguage,
-    updatePreferences: updateAllPreferences,
   };
 }
 
@@ -208,3 +159,4 @@ export function useAuthGuard(redirectTo: string = '/auth/login') {
 export function useCurrentUser() {
   return useAppSelector(selectCurrentUser);
 }
+

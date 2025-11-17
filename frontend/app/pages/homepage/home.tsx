@@ -1,4 +1,4 @@
-import { Logo } from "~/components/atoms/Logo";
+import { Logo } from "~/components/ui/logo";
 import { Button } from "~/components/ui/button";
 import { ReduxExamplesCard } from "~/components/shared/ReduxExamplesCard";
 

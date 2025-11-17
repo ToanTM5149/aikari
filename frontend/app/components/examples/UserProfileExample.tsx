@@ -7,27 +7,25 @@
  * 3. RTK Query hooks để fetch data
  */
 
-import { useEffect } from 'react';
-import { useCurrentUser } from '~/store/hooks';
-import { useAppDispatch, useAppSelector } from '~/store';
-import { fetchUserProfile, selectUserProfile, selectUserLoading } from '~/store/slices/userSlice';
+import { useCurrentUser } from '~/redux/features/user';
+import { useAppSelector } from '~/redux/store/hooks';
+import { selectUserProfile, selectUserLoading } from '~/redux/features/user';
+import { useGetUserProfileQuery } from '~/redux/features/user';
 import { Button } from '~/components/ui/button';
 import { Card } from '~/components/ui/card';
 
 export function UserProfileExample() {
-  const dispatch = useAppDispatch();
   const currentUser = useCurrentUser();
   const profile = useAppSelector(selectUserProfile);
   const loading = useAppSelector(selectUserLoading);
-
+  
   // Fetch user profile khi component mount
-  useEffect(() => {
-    if (currentUser?.id) {
-      dispatch(fetchUserProfile(currentUser.id));
-    }
-  }, [dispatch, currentUser?.id]);
+  const { isLoading: isFetchingProfile } = useGetUserProfileQuery(
+    currentUser?.id || '',
+    { skip: !currentUser?.id }
+  );
 
-  if (loading) {
+  if (loading || isFetchingProfile) {
     return <div>Loading profile...</div>;
   }
 

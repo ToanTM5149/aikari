@@ -1,5 +1,5 @@
 import { Button } from "~/components/ui/button";
-import { Logo } from "~/components/atoms/Logo";
+import { Logo } from "~/components/ui/logo";
 
 export default function Header() {
   return (

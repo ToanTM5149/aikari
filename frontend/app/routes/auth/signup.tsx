@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router"
-import { SignupPage } from "~/components/page/auth/SignupPage"
+import { SignupPage } from "~/pages/auth/signup"
 
 export function loader() {
   return null
@@ -10,7 +10,6 @@ export default function SignupRoute() {
 
   const handleSignup = (data?: any) => {
     console.log("Signup data:", data)
-    // Navigate to home or dashboard after signup
     navigate("/")
   }
 
