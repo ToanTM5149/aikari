@@ -26,11 +26,16 @@ type RootState = {
  * 
  * ⚠️ SECURITY: credentials: 'include' để gửi HTTP-only cookies
  * Điều này cần thiết để refresh token cookie được gửi tự động
+ * 
+ * ⚠️ COOKIE FIX: Sử dụng relative path để dùng Vite proxy
+ * Proxy giúp frontend và backend cùng origin → cookie hoạt động đúng
  */
 const baseQuery = fetchBaseQuery({
-  baseUrl: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1`,
-  
-  // ⚠️ CRITICAL: Enable sending cookies cross-origin
+  // Sử dụng relative path để dùng Vite proxy trong dev
+  // Production: có thể dùng VITE_API_URL từ env
+  baseUrl: import.meta.env.DEV 
+    ? '/api/v1'  // Dev: dùng Vite proxy → cùng origin với frontend
+    : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1`, 
   credentials: 'include',
   
   /**
@@ -67,25 +72,19 @@ const baseQueryWithReauth: BaseQueryFn<
   
   // Nếu response là 401 (Unauthorized) => token expired
   if (result.error && result.error.status === 401) {
-    // Try to refresh token
-    // ⚠️ KHÔNG cần gửi refresh token - cookie tự động được gửi
     const refreshResult = await baseQuery(
       {
         url: '/login/refresh-token',
         method: 'POST',
-        // ⚠️ KHÔNG có body - refresh token trong HTTP-only cookie
       },
       api,
       extraOptions
     );
     
     if (refreshResult.data) {
-      // Store new access token
       const newToken = (refreshResult.data as any).access_token;
-      
-      // ⚠️ KHÔNG lưu vào localStorage - chỉ update Redux state
       const state = api.getState() as RootState;
-      
+  
       // Dispatch action to update token in store
       api.dispatch({
         type: 'auth/setCredentials',
