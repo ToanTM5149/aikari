@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import func, select
 
 from app.crud.crud import (
@@ -21,6 +21,7 @@ from app.core.security import get_password_hash, verify_password
 from app.models import User
 from app.schemas import (
   Message,
+  Token,
   TokenResponse,
   UpdatePassword,
   UserCreate,
@@ -145,11 +146,16 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
   return Message(message="User deleted successfully")
 
 
-@router.post("/signup", response_model=TokenResponse)
-def register_user(session: SessionDep, user_in: UserRegister) -> Any:
+@router.post("/signup")
+def register_user(
+  session: SessionDep, 
+  user_in: UserRegister,
+  response: Response
+) -> TokenResponse:
   """
   Create new user without the need to be logged in.
-  Returns access token and refresh token for immediate login.
+  Returns access token and user info for immediate login.
+  Refresh token được lưu trong HTTP-only cookie.
   """
   user = get_user_by_email(session=session, email=user_in.email)
   if user:
@@ -172,14 +178,45 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
   access_token = security.create_access_token(
     user.user_id, expires_delta=access_token_expires
   )
-  refresh_token = security.create_refresh_token(user.user_id)
   
-  # Convert user to UserPublic using model_validate with from_attributes
+  # Tạo refresh token và lưu vào database
+  refresh_token, refresh_jti, refresh_expires = security.create_refresh_token(user.user_id)
+  
+  # Lưu refresh token vào database để track
+  from app.models.refresh_token import RefreshToken
+  refresh_token_record = RefreshToken(
+    jti=refresh_jti,
+    user_id=user.user_id,
+    expires_at=refresh_expires,
+    device_info=None
+  )
+  session.add(refresh_token_record)
+  session.commit()
+  
+  # Set refresh token vào HTTP-only cookie (giống login)
+  cookie_params = {
+    "key": "refresh_token",
+    "value": refresh_token,
+    "httponly": True,
+    "secure": settings.COOKIE_SECURE,
+    "samesite": settings.COOKIE_SAMESITE,
+    "max_age": settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+    "path": "/",
+  }
+  
+  # Chỉ set domain nếu có giá trị
+  if settings.COOKIE_DOMAIN:
+    cookie_params["domain"] = settings.COOKIE_DOMAIN
+  
+  response.set_cookie(**cookie_params)
+  
+  # Convert user to UserPublic
   user_public = UserPublic.model_validate(user, from_attributes=True)
   
+  # Trả về access token và user info
   return TokenResponse(
     access_token=access_token,
-    refresh_token=refresh_token,
+    refresh_token="",  # Không trả trong response, chỉ trong cookie
     user=user_public
   )
 

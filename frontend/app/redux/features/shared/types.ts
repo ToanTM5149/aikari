@@ -43,11 +43,14 @@ export interface ApiError {
  * Token Response Type
  * 
  * Response từ login/register endpoint
+ * 
+ * ⚠️ SECURITY: refresh_token không còn trong response
+ * Refresh token được lưu trong HTTP-only cookie bởi server
  */
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
-  token_type: string;
+  refresh_token?: string; // Deprecated - không còn được trả về
+  token_type?: string;
   user: User;
 }
 

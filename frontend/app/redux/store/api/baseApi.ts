@@ -23,9 +23,15 @@ type RootState = {
  * Base Query với Auth Token
  * 
  * Tự động thêm Authorization header vào mọi request
+ * 
+ * ⚠️ SECURITY: credentials: 'include' để gửi HTTP-only cookies
+ * Điều này cần thiết để refresh token cookie được gửi tự động
  */
 const baseQuery = fetchBaseQuery({
   baseUrl: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1`,
+  
+  // ⚠️ CRITICAL: Enable sending cookies cross-origin
+  credentials: 'include',
   
   /**
    * Prepare Headers
@@ -48,6 +54,9 @@ const baseQuery = fetchBaseQuery({
  * 
  * Tự động retry request nếu token expired
  * Refresh token và retry request
+ * 
+ * ⚠️ SECURITY: Refresh token KHÔNG gửi trong body
+ * Cookie HTTP-only tự động được gửi với mọi request
  */
 const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
@@ -59,42 +68,38 @@ const baseQueryWithReauth: BaseQueryFn<
   // Nếu response là 401 (Unauthorized) => token expired
   if (result.error && result.error.status === 401) {
     // Try to refresh token
-    const state = api.getState() as RootState;
-    const refreshToken = state.auth.refreshToken;
+    // ⚠️ KHÔNG cần gửi refresh token - cookie tự động được gửi
+    const refreshResult = await baseQuery(
+      {
+        url: '/login/refresh-token',
+        method: 'POST',
+        // ⚠️ KHÔNG có body - refresh token trong HTTP-only cookie
+      },
+      api,
+      extraOptions
+    );
     
-    if (refreshToken) {
-      // Call refresh token endpoint
-      const refreshResult = await baseQuery(
-        {
-          url: '/login/refresh-token',
-          method: 'POST',
-          body: { refresh_token: refreshToken },
-        },
-        api,
-        extraOptions
-      );
+    if (refreshResult.data) {
+      // Store new access token
+      const newToken = (refreshResult.data as any).access_token;
       
-      if (refreshResult.data) {
-        // Store new token
-        const newToken = (refreshResult.data as any).access_token;
-        localStorage.setItem('access_token', newToken);
-        
-        // Dispatch action to update token in store
-        api.dispatch({
-          type: 'auth/setCredentials',
-          payload: { 
-            accessToken: newToken, 
-            refreshToken,
-            user: state.auth.user,
-          },
-        });
-        
-        // Retry original request với new token
-        result = await baseQuery(args, api, extraOptions);
-      } else {
-        // Refresh failed => logout
-        api.dispatch({ type: 'auth/logout' });
-      }
+      // ⚠️ KHÔNG lưu vào localStorage - chỉ update Redux state
+      const state = api.getState() as RootState;
+      
+      // Dispatch action to update token in store
+      api.dispatch({
+        type: 'auth/setCredentials',
+        payload: { 
+          accessToken: newToken,
+          user: state.auth.user,
+        },
+      });
+      
+      // Retry original request với new token
+      result = await baseQuery(args, api, extraOptions);
+    } else {
+      // Refresh failed => logout
+      api.dispatch({ type: 'auth/logout' });
     }
   }
   

@@ -58,10 +58,13 @@ export interface RegisterCredentials {
 
 /**
  * Set Credentials Payload
+ * 
+ * ⚠️ SECURITY: refreshToken không còn được gửi từ server
+ * Refresh token chỉ tồn tại trong HTTP-only cookie
  */
 export interface SetCredentialsPayload {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string; // Optional - deprecated, sẽ xóa trong version sau
   user: User;
 }
 

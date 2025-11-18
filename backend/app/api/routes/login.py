@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Annotated, Any
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -29,10 +29,13 @@ router = APIRouter(tags=["login"])
 
 @router.post("/login/access-token")
 def login_access_token(
-  session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+  session: SessionDep, 
+  form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+  response: Response
 ) -> TokenResponse:
   """
-  OAuth2 compatible token login, get access token and refresh token for future requests
+  OAuth2 compatible token login, get access token for future requests
+  Refresh token được lưu trong HTTP-only cookie để bảo mật
   """
   user = authenticate(
     session=session, email=form_data.username, password=form_data.password
@@ -59,12 +62,33 @@ def login_access_token(
   session.add(refresh_token_record)
   session.commit()
   
-  # Convert user to UserPublic using model_validate with from_attributes
+  # Set refresh token vào HTTP-only cookie
+  # HttpOnly: JavaScript không thể đọc được → chống XSS
+  # Secure: Chỉ gửi qua HTTPS (production)
+  # SameSite: Chống CSRF attacks
+  cookie_params = {
+    "key": "refresh_token",
+    "value": refresh_token,
+    "httponly": True,
+    "secure": settings.COOKIE_SECURE,
+    "samesite": settings.COOKIE_SAMESITE,
+    "max_age": settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # 7 days
+    "path": "/",
+  }
+  
+  # Chỉ set domain nếu có giá trị (không set cho localhost)
+  if settings.COOKIE_DOMAIN:
+    cookie_params["domain"] = settings.COOKIE_DOMAIN
+  
+  response.set_cookie(**cookie_params)
+  
+  # Convert user to UserPublic
   user_public = UserPublic.model_validate(user, from_attributes=True)
   
+  # Trả về access token và user info (refresh token trong cookie)
   return TokenResponse(
     access_token=access_token,
-    refresh_token=refresh_token,
+    refresh_token="",  # Không trả trong response, chỉ trong cookie
     user=user_public
   )
 
@@ -78,12 +102,22 @@ def test_token(current_user: CurrentUser) -> Any:
 
 
 @router.post("/login/refresh-token")
-def refresh_token(session: SessionDep, body: RefreshTokenRequest) -> Token:
+def refresh_token(session: SessionDep, request: Request) -> Token:
   """
-  Refresh access token using refresh token
+  Refresh access token using refresh token from HTTP-only cookie
+  Client chỉ cần gọi endpoint này, cookie sẽ tự động được gửi
   """
+  # Đọc refresh token từ cookie
+  refresh_token = request.cookies.get("refresh_token")
+  
+  if not refresh_token:
+    raise HTTPException(
+      status_code=401, 
+      detail="Refresh token not found. Please login again."
+    )
+  
   # Verify refresh token
-  user_id, jti = verify_token(body.refresh_token, token_type="refresh")
+  user_id, jti = verify_token(refresh_token, token_type="refresh")
   
   if not user_id or not jti:
     raise HTTPException(status_code=401, detail="Invalid refresh token")
@@ -119,47 +153,60 @@ def refresh_token(session: SessionDep, body: RefreshTokenRequest) -> Token:
 def logout(
   session: SessionDep,
   current_user: CurrentUser,
-  body: RefreshTokenRequest
+  request: Request,
+  response: Response
 ) -> Message:
   """
-  Logout - Revoke refresh token và thêm vào blacklist
+  Logout - Revoke refresh token và clear cookie
   
   Best practice:
-  1. Client gửi refresh token khi logout
-  2. Server revoke refresh token đó
-  3. Client xóa cả access token và refresh token ở local storage
-  4. Access token vẫn valid cho đến khi hết hạn (thời gian ngắn)
+  1. Client gọi API logout
+  2. Server đọc refresh token từ cookie
+  3. Server revoke refresh token đó và thêm vào blacklist
+  4. Server clear refresh token cookie
+  5. Client xóa access token ở memory
   """
+  # Đọc refresh token từ cookie
+  refresh_token = request.cookies.get("refresh_token")
+  
+  if not refresh_token:
+    # Nếu không có cookie, vẫn cho logout thành công
+    delete_params = {"key": "refresh_token", "path": "/"}
+    if settings.COOKIE_DOMAIN:
+      delete_params["domain"] = settings.COOKIE_DOMAIN
+    response.delete_cookie(**delete_params)
+    return Message(message="Logged out successfully")
+  
   # Verify refresh token
-  user_id, refresh_jti = verify_token(body.refresh_token, token_type="refresh")
+  user_id, refresh_jti = verify_token(refresh_token, token_type="refresh")
   
-  if not user_id or not refresh_jti:
-    raise HTTPException(status_code=401, detail="Invalid refresh token")
+  if user_id and refresh_jti:
+    # Verify token thuộc về current user
+    if str(current_user.user_id) == user_id:
+      # Revoke refresh token trong database
+      success = security.revoke_refresh_token(session, refresh_jti)
+      
+      if success:
+        # Thêm refresh token vào blacklist
+        from sqlmodel import select
+        statement = select(RefreshToken).where(RefreshToken.jti == refresh_jti)
+        refresh_token_record = session.exec(statement).first()
+        
+        if refresh_token_record:
+          security.add_token_to_blacklist(
+            session=session,
+            jti=refresh_jti,
+            token_type="refresh",
+            user_id=user_id,
+            expires_at=refresh_token_record.expires_at,
+            reason="logout"
+          )
   
-  # Verify token thuộc về current user
-  if str(current_user.user_id) != user_id:
-    raise HTTPException(status_code=403, detail="Token does not belong to current user")
-  
-  # Revoke refresh token trong database
-  success = security.revoke_refresh_token(session, refresh_jti)
-  
-  if not success:
-    raise HTTPException(status_code=404, detail="Refresh token not found")
-  
-  # Thêm refresh token vào blacklist
-  from sqlmodel import select
-  statement = select(RefreshToken).where(RefreshToken.jti == refresh_jti)
-  refresh_token_record = session.exec(statement).first()
-  
-  if refresh_token_record:
-    security.add_token_to_blacklist(
-      session=session,
-      jti=refresh_jti,
-      token_type="refresh",
-      user_id=user_id,
-      expires_at=refresh_token_record.expires_at,
-      reason="logout"
-    )
+  # Clear refresh token cookie
+  delete_params = {"key": "refresh_token", "path": "/"}
+  if settings.COOKIE_DOMAIN:
+    delete_params["domain"] = settings.COOKIE_DOMAIN
+  response.delete_cookie(**delete_params)
   
   return Message(message="Logged out successfully")
 

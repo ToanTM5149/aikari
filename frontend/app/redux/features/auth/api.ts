@@ -3,6 +3,10 @@
  * 
  * RTK Query endpoints cho authentication
  * Inject vào baseApi
+ * 
+ * ⚠️ SECURITY NOTES:
+ * - Access token: Trả về trong response body, lưu trong memory
+ * - Refresh token: Server set trong HTTP-only cookie, client không đọc được
  */
 
 import { baseApi } from '../../store/api/baseApi';
@@ -20,7 +24,8 @@ export const authApi = baseApi.injectEndpoints({
     /**
      * Login
      * 
-     * Login user và nhận tokens
+     * Login user và nhận access token
+     * Refresh token được server set trong HTTP-only cookie
      */
     login: builder.mutation<TokenResponse, LoginCredentials>({
       query: (credentials) => ({
@@ -41,10 +46,10 @@ export const authApi = baseApi.injectEndpoints({
         try {
           const { data } = await queryFulfilled;
           
-          // Set credentials vào auth state
+          // ⚠️ SECURITY: Chỉ set access token và user
+          // Refresh token đã được server set trong HTTP-only cookie
           dispatch(setCredentials({
             accessToken: data.access_token,
-            refreshToken: data.refresh_token,
             user: data.user,
           }));
         } catch (error: any) {
@@ -59,6 +64,7 @@ export const authApi = baseApi.injectEndpoints({
      * Register
      * 
      * Đăng ký user mới
+     * Refresh token được server set trong HTTP-only cookie
      */
     register: builder.mutation<TokenResponse, RegisterCredentials>({
       query: (credentials) => ({
@@ -73,10 +79,9 @@ export const authApi = baseApi.injectEndpoints({
         try {
           const { data } = await queryFulfilled;
           
-          // Set credentials vào auth state
+          // ⚠️ SECURITY: Chỉ set access token và user
           dispatch(setCredentials({
             accessToken: data.access_token,
-            refreshToken: data.refresh_token,
             user: data.user,
           }));
         } catch (error: any) {
@@ -91,12 +96,15 @@ export const authApi = baseApi.injectEndpoints({
      * Refresh Token
      * 
      * Refresh access token khi hết hạn
+     * 
+     * ⚠️ SECURITY: KHÔNG gửi refresh token trong body
+     * Refresh token tự động được gửi qua HTTP-only cookie
+     * Server đọc từ cookie và trả về access token mới
      */
-    refreshToken: builder.mutation<{ access_token: string }, { refresh_token: string }>({
-      query: (body) => ({
+    refreshToken: builder.mutation<{ access_token: string }, void>({
+      query: () => ({
         url: '/login/refresh-token',
         method: 'POST',
-        body,
       }),
       async onQueryStarted(_, { dispatch, queryFulfilled }) {
         try {
@@ -117,15 +125,17 @@ export const authApi = baseApi.injectEndpoints({
     /**
      * Logout
      * 
-     * Đăng xuất user (có thể call API để invalidate token)
+     * Đăng xuất user
+     * Server sẽ revoke refresh token và clear HTTP-only cookie
      */
-    logout: builder.mutation<void, void>({
+    logoutUser: builder.mutation<void, void>({
       query: () => ({
         url: '/login/logout',
         method: 'POST',
       }),
       async onQueryStarted(_, { dispatch }) {
         // Clear auth state
+        // Cookie sẽ được server clear tự động
         dispatch(logout());
       },
     }),
@@ -141,6 +151,6 @@ export const {
   useLoginMutation,
   useRegisterMutation,
   useRefreshTokenMutation,
-  useLogoutMutation,
+  useLogoutUserMutation,
 } = authApi;
 
