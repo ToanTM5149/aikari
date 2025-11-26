@@ -128,7 +128,7 @@ export const authApi = baseApi.injectEndpoints({
      * Đăng xuất user
      * Server sẽ revoke refresh token và clear HTTP-only cookie
      */
-    logoutUser: builder.mutation<void, void>({
+    logout: builder.mutation<void, void>({
       query: () => ({
         url: '/logout',
         method: 'POST',
@@ -151,6 +151,6 @@ export const {
   useLoginMutation,
   useRegisterMutation,
   useRefreshTokenMutation,
-  useLogoutUserMutation,
+  useLogoutMutation,
 } = authApi;
 
