@@ -8,6 +8,8 @@
  */
 
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { useDispatch, useSelector } from 'react-redux';
+import type { TypedUseSelectorHook } from 'react-redux';
 
 // Import các slice reducers từ features
 import authReducer from '../features/auth/slice';
@@ -75,6 +77,15 @@ export type RootState = ReturnType<typeof store.getState>;
 
 // AppDispatch type - Mô tả type của dispatch function (bao gồm async actions)
 export type AppDispatch = typeof store.dispatch;
+
+/**
+ * Typed Hooks
+ * 
+ * Pre-typed versions of useDispatch and useSelector
+ * Use throughout the app instead of plain `useDispatch` and `useSelector`
+ */
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 /**
  * Store Setup Status Hook

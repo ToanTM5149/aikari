@@ -3,9 +3,15 @@
  * 
  * Slice này quản lý:
  * 1. Authentication status (logged in/out)
- * 2. Access & Refresh tokens
- * 3. Current user info
- * 4. Auth loading states và errors
+ * 2. Access token (CHỈ LƯU TRONG MEMORY - không localStorage)
+ * 3. Refresh token (LƯU TRONG HTTP-ONLY COOKIE - server-side)
+ * 4. Current user info
+ * 5. Auth loading states và errors
+ * 
+ * ⚠️ SECURITY BEST PRACTICES:
+ * - Access token: Lưu trong memory (Redux state), sống ngắn (5-15 phút)
+ * - Refresh token: KHÔNG lưu trong state, chỉ trong HTTP-only cookie
+ * - Khi reload page: Access token mất → gọi refresh endpoint
  * 
  * Lưu ý: Không có async thunks ở đây
  * Async operations sẽ được handle bởi RTK Query trong api.ts
@@ -23,7 +29,7 @@ import type { AuthState, SetCredentialsPayload } from './types';
 const initialState: AuthState = {
   isAuthenticated: false,
   accessToken: null,
-  refreshToken: null,
+  refreshToken: null, // Deprecated - sẽ xóa trong version sau
   user: null,
   loading: false,
   error: null,
@@ -50,17 +56,21 @@ const authSlice = createSlice({
     /**
      * Set Credentials
      * Dùng để set auth state sau khi login/register thành công
+     * 
+     * ⚠️ SECURITY: Chỉ lưu access token trong memory (Redux state)
+     * Refresh token được lưu trong HTTP-only cookie bởi server
      */
     setCredentials: (state, action: PayloadAction<SetCredentialsPayload>) => {
       state.accessToken = action.payload.accessToken;
-      state.refreshToken = action.payload.refreshToken;
       state.user = action.payload.user;
       state.isAuthenticated = true;
       state.error = null;
       
-      // Lưu tokens vào localStorage
-      localStorage.setItem('access_token', action.payload.accessToken);
-      localStorage.setItem('refresh_token', action.payload.refreshToken);
+      // ⚠️ KHÔNG lưu access token vào localStorage
+      // Access token chỉ tồn tại trong memory
+      // Khi reload page → mất token → gọi refresh từ cookie
+      
+      // Chỉ lưu user info để UX tốt hơn (không cần re-fetch)
       localStorage.setItem('user', JSON.stringify(action.payload.user));
     },
     
@@ -70,7 +80,7 @@ const authSlice = createSlice({
      */
     updateAccessToken: (state, action: PayloadAction<string>) => {
       state.accessToken = action.payload;
-      localStorage.setItem('access_token', action.payload);
+      // ⚠️ KHÔNG lưu vào localStorage
     },
     
     /**
@@ -111,19 +121,23 @@ const authSlice = createSlice({
     /**
      * Logout
      * Clear tất cả auth state
+     * 
+     * ⚠️ SECURITY: Chỉ clear memory state
+     * HTTP-only cookie sẽ được clear bởi server khi gọi logout API
      */
     logout: (state) => {
       state.isAuthenticated = false;
       state.accessToken = null;
-      state.refreshToken = null;
+      state.refreshToken = null; // Deprecated field
       state.user = null;
       state.error = null;
       state.loading = false;
       
-      // Clear localStorage
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // Clear user info từ localStorage
       localStorage.removeItem('user');
+      
+      // ⚠️ KHÔNG cần clear tokens vì không lưu trong localStorage nữa
+      // Refresh token cookie sẽ được server clear khi logout
     },
   },
 });

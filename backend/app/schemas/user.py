@@ -25,11 +25,18 @@ class UserCreate(UserBase):
 
 
 class UserRegister(SQLModel):
+    # Step 1 - Required fields
     username: str
     email: EmailStr
     password: str = Field(min_length=8)
-    full_name: str
     role: UserRole = UserRole.STUDENT
+    
+    # Step 2 - Optional fields
+    full_name: str | None = None
+    phone_numbers: str | None = None
+    address: str | None = None
+    city: str | None = None
+    country: str | None = None
 
 
 class UserUpdate(SQLModel):
@@ -63,4 +70,13 @@ class UserPublic(UserBase):
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int
+
+
+class TokenResponse(SQLModel):
+    """Response schema for login and signup endpoints"""
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserPublic
+
 

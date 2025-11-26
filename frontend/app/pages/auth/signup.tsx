@@ -15,6 +15,9 @@ import { Logo } from "~/components/ui/logo"
 import { Eye, EyeOff, ArrowLeft } from "lucide-react"
 import { ScrollArea } from "~/components/ui/scroll-area"
 import { toast } from "sonner"
+import { useRegisterMutation } from "~/redux/features/auth/api"
+import { useAppSelector } from "~/redux/store"
+import { selectAuthError } from "~/redux/features/auth/slice"
 
 interface SignupPageProps {
   onSignup: (data?: { 
@@ -53,8 +56,10 @@ export function SignupPage({ onSignup, onSwitchToLogin }: SignupPageProps) {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [step, setStep] = useState(1)
+  
+  const [register, { isLoading }] = useRegisterMutation()
+  const authError = useAppSelector(selectAuthError)
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -67,30 +72,47 @@ export function SignupPage({ onSignup, onSwitchToLogin }: SignupPageProps) {
       toast.error("Passwords don't match!")
       return
     }
+
+    if (!formData.userType) {
+      toast.error("Please select your role!")
+      return
+    }
     
-    setIsLoading(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    toast.success("Account created successfully! Welcome aboard!")
-    setIsLoading(false)
-    
-    // Pass user data to parent
-    onSignup({
-      username: formData.username,
-      email: formData.email,
-      fullName: formData.fullName || formData.username,
-      schoolName: formData.schoolName,
-      address: formData.address,
-      city: formData.city,
-      state: formData.state,
-      zipCode: formData.zipCode,
-      sex: formData.sex,
-      dateOfBirth: formData.dateOfBirth,
-      phone: formData.phone,
-      userType: formData.userType,
-    })
+    try {
+      // Prepare data for API - include optional step 2 fields if provided
+      const registerData: any = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        role: formData.userType === 'teacher' ? 'TEACHER' : 'STUDENT',
+      }
+      
+      // Add optional fields if provided
+      if (formData.fullName) registerData.full_name = formData.fullName
+      if (formData.phone) registerData.phone_numbers = formData.phone
+      if (formData.address) registerData.address = formData.address
+      if (formData.city) registerData.city = formData.city
+      if (formData.state) registerData.country = formData.state // Using state as country
+      
+      const result = await register(registerData).unwrap()
+      
+      toast.success("Account created successfully! Welcome aboard!")
+      
+      // Pass user data to parent
+      onSignup({
+        username: result.user.username,
+        email: result.user.email,
+        fullName: result.user.full_name,
+        address: result.user.address || undefined,
+        city: result.user.city || undefined,
+        state: result.user.country || undefined,
+        phone: result.user.phone_numbers || undefined,
+        userType: result.user.role,
+      })
+    } catch (error: any) {
+      const errorMessage = error?.data?.detail || authError || "Registration failed. Please try again."
+      toast.error(errorMessage)
+    }
   }
 
   const canProceedToStep2 = formData.username && formData.email && formData.password && 

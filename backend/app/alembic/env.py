@@ -41,6 +41,8 @@ from app.models import (  # noqa
     Term,
     Test,
     TestResult,
+    TokenBlacklist,
+    RefreshToken,
 )
 
 target_metadata = SQLModel.metadata

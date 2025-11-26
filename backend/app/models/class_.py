@@ -17,7 +17,7 @@ class Class(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    members: list["ClassMember"] = Relationship(back_populates="class")
+    members: list["ClassMember"] = Relationship(back_populates="class_obj")
 
 
 class ClassMember(SQLModel, table=True):
@@ -28,8 +28,8 @@ class ClassMember(SQLModel, table=True):
     role: ClassRole = Field(default=ClassRole.MEMBER)
     joined_at: datetime = Field(default_factory=datetime.utcnow)
     
-    # Relationships
-    class_: "Class" = Relationship(back_populates="members")
+    # Relationships - use sa_relationship_kwargs to avoid 'class' keyword conflict
+    class_obj: "Class" = Relationship(back_populates="members", sa_relationship_kwargs={"foreign_keys": "[ClassMember.class_id]"})
     user: "User" = Relationship(back_populates="class_memberships")
     
     __table_args__ = (

@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Logo } from "~/components/ui/logo"
 import { Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
+import { useLoginMutation } from "~/redux/features/auth/api"
+import { useAppSelector } from "~/redux/store"
+import { selectAuthError } from "~/redux/features/auth/slice"
 
 interface LoginPageProps {
   onLogin: (data?: { username: string; email?: string; name?: string; userType?: string }) => void
@@ -14,27 +17,32 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  
+  const [login, { isLoading }] = useLoginMutation()
+  const authError = useAppSelector(selectAuthError)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    toast.success("Welcome back! You've successfully logged in.")
-    setIsLoading(false)
-    
-    // Pass user data to parent
-    onLogin({
-      username,
-      email: `${username}@example.com`,
-      name: username.charAt(0).toUpperCase() + username.slice(1),
-    })
+    try {
+      const result = await login({ email, password }).unwrap()
+      
+      toast.success("Welcome back! You've successfully logged in.")
+      
+      // Pass user data to parent
+      onLogin({
+        username: result.user.username,
+        email: result.user.email,
+        name: result.user.full_name,
+        userType: result.user.role,
+      })
+    } catch (error: any) {
+      const errorMessage = error?.data?.detail || authError || "Login failed. Please try again."
+      toast.error(errorMessage)
+    }
   }
 
   return (
@@ -68,13 +76,13 @@ export function LoginPage({ onLogin, onSwitchToSignup }: LoginPageProps) {
                 transition={{ delay: 0.3 }}
                 className="space-y-2"
               >
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="bg-input-background"
                 />

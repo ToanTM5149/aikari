@@ -6,20 +6,23 @@
  */
 
 /**
- * User Entity Type
+ * User Interface
  * 
- * Mô tả cấu trúc của một user object
- * Phải match với backend API response
+ * Đại diện cho user trong hệ thống
  */
 export interface User {
-  id: string;
-  email: string;
+  user_id: string;
+  username: string;
   full_name: string;
-  is_active: boolean;
-  is_superuser: boolean;
+  email: string;
+  role: 'STUDENT' | 'TEACHER' | 'ADMIN';
+  phone_numbers?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  preferences?: Record<string, any> | null;
   created_at: string;
-  updated_at?: string;
-  avatar_url?: string;
+  updated_at: string;
 }
 
 /**
@@ -40,11 +43,14 @@ export interface ApiError {
  * Token Response Type
  * 
  * Response từ login/register endpoint
+ * 
+ * ⚠️ SECURITY: refresh_token không còn trong response
+ * Refresh token được lưu trong HTTP-only cookie bởi server
  */
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
-  token_type: string;
+  refresh_token?: string; // Deprecated - không còn được trả về
+  token_type?: string;
   user: User;
 }
 

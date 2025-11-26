@@ -19,6 +19,8 @@ from app.models.quizz import AIGeneratedContents, Paragraph, Quizz
 from app.models.studyset import StudySet
 from app.models.term import Term
 from app.models.test import Test, TestResult
+from app.models.token_blacklist import TokenBlacklist
+from app.models.refresh_token import RefreshToken
 
 __all__ = [
     # Base
@@ -42,4 +44,6 @@ __all__ = [
     "AIGeneratedContents",
     "StudyActivity",
     "ProgressSummary",
+    "TokenBlacklist",
+    "RefreshToken",
 ]

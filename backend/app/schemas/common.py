@@ -1,3 +1,4 @@
+from typing import Any
 from sqlmodel import SQLModel, Field
 
 
@@ -12,6 +13,11 @@ class Token(SQLModel):
 
 class TokenPayload(SQLModel):
     sub: str | None = None
+    type: str = "access"  # "access" or "refresh"
+
+
+class RefreshTokenRequest(SQLModel):
+    refresh_token: str
 
 
 class UpdatePassword(SQLModel):

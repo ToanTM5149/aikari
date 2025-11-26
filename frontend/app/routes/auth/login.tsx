@@ -10,8 +10,8 @@ export default function LoginRoute() {
 
   const handleLogin = (data?: any) => {
     console.log("Login data:", data)
-    // Navigate to home or dashboard after login
-    navigate("/")
+    // Navigate to dashboard after successful login
+    navigate("/dashboard")
   }
 
   const handleSwitchToSignup = () => {
