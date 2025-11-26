@@ -130,7 +130,7 @@ export const authApi = baseApi.injectEndpoints({
      */
     logoutUser: builder.mutation<void, void>({
       query: () => ({
-        url: '/login/logout',
+        url: '/logout',
         method: 'POST',
       }),
       async onQueryStarted(_, { dispatch }) {
