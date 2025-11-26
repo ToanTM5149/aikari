@@ -139,6 +139,56 @@ export const authApi = baseApi.injectEndpoints({
         dispatch(logout());
       },
     }),
+    
+    /**
+     * Forgot Password
+     * 
+     * Gửi email reset password
+     * Server sẽ gửi email chứa link reset password
+     */
+    forgotPassword: builder.mutation<{ message: string }, { email: string }>({
+      query: ({ email }) => ({
+        url: `/password-recovery/${email}`,
+        method: 'POST',
+      }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
+        
+        try {
+          await queryFulfilled;
+        } catch (error: any) {
+          dispatch(setError(error?.data?.detail || 'Failed to send recovery email'));
+        } finally {
+          dispatch(setLoading(false));
+        }
+      },
+    }),
+    
+    /**
+     * Reset Password
+     * 
+     * Đặt lại mật khẩu mới bằng token từ email
+     */
+    resetPassword: builder.mutation<{ message: string }, { token: string; new_password: string }>({
+      query: (body) => ({
+        url: '/reset-password/',
+        method: 'POST',
+        body,
+      }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
+        
+        try {
+          await queryFulfilled;
+        } catch (error: any) {
+          dispatch(setError(error?.data?.detail || 'Failed to reset password'));
+        } finally {
+          dispatch(setLoading(false));
+        }
+      },
+    }),
   }),
 });
 
@@ -152,5 +202,7 @@ export const {
   useRegisterMutation,
   useRefreshTokenMutation,
   useLogoutMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
 } = authApi;
 

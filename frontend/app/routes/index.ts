@@ -4,7 +4,7 @@ export default [
   route(".well-known/*", "routes/.well-known.tsx"),
   
   // Auth routes (login, signup, etc.) - cho user chưa đăng nhập
-  route("/", "routes/_layouts/auth-layout.tsx", [
+  route("/auth", "routes/_layouts/auth-layout.tsx", [
     route("login", "routes/auth/login.tsx"),
     route("signup", "routes/auth/signup.tsx"),
     route("forgot-password", "routes/auth/forgot-password.tsx"),
@@ -14,7 +14,7 @@ export default [
   // Public routes (landing page) - cho user chưa đăng nhập
   layout("routes/_layouts/main-layout.tsx", [
     index("routes/home.tsx"),
-    route("redux-examples", "pages/homepage/redux-examples.tsx"),
+    route("redux-examples", "components/pages/homepage/redux-examples.tsx"),
   ]),
   
   // Authenticated routes - cho user đã đăng nhập (với sidebar + header mới)

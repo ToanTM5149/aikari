@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router"
-import { SignupPage } from "~/pages/auth/signup"
+import { SignupPage } from "~/components/pages/auth/signup"
 
 export function loader() {
   return null
@@ -14,7 +14,7 @@ export default function SignupRoute() {
   }
 
   const handleSwitchToLogin = () => {
-    navigate("/login")
+    navigate("/auth/login")
   }
 
   return (
