@@ -5,13 +5,12 @@ import { AppSidebar } from "~/components/layout/authenticated/AppSidebar";
 import { SidebarProvider, SidebarInset } from "~/components/ui/sidebar";
 import { useAppSelector, useAppDispatch } from "~/redux/store";
 import { selectIsAuthenticated, selectCurrentUser, logout } from "~/redux/features/auth/slice";
-import { useLogoutUserMutation } from "~/redux/features/auth/api";
+import { useLogoutMutation } from "~/redux/features/auth/api";
 
 export default function AuthenticatedLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useAppDispatch();
-  const [logoutUser] = useLogoutUserMutation();
+  const [logoutUser] = useLogoutMutation();
   
   // Get auth state from Redux
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
