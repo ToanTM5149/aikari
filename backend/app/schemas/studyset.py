@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlmodel import SQLModel
+from typing import Any
 
 from app.models.enums import ContentType
 
@@ -27,4 +28,5 @@ class StudySetPublic(StudySetBase):
     owner_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    attributes: list[dict[str, Any]] | None = None
 

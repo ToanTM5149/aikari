@@ -19,9 +19,8 @@ class ContentType(str, Enum):
 
 
 class GenerateType(str, Enum):
-    QUIZZ = "QUIZZ"
     TEST = "TEST"
-    PARAGRAPH = "PARAGRAPH"
+    ATTRIBUTE = "ATTRIBUTE"
 
 
 class TestType(str, Enum):

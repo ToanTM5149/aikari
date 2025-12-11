@@ -36,4 +36,3 @@ class AIGeneratedContents(SQLModel, table=True):
 
     # Relationships
     study_set: "StudySet" = Relationship(back_populates="ai_generated_contents")
-

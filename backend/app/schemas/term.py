@@ -2,12 +2,17 @@ import uuid
 from datetime import datetime
 
 from sqlmodel import SQLModel
+from typing import Any
 
 
 class TermBase(SQLModel):
     term_text: str
     definition: str
     example: str | None = None
+    category: str | None = None
+    subcategory: str | None = None
+    image_url: str | None = None
+    attributes: dict[str, Any] | None = None
 
 
 class TermCreate(TermBase):
