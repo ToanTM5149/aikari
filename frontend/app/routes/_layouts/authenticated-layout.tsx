@@ -27,7 +27,7 @@ export default function AuthenticatedLayout() {
   const getCurrentView = () => {
     const path = location.pathname;
     if (path === "/dashboard") return "home";
-    if (path.startsWith("/class")) return "class";
+    if (path.startsWith("/dashboard/class")) return "class";
     if (path.startsWith("/create")) return "create";
     if (path.startsWith("/flashcard")) return "flashcard";
     return "home";
@@ -39,7 +39,7 @@ export default function AuthenticatedLayout() {
         navigate("/dashboard");
         break;
       case "class":
-        navigate("/class");
+        navigate("/dashboard/class");
         break;
       case "create":
         navigate("/create");

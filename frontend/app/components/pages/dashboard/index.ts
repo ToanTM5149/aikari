@@ -1,0 +1,11 @@
+// Dashboard page components
+export { HomePage } from './home-page'
+export { ClassPage } from './class-page'
+export { CreateFlashcard } from './create-flashcard'
+export { Flashcard } from './flashcard'
+export { FlashcardContent } from './flashcard-content'
+export { FolderPage } from './folder-page'
+export { ClassStatistics } from './class-statistics'
+export { ProfilePage } from './profile-page'
+export { Chatbot } from './chatbot'
+export { GenerateContent } from './generate-content'
