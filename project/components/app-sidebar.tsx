@@ -84,7 +84,7 @@ export function AppSidebar({
   };
 
   return (
-    <Sidebar collapsible="none" className="border-r border-border">
+    <Sidebar>
       <SidebarHeader>
         <div className="flex items-center justify-center p-4">
           <Logo size="sm" showText={true} />

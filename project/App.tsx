@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "motion/react"
 import { SidebarProvider, SidebarInset } from "./components/ui/sidebar"
 import { AppSidebar } from "./components/app-sidebar"
 import { AppHeader } from "./components/app-header"
@@ -10,6 +10,7 @@ import { HomePage } from "./components/home-page"
 import { CreateFlashcard } from "./components/create-flashcard"
 import { FolderPage } from "./components/folder-page"
 import { ClassPage } from "./components/class-page"
+import { ClassStatistics } from "./components/class-statistics"
 import { ProfilePage } from "./components/profile-page"
 import { LoginPage } from "./components/login-page"
 import { SignupPage } from "./components/signup-page"
@@ -20,6 +21,7 @@ export default function App() {
   const [authView, setAuthView] = useState<"login" | "signup">("login")
   const [currentView, setCurrentView] = useState("home")
   const [isStudying, setIsStudying] = useState(false)
+  const [selectedClassName, setSelectedClassName] = useState<string>("")
   const [userData, setUserData] = useState<{
     name: string
     email: string
@@ -177,7 +179,29 @@ export default function App() {
             transition={{ duration: 0.3 }}
             className="col-span-4 row-span-4"
           >
-            <ClassPage onStudySetClick={handleStudySetClick} />
+            <ClassPage 
+              onStudySetClick={handleStudySetClick}
+              onStatisticsClick={(className) => {
+                setSelectedClassName(className)
+                setCurrentView("statistics")
+              }}
+            />
+          </motion.div>
+        )
+      case "statistics":
+        return (
+          <motion.div
+            key="statistics"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="col-span-4 row-span-4"
+          >
+            <ClassStatistics 
+              className={selectedClassName}
+              onBack={() => setCurrentView("class")}
+            />
           </motion.div>
         )
       case "folder":
@@ -251,7 +275,7 @@ export default function App() {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-background">
+      <div className="flex h-screen w-full">
         <AppSidebar 
           currentView={currentView} 
           onNavigate={handleNavigate} 
@@ -260,16 +284,16 @@ export default function App() {
           userEmail={userData.email || "guest@example.com"}
           onProfileClick={() => handleNavigate("profile")}
         />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <AppHeader />
-          <main className="flex-1 p-6 overflow-auto bg-background">
-            <div className="grid grid-cols-4 grid-rows-4 gap-6 h-full">
+        <SidebarInset className="flex-1">
+          <div className="flex flex-col h-full">
+            <AppHeader />
+            <main className="flex-1 p-6 grid grid-cols-4 grid-rows-4 gap-6">
               <AnimatePresence mode="wait">
                 {renderMainContent()}
               </AnimatePresence>
-            </div>
-          </main>
-        </div>
+            </main>
+          </div>
+        </SidebarInset>
       </div>
       <Toaster />
     </SidebarProvider>

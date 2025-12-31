@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "motion/react"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -26,7 +26,8 @@ import {
   ChevronRight,
   Plus,
   Filter,
-  Settings
+  Settings,
+  BarChart3,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -193,9 +194,10 @@ const classes = [
 
 interface ClassPageProps {
   onStudySetClick?: () => void
+  onStatisticsClick?: (className: string) => void
 }
 
-export function ClassPage({ onStudySetClick }: ClassPageProps) {
+export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedClass, setSelectedClass] = useState<number | null>(null)
@@ -273,6 +275,14 @@ export function ClassPage({ onStudySetClick }: ClassPageProps) {
                 <Button variant="outline" size="sm">
                   <UserPlus className="w-4 h-4 mr-2" />
                   Invite
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onStatisticsClick?.(cls.name)}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Statistics
                 </Button>
                 <Button variant="outline" size="sm">
                   <Settings className="w-4 h-4" />

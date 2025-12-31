@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/button"
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react"
