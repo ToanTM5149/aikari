@@ -20,6 +20,8 @@ export default [
   // Authenticated routes - cho user đã đăng nhập (với sidebar + header mới)
   layout("routes/_layouts/authenticated-layout.tsx", [
     route("dashboard", "routes/dashboard/home.tsx"),
+    route("dashboard/studysets", "routes/dashboard/studysets.tsx"),
+    route("dashboard/studysets/:studysetId", "routes/dashboard/studyset-detail.tsx"),
     route("dashboard/class", "routes/dashboard/class.tsx"),
     route("dashboard/class/:className/statistics", "routes/dashboard/class.$className.statistics.tsx"),
     route("create", "routes/dashboard/create.tsx"),

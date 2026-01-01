@@ -1,69 +1,154 @@
 /**
- * Shared Types
+ * Class & StudySet Types
  * 
- * File này chứa tất cả types dùng chung giữa các features
- * Đặt ở đây để tránh circular imports
+ * Types cho Class management và StudySet/Flashcard features
+ * Sync với backend models
  */
 
-/**
- * User Interface
- * 
- * Đại diện cho user trong hệ thống
- */
-export interface User {
+// ==================== ENUMS ====================
+
+export enum UserRole {
+  STUDENT = 'STUDENT',
+  TEACHER = 'TEACHER',
+  ADMIN = 'ADMIN',
+}
+
+export enum ClassRole {
+  OWNER = 'OWNER',
+  MEMBER = 'MEMBER',
+  CO_TEACHER = 'CO_TEACHER',
+}
+
+export enum ContentType {
+  DEFAULT = 'DEFAULT',
+  AI_GENERATED = 'AI_GENERATED',
+}
+
+// ==================== CLASS TYPES ====================
+
+export interface Class {
+  class_id: string;
+  class_name: string;
+  description?: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface ClassMember {
+  class_id: string;
   user_id: string;
-  username: string;
-  full_name: string;
-  email: string;
-  role: 'STUDENT' | 'TEACHER' | 'ADMIN';
-  phone_numbers?: string | null;
-  address?: string | null;
-  city?: string | null;
-  country?: string | null;
-  preferences?: Record<string, any> | null;
+  role: ClassRole;
+  joined_at: string;
+}
+
+export interface ClassCreate {
+  class_name: string;
+  description?: string;
+}
+
+export interface ClassUpdate {
+  class_name?: string;
+  description?: string;
+}
+
+export interface ClassesResponse {
+  data: Class[];
+  count: number;
+}
+
+export interface ClassMemberCreate {
+  user_id: string;
+  role?: ClassRole;
+}
+
+export interface ClassMemberUpdate {
+  role: ClassRole;
+}
+
+export interface ClassMembersResponse {
+  data: ClassMember[];
+  count: number;
+}
+
+// ==================== STUDYSET TYPES ====================
+
+export interface StudySet {
+  studyset_id: string;
+  title: string;
+  description?: string;
+  owner_id: string;
+  content_type: ContentType;
   created_at: string;
   updated_at: string;
 }
 
-/**
- * API Error Response Type
- * 
- * Cấu trúc error response từ backend
- */
-export interface ApiError {
-  detail: string;
-  status?: number;
-  data?: {
-    message: string;
-    errors?: Record<string, string[]>;
-  };
+export interface StudySetCreate {
+  title: string;
+  description?: string;
+  content_type?: ContentType;
 }
 
-/**
- * Token Response Type
- * 
- * Response từ login/register endpoint
- * 
- * ⚠️ SECURITY: refresh_token không còn trong response
- * Refresh token được lưu trong HTTP-only cookie bởi server
- */
-export interface TokenResponse {
-  access_token: string;
-  refresh_token?: string; // Deprecated - không còn được trả về
-  token_type?: string;
-  user: User;
+export interface StudySetUpdate {
+  title?: string;
+  description?: string;
+  content_type?: ContentType;
 }
 
-/**
- * API Request State Type
- * 
- * Generic type cho tracking API request status
- * Dùng cho RTK Query hoặc custom async thunks
- */
-export interface ApiRequestState<T = unknown> {
-  data: T | null;
-  loading: boolean;
-  error: string | null;
-  status: 'idle' | 'pending' | 'succeeded' | 'failed';
+export interface StudySetsResponse {
+  data: StudySet[];
+  count: number;
 }
 
+// ==================== TERM TYPES ====================
+
+export interface Term {
+  term_id: string;
+  studyset_id: string;
+  term_text: string;
+  definition: string;
+  example?: string;
+  category?: string;
+  subcategory?: string;
+  image_url?: string;
+  attributes?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TermCreate {
+  term_text: string;
+  definition: string;
+  example?: string;
+  category?: string;
+  subcategory?: string;
+  image_url?: string;
+  attributes?: Record<string, any>;
+}
+
+export interface TermUpdate {
+  term_text?: string;
+  definition?: string;
+  example?: string;
+  category?: string;
+  subcategory?: string;
+  image_url?: string;
+  attributes?: Record<string, any>;
+}
+
+export interface TermsResponse {
+  data: Term[];
+  count: number;
+}
+
+// ==================== API RESPONSE TYPES ====================
+
+export interface MessageResponse {
+  message: string;
+}
+
+// ==================== QUERY PARAMS ====================
+
+export interface PaginationParams {
+  skip?: number;
+  limit?: number;
+}

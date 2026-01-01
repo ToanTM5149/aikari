@@ -120,7 +120,7 @@ export const baseApi = createApi({
    * Tags dùng cho cache invalidation
    * Khi một mutation thành công, có thể invalidate tags để trigger refetch
    */
-  tagTypes: ['User', 'Class', 'Flashcard', 'Study'],
+  tagTypes: ['User', 'Class', 'Flashcard', 'Study', 'StudySet'],
   
   /**
    * Endpoints

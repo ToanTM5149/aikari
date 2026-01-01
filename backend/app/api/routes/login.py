@@ -6,11 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.crud.crud import (
-  authenticate,
-  get_user_by_email,
-  update_user,
-)
+from app import crud
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
 from app.core import security
 from app.core.config import settings
@@ -37,7 +33,7 @@ def login_access_token(
   OAuth2 compatible token login, get access token for future requests
   Refresh token được lưu trong HTTP-only cookie để bảo mật
   """
-  user = authenticate(
+  user = crud.authenticate(
     session=session, email=form_data.username, password=form_data.password
   )
   if not user:
@@ -260,7 +256,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
   """
   Password Recovery
   """
-  user = get_user_by_email(session=session, email=email)
+  user = crud.get_user_by_email(session=session, email=email)
 
   if not user:
     raise HTTPException(
@@ -287,7 +283,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
   email = verify_password_reset_token(token=body.token)
   if not email:
     raise HTTPException(status_code=400, detail="Invalid token")
-  user = get_user_by_email(session=session, email=email)
+  user = crud.get_user_by_email(session=session, email=email)
   if not user:
     raise HTTPException(
       status_code=404,
@@ -309,7 +305,7 @@ def recover_password_html_content(email: str, session: SessionDep) -> Any:
   """
   HTML Content for Password Recovery
   """
-  user = get_user_by_email(session=session, email=email)
+  user = crud.get_user_by_email(session=session, email=email)
 
   if not user:
     raise HTTPException(

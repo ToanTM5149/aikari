@@ -5,19 +5,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from app import crud
-from app.api.deps import CurrentUser, get_session
-from app.models.models import (
-    Class,
+from app.api.deps import CurrentUser, SessionDep
+from app.models import Class, ClassMember, ClassRole
+from app.schemas import (
     ClassCreate,
+    ClassMemberCreate,
+    ClassMemberPublic,
+    ClassMembersPublic,
+    ClassMemberUpdate,
     ClassPublic,
     ClassesPublic,
     ClassUpdate,
-    ClassMember,
-    ClassMemberCreate,
-    ClassMemberPublic,
-    ClassMemberUpdate,
     Message,
-    ClassRole,
 )
 
 router = APIRouter()
@@ -26,7 +25,7 @@ router = APIRouter()
 @router.get("/", response_model=ClassesPublic)
 def read_classes(
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
@@ -34,15 +33,15 @@ def read_classes(
     Retrieve classes where user is a member.
     """
     classes = crud.get_user_classes(
-        session=session, user_id=current_user.id, skip=skip, limit=limit
+        session=session, user_id=current_user.user_id, skip=skip, limit=limit
     )
     return ClassesPublic(data=classes, count=len(classes))
 
 
-@router.get("/owned", response_model=ClassesPublic)
+@router.get("/owned/", response_model=ClassesPublic)
 def read_owned_classes(
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
@@ -50,16 +49,16 @@ def read_owned_classes(
     Retrieve classes owned by current user.
     """
     classes = crud.get_classes_by_owner(
-        session=session, owner_id=current_user.id, skip=skip, limit=limit
+        session=session, owner_id=current_user.user_id, skip=skip, limit=limit
     )
     return ClassesPublic(data=classes, count=len(classes))
 
 
-@router.get("/{class_id}", response_model=ClassPublic)
+@router.get("/{class_id}/", response_model=ClassPublic)
 def read_class(
     class_id: uuid.UUID,
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
 ) -> Any:
     """
     Get class by ID.
@@ -70,7 +69,7 @@ def read_class(
     
     # Check if user is member or class is public
     membership = crud.get_user_class_membership(
-        session=session, class_id=class_id, user_id=current_user.id
+        session=session, class_id=class_id, user_id=current_user.user_id
     )
     if not membership and not class_obj.is_public:
         raise HTTPException(status_code=403, detail="Not enough permissions")
@@ -82,23 +81,23 @@ def read_class(
 def create_class(
     *,
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
     class_in: ClassCreate,
 ) -> Any:
     """
     Create new class.
     """
     class_obj = crud.create_class(
-        session=session, class_in=class_in, owner_id=current_user.id
+        session=session, class_in=class_in, owner_id=current_user.user_id
     )
     return class_obj
 
 
-@router.put("/{class_id}", response_model=ClassPublic)
+@router.put("/{class_id}/", response_model=ClassPublic)
 def update_class(
     *,
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
     class_id: uuid.UUID,
     class_in: ClassUpdate,
 ) -> Any:
@@ -111,7 +110,7 @@ def update_class(
     
     # Check if user is owner or admin
     membership = crud.get_user_class_membership(
-        session=session, class_id=class_id, user_id=current_user.id
+        session=session, class_id=class_id, user_id=current_user.user_id
     )
     if not membership or membership.role not in [ClassRole.owner, ClassRole.admin]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
@@ -120,11 +119,11 @@ def update_class(
     return class_obj
 
 
-@router.delete("/{class_id}", response_model=Message)
+@router.delete("/{class_id}/", response_model=Message)
 def delete_class(
     class_id: uuid.UUID,
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
 ) -> Any:
     """
     Delete a class.
@@ -132,25 +131,25 @@ def delete_class(
     class_obj = crud.get_class(session=session, class_id=class_id)
     if not class_obj:
         raise HTTPException(status_code=404, detail="Class not found")
-    if class_obj.owner_user_id != current_user.id:
+    if class_obj.owner_user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     crud.delete_class(session=session, class_id=class_id)
     return Message(message="Class deleted successfully")
 
 
-@router.get("/{class_id}/members")
+@router.get("/{class_id}/members/")
 def read_class_members(
     class_id: uuid.UUID,
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
 ) -> Any:
     """
     Get class members.
     """
     # Check if user is member
     membership = crud.get_user_class_membership(
-        session=session, class_id=class_id, user_id=current_user.id
+        session=session, class_id=class_id, user_id=current_user.user_id
     )
     if not membership:
         raise HTTPException(status_code=403, detail="Not enough permissions")
@@ -159,11 +158,11 @@ def read_class_members(
     return {"data": members, "count": len(members)}
 
 
-@router.post("/{class_id}/members", response_model=ClassMemberPublic)
+@router.post("/{class_id}/members/", response_model=ClassMemberPublic)
 def add_class_member(
     *,
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
     class_id: uuid.UUID,
     member_in: ClassMemberCreate,
 ) -> Any:
@@ -172,23 +171,23 @@ def add_class_member(
     """
     # Check if user is owner or admin
     membership = crud.get_user_class_membership(
-        session=session, class_id=class_id, user_id=current_user.id
+        session=session, class_id=class_id, user_id=current_user.user_id
     )
     if not membership or membership.role not in [ClassRole.owner, ClassRole.admin]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     member_in.class_id = class_id
     member = crud.create_class_member(
-        session=session, member_in=member_in, invited_by=current_user.id
+        session=session, member_in=member_in, invited_by=current_user.user_id
     )
     return member
 
 
-@router.put("/{class_id}/members/{member_id}", response_model=ClassMemberPublic)
+@router.put("/{class_id}/members/{member_id}/", response_model=ClassMemberPublic)
 def update_class_member(
     *,
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
     class_id: uuid.UUID,
     member_id: uuid.UUID,
     member_in: ClassMemberUpdate,
@@ -198,7 +197,7 @@ def update_class_member(
     """
     # Check if user is owner or admin
     membership = crud.get_user_class_membership(
-        session=session, class_id=class_id, user_id=current_user.id
+        session=session, class_id=class_id, user_id=current_user.user_id
     )
     if not membership or membership.role not in [ClassRole.owner, ClassRole.admin]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
@@ -211,19 +210,19 @@ def update_class_member(
     return member
 
 
-@router.delete("/{class_id}/members/{member_id}", response_model=Message)
+@router.delete("/{class_id}/members/{member_id}/", response_model=Message)
 def remove_class_member(
     class_id: uuid.UUID,
     member_id: uuid.UUID,
     current_user: CurrentUser,
-    session: Session = Depends(get_session),
+    session: SessionDep,
 ) -> Any:
     """
     Remove member from class.
     """
     # Check if user is owner or admin
     membership = crud.get_user_class_membership(
-        session=session, class_id=class_id, user_id=current_user.id
+        session=session, class_id=class_id, user_id=current_user.user_id
     )
     if not membership or membership.role not in [ClassRole.owner, ClassRole.admin]:
         raise HTTPException(status_code=403, detail="Not enough permissions")

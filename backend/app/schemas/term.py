@@ -15,8 +15,15 @@ class TermBase(SQLModel):
     attributes: dict[str, Any] | None = None
 
 
-class TermCreate(TermBase):
-    studyset_id: uuid.UUID
+class TermCreate(SQLModel):
+    # Không cần studyset_id vì đã có trong path parameter
+    term_text: str
+    definition: str
+    example: str | None = None
+    category: str | None = None
+    subcategory: str | None = None
+    image_url: str | None = None
+    attributes: dict[str, Any] | None = None
 
 
 class TermUpdate(SQLModel):

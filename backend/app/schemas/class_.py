@@ -1,0 +1,64 @@
+import uuid
+from datetime import datetime
+
+from sqlmodel import SQLModel
+
+from app.models.enums import ClassRole
+
+
+# Base schemas
+class ClassBase(SQLModel):
+    class_name: str
+    description: str | None = None
+
+
+class ClassMemberBase(SQLModel):
+    role: ClassRole = ClassRole.MEMBER
+
+
+# Create schemas
+class ClassCreate(ClassBase):
+    pass
+
+
+class ClassMemberCreate(ClassMemberBase):
+    user_id: uuid.UUID
+
+
+# Update schemas
+class ClassUpdate(SQLModel):
+    class_name: str | None = None
+    description: str | None = None
+
+
+class ClassMemberUpdate(SQLModel):
+    role: ClassRole | None = None
+
+
+# Public schemas (response models)
+class ClassPublic(ClassBase):
+    class_id: uuid.UUID
+    created_by: str
+    created_at: datetime
+    
+    model_config = {"from_attributes": True}
+
+
+class ClassMemberPublic(ClassMemberBase):
+    class_id: uuid.UUID
+    user_id: uuid.UUID
+    joined_at: datetime
+    
+    model_config = {"from_attributes": True}
+
+
+# List schemas
+class ClassesPublic(SQLModel):
+    data: list[ClassPublic]
+    count: int
+
+
+class ClassMembersPublic(SQLModel):
+    data: list[ClassMemberPublic]
+    count: int
+

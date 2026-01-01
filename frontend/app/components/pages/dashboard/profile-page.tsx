@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "motion/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { Button } from "~/components/ui/button"
@@ -23,8 +23,12 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Edit2,
+  Save,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useUpdateMeMutation, useUpdatePasswordMutation } from "~/redux/features/auth/api"
 
 interface ProfilePageProps {
   userData: {
@@ -46,6 +50,8 @@ interface ProfilePageProps {
 
 export function ProfilePage({ userData }: ProfilePageProps) {
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -56,7 +62,32 @@ export function ProfilePage({ userData }: ProfilePageProps) {
     new: false,
     confirm: false,
   })
-  const [isLoading, setIsLoading] = useState(false)
+  
+  // Form data for editing profile
+  const [formData, setFormData] = useState({
+    full_name: userData.fullName || "",
+    email: userData.email || "",
+    phone_numbers: userData.phone || "",
+    address: userData.address || "",
+    city: userData.city || "",
+    country: userData.state || "", // Using state as country for now
+  })
+  
+  // RTK Query mutations
+  const [updateMe, { isLoading: isUpdating }] = useUpdateMeMutation()
+  const [updatePassword, { isLoading: isUpdatingPassword }] = useUpdatePasswordMutation()
+  
+  // Sync formData with userData when userData changes (after successful update)
+  useEffect(() => {
+    setFormData({
+      full_name: userData.fullName || "",
+      email: userData.email || "",
+      phone_numbers: userData.phone || "",
+      address: userData.address || "",
+      city: userData.city || "",
+      country: userData.state || "",
+    })
+  }, [userData.fullName, userData.email, userData.phone, userData.address, userData.city, userData.state])
 
   const getInitials = (name: string) => {
     return name
@@ -75,37 +106,103 @@ export function ProfilePage({ userData }: ProfilePageProps) {
       return
     }
 
-    if (passwordData.newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters!")
+    if (passwordData.newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters!")
       return
     }
 
-    setIsLoading(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    toast.success("Password reset successfully!")
-    setIsLoading(false)
-    setIsResetPasswordOpen(false)
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    })
+    try {
+      await updatePassword({
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword,
+      }).unwrap()
+      
+      toast.success("Password updated successfully!")
+      setIsResetPasswordOpen(false)
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      })
+    } catch (error: any) {
+      toast.error(error?.data?.detail || "Failed to update password")
+    }
+  }
+  
+  const handleEditToggle = () => {
+    if (isEditMode) {
+      // Cancel edit - reset form data
+      setFormData({
+        full_name: userData.fullName || "",
+        email: userData.email || "",
+        phone_numbers: userData.phone || "",
+        address: userData.address || "",
+        city: userData.city || "",
+        country: userData.state || "",
+      })
+    }
+    setIsEditMode(!isEditMode)
+  }
+  
+  const handleSaveProfile = async () => {
+    try {
+      // Only send non-empty fields
+      const updateData: any = {}
+      if (formData.full_name) updateData.full_name = formData.full_name
+      if (formData.email) updateData.email = formData.email
+      if (formData.phone_numbers) updateData.phone_numbers = formData.phone_numbers
+      if (formData.address) updateData.address = formData.address
+      if (formData.city) updateData.city = formData.city
+      if (formData.country) updateData.country = formData.country
+      
+      await updateMe(updateData).unwrap()
+      
+      toast.success("Profile updated successfully!")
+      setIsEditMode(false)
+    } catch (error: any) {
+      toast.error(error?.data?.detail || "Failed to update profile")
+    }
   }
 
-  const InfoRow = ({ icon: Icon, label, value }: { icon: any, label: string, value?: string }) => (
-    <div className="flex items-start gap-4 py-3">
-      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
-        <Icon className="w-5 h-5" />
+  const InfoRow = ({ icon: Icon, label, value, fieldName }: { 
+    icon: any, 
+    label: string, 
+    value?: string,
+    fieldName?: keyof typeof formData 
+  }) => {
+    if (isEditMode && fieldName) {
+      return (
+        <div className="flex items-start gap-4 py-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+            <Icon className="w-5 h-5" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <Label htmlFor={fieldName} className="text-sm text-muted-foreground">
+              {label}
+            </Label>
+            <Input
+              id={fieldName}
+              value={formData[fieldName] || ""}
+              onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
+              placeholder={`Enter ${label.toLowerCase()}`}
+            />
+          </div>
+        </div>
+      )
+    }
+    
+    return (
+      <div className="flex items-start gap-4 py-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-foreground">{value || "Not provided"}</p>
+        </div>
       </div>
-      <div className="flex-1">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-foreground">{value || "Not provided"}</p>
-      </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="h-full overflow-auto">
@@ -153,16 +250,73 @@ export function ProfilePage({ userData }: ProfilePageProps) {
           transition={{ duration: 0.3, delay: 0.1 }}
         >
           <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>Your personal details and contact information</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>Your personal details and contact information</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                {isEditMode ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEditToggle}
+                      disabled={isUpdating}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveProfile}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full mr-2"
+                        />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditToggle}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-1">
-              <InfoRow icon={User} label="Full Name" value={userData.fullName || userData.name} />
+              <InfoRow 
+                icon={User} 
+                label="Full Name" 
+                value={userData.fullName || userData.name}
+                fieldName="full_name"
+              />
               <Separator />
-              <InfoRow icon={Mail} label="Email Address" value={userData.email} />
+              <InfoRow 
+                icon={Mail} 
+                label="Email Address" 
+                value={userData.email}
+                fieldName="email"
+              />
               <Separator />
-              <InfoRow icon={Phone} label="Phone Number" value={userData.phone} />
+              <InfoRow 
+                icon={Phone} 
+                label="Phone Number" 
+                value={userData.phone}
+                fieldName="phone_numbers"
+              />
               <Separator />
               <InfoRow 
                 icon={Calendar} 
@@ -191,11 +345,26 @@ export function ProfilePage({ userData }: ProfilePageProps) {
               <CardDescription>Your residential and school information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1">
-              <InfoRow icon={MapPin} label="Street Address" value={userData.address} />
+              <InfoRow 
+                icon={MapPin} 
+                label="Street Address" 
+                value={userData.address}
+                fieldName="address"
+              />
               <Separator />
-              <InfoRow icon={MapPin} label="City" value={userData.city} />
+              <InfoRow 
+                icon={MapPin} 
+                label="City" 
+                value={userData.city}
+                fieldName="city"
+              />
               <Separator />
-              <InfoRow icon={MapPin} label="State/Region" value={userData.state} />
+              <InfoRow 
+                icon={MapPin} 
+                label="State/Country" 
+                value={userData.state}
+                fieldName="country"
+              />
               <Separator />
               <InfoRow icon={MapPin} label="Zip Code" value={userData.zipCode} />
               <Separator />
@@ -319,12 +488,12 @@ export function ProfilePage({ userData }: ProfilePageProps) {
                 type="button"
                 variant="outline"
                 onClick={() => setIsResetPasswordOpen(false)}
-                disabled={isLoading}
+                disabled={isUpdatingPassword}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" disabled={isUpdatingPassword}>
+                {isUpdatingPassword ? (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}

@@ -4,12 +4,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import func, select
 
-from app.crud.crud import (
-  authenticate,
-  create_user as crud_create_user,
-  get_user_by_email,
-  update_user as crud_update_user,
-)
+from app import crud
 from app.api.deps import (
   CurrentUser,
   SessionDep,
@@ -62,14 +57,14 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
   """
   Create new user.
   """
-  user = get_user_by_email(session=session, email=user_in.email)
+  user = crud.get_user_by_email(session=session, email=user_in.email)
   if user:
     raise HTTPException(
       status_code=400,
       detail="The user with this email already exists in the system.",
     )
 
-  user = crud_create_user(session=session, user_create=user_in)
+  user = crud.create_user(session=session, user_create=user_in)
   if settings.emails_enabled and user_in.email:
     email_data = generate_new_account_email(
       email_to=user_in.email, username=user_in.email, password=user_in.password
@@ -91,8 +86,8 @@ def update_user_me(
   """
 
   if user_in.email:
-    existing_user = get_user_by_email(session=session, email=user_in.email)
-    if existing_user and existing_user.id != current_user.id:
+    existing_user = crud.get_user_by_email(session=session, email=user_in.email)
+    if existing_user and existing_user.user_id != current_user.user_id:
       raise HTTPException(
         status_code=409, detail="User with this email already exists"
       )
@@ -111,14 +106,14 @@ def update_password_me(
   """
   Update own password.
   """
-  if not verify_password(body.current_password, current_user.hashed_password):
+  if not verify_password(body.current_password, current_user.password):
     raise HTTPException(status_code=400, detail="Incorrect password")
   if body.current_password == body.new_password:
     raise HTTPException(
       status_code=400, detail="New password cannot be the same as the current one"
     )
   hashed_password = get_password_hash(body.new_password)
-  current_user.hashed_password = hashed_password
+  current_user.password = hashed_password
   session.add(current_user)
   session.commit()
   return Message(message="Password updated successfully")
@@ -157,7 +152,7 @@ def register_user(
   Returns access token and user info for immediate login.
   Refresh token được lưu trong HTTP-only cookie.
   """
-  user = get_user_by_email(session=session, email=user_in.email)
+  user = crud.get_user_by_email(session=session, email=user_in.email)
   if user:
     raise HTTPException(
       status_code=400,
@@ -170,7 +165,7 @@ def register_user(
     user_create_data["full_name"] = user_in.username
   
   user_create = UserCreate.model_validate(user_create_data)
-  user = crud_create_user(session=session, user_create=user_create)
+  user = crud.create_user(session=session, user_create=user_create)
   
   # Tạo access token và refresh token
   from datetime import timedelta
@@ -261,13 +256,13 @@ def update_user(
       detail="The user with this id does not exist in the system",
     )
   if user_in.email:
-    existing_user = get_user_by_email(session=session, email=user_in.email)
-    if existing_user and existing_user.id != user_id:
+    existing_user = crud.get_user_by_email(session=session, email=user_in.email)
+    if existing_user and existing_user.user_id != user_id:
       raise HTTPException(
         status_code=409, detail="User with this email already exists"
       )
 
-  db_user = crud_update_user(session=session, db_user=db_user, user_in=user_in)
+  db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
   return db_user
 
 

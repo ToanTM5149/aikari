@@ -68,3 +68,29 @@ export interface SetCredentialsPayload {
   user: User;
 }
 
+/**
+ * User Update Me Type
+ * 
+ * Data để update thông tin cá nhân
+ * User chỉ có thể update các field này, không thể thay đổi username hoặc role
+ */
+export interface UserUpdateMe {
+  full_name?: string;
+  email?: string;
+  phone_numbers?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  preferences?: Record<string, any>;
+}
+
+/**
+ * Update Password Type
+ * 
+ * Data để đổi mật khẩu
+ */
+export interface UpdatePassword {
+  current_password: string;
+  new_password: string;
+}
+

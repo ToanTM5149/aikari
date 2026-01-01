@@ -10,7 +10,7 @@ import {
   SidebarHeader,
 } from "~/components/ui/sidebar";
 import { Logo } from "~/components/ui/logo";
-import { Home, GraduationCap, BookOpen, LogOut, Plus } from "lucide-react";
+import { Home, GraduationCap, BookOpen, LogOut, Plus, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 
@@ -21,7 +21,12 @@ const menuItems = [
     id: "home",
   },
   {
-    title: "Class",
+    title: "My Study Sets",
+    icon: Layers,
+    id: "studysets",
+  },
+  {
+    title: "Classes",
     icon: GraduationCap,
     id: "class",
   },

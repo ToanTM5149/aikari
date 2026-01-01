@@ -10,9 +10,9 @@
  */
 
 import { baseApi } from '../../store/api/baseApi';
-import type { TokenResponse } from '../shared/types';
-import type { LoginCredentials, RegisterCredentials } from './types';
-import { setCredentials, logout, setLoading, setError } from './slice';
+import type { TokenResponse, User } from '../shared/types';
+import type { LoginCredentials, RegisterCredentials, UserUpdateMe, UpdatePassword } from './types';
+import { setCredentials, logout, setLoading, setError, updateUser } from './slice';
 
 /**
  * Auth API Endpoints
@@ -189,6 +189,63 @@ export const authApi = baseApi.injectEndpoints({
         }
       },
     }),
+    
+    /**
+     * Update Me
+     * 
+     * Cập nhật thông tin cá nhân của user hiện tại
+     * PATCH /users/me
+     */
+    updateMe: builder.mutation<User, UserUpdateMe>({
+      query: (data) => ({
+        url: '/users/me',
+        method: 'PATCH',
+        body: data,
+      }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
+        
+        try {
+          const { data } = await queryFulfilled;
+          
+          // Update user in auth state
+          dispatch(updateUser(data));
+        } catch (error: any) {
+          dispatch(setError(error?.data?.detail || 'Failed to update profile'));
+        } finally {
+          dispatch(setLoading(false));
+        }
+      },
+      // Invalidate user queries to refetch
+      invalidatesTags: ['User'],
+    }),
+    
+    /**
+     * Update Password
+     * 
+     * Đổi mật khẩu của user hiện tại
+     * PATCH /users/me/password
+     */
+    updatePassword: builder.mutation<{ message: string }, UpdatePassword>({
+      query: (data) => ({
+        url: '/users/me/password',
+        method: 'PATCH',
+        body: data,
+      }),
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
+        
+        try {
+          await queryFulfilled;
+        } catch (error: any) {
+          dispatch(setError(error?.data?.detail || 'Failed to update password'));
+        } finally {
+          dispatch(setLoading(false));
+        }
+      },
+    }),
   }),
 });
 
@@ -204,5 +261,7 @@ export const {
   useLogoutMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useUpdateMeMutation,
+  useUpdatePasswordMutation,
 } = authApi;
 

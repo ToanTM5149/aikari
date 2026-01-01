@@ -44,6 +44,20 @@ from app.schemas.test import (
     TestUpdate,
 )
 
+# Class Schemas
+from app.schemas.class_ import (
+    ClassBase,
+    ClassCreate,
+    ClassMemberBase,
+    ClassMemberCreate,
+    ClassMemberPublic,
+    ClassMembersPublic,
+    ClassMemberUpdate,
+    ClassPublic,
+    ClassesPublic,
+    ClassUpdate,
+)
+
 __all__ = [
     # Common Schemas
     "Message",
@@ -76,5 +90,16 @@ __all__ = [
     "TestCreate",
     "TestUpdate",
     "TestPublic",
+    # Class Schemas
+    "ClassBase",
+    "ClassCreate",
+    "ClassUpdate",
+    "ClassPublic",
+    "ClassesPublic",
+    "ClassMemberBase",
+    "ClassMemberCreate",
+    "ClassMemberUpdate",
+    "ClassMemberPublic",
+    "ClassMembersPublic",
 ]
 

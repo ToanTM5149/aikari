@@ -5,7 +5,7 @@ export default function HomePageRoute() {
   const navigate = useNavigate()
 
   const handleStudySetClick = () => {
-    navigate("/flashcard")
+    navigate("/dashboard/studysets")
   }
 
   return <HomePage onStudySetClick={handleStudySetClick} />
