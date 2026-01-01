@@ -22,6 +22,7 @@ export default [
     route("dashboard", "routes/dashboard/home.tsx"),
     route("dashboard/studysets", "routes/dashboard/studysets.tsx"),
     route("dashboard/studysets/:studysetId", "routes/dashboard/studyset-detail.tsx"),
+    route("dashboard/studysets/:studysetId/study", "routes/dashboard/study-mode.tsx"),
     route("dashboard/class", "routes/dashboard/class.tsx"),
     route("dashboard/class/:className/statistics", "routes/dashboard/class.$className.statistics.tsx"),
     route("create", "routes/dashboard/create.tsx"),

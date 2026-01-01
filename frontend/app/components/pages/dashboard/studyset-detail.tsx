@@ -20,6 +20,8 @@ import {
   Edit2,
   AlertCircle,
   Loader2,
+  BookOpen,
+  Edit,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -42,6 +44,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import { Skeleton } from "~/components/ui/skeleton";
 
 interface TermInput {
@@ -81,6 +91,16 @@ export function StudySetDetail() {
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
   const [editingTerms, setEditingTerms] = useState<TermInput[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Edit single term dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingTerm, setEditingTerm] = useState<{
+    term_id: string;
+    term_text: string;
+    definition: string;
+    example?: string;
+    category?: string;
+  } | null>(null);
 
   // Initialize editing terms from API data
   const initializeEditMode = () => {
@@ -218,6 +238,47 @@ export function StudySetDetail() {
       return error.data.message;
     }
     return "Đã xảy ra lỗi";
+  };
+
+  // Open edit dialog for single term
+  const openEditDialog = (term: any) => {
+    setEditingTerm({
+      term_id: term.term_id,
+      term_text: term.term_text,
+      definition: term.definition,
+      example: term.example || "",
+      category: term.category || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Save single term from dialog
+  const handleSaveSingleTermDialog = async () => {
+    if (!editingTerm) return;
+
+    if (!editingTerm.term_text.trim() || !editingTerm.definition.trim()) {
+      toast.error("Vui lòng điền đầy đủ thuật ngữ và định nghĩa");
+      return;
+    }
+
+    try {
+      await updateTerm({
+        studysetId: studysetId!,
+        termId: editingTerm.term_id,
+        data: {
+          term_text: editingTerm.term_text,
+          definition: editingTerm.definition,
+          example: editingTerm.example || undefined,
+          category: editingTerm.category || undefined,
+        },
+      }).unwrap();
+      toast.success("Đã cập nhật flashcard!");
+      setEditDialogOpen(false);
+      setEditingTerm(null);
+    } catch (error: any) {
+      const errorMsg = getErrorMessage(error);
+      toast.error(errorMsg);
+    }
   };
 
   const updateTermInput = (
@@ -389,6 +450,15 @@ export function StudySetDetail() {
               {!isEditing && (
                 <>
                   <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => navigate(`/dashboard/studysets/${studysetId}/study`)}
+                    disabled={!termsData?.data || termsData.data.length === 0}
+                  >
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Học
+                  </Button>
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setPreviewMode(!previewMode)}
@@ -407,7 +477,7 @@ export function StudySetDetail() {
                   </Button>
                   <Button size="sm" onClick={initializeEditMode}>
                     <Edit2 className="w-4 h-4 mr-2" />
-                    Chỉnh sửa
+                    Chỉnh sửa tất cả
                   </Button>
                 </>
               )}
@@ -825,6 +895,15 @@ export function StudySetDetail() {
                                 )}
                               </div>
                             </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(term)}
+                              className="shrink-0"
+                              title="Chỉnh sửa"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -846,6 +925,99 @@ export function StudySetDetail() {
           </AnimatePresence>
         </CardContent>
       </Card>
+
+      {/* Edit Term Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa Flashcard</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin cho flashcard này
+            </DialogDescription>
+          </DialogHeader>
+          {editingTerm && (
+            <div className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="edit-category">Danh mục (tùy chọn)</Label>
+                <Input
+                  id="edit-category"
+                  placeholder="VD: Toán học, Lịch sử..."
+                  value={editingTerm.category || ""}
+                  onChange={(e) =>
+                    setEditingTerm({ ...editingTerm, category: e.target.value })
+                  }
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-term">
+                  Thuật ngữ / Câu hỏi <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="edit-term"
+                  placeholder="Nhập thuật ngữ hoặc câu hỏi..."
+                  value={editingTerm.term_text}
+                  onChange={(e) =>
+                    setEditingTerm({ ...editingTerm, term_text: e.target.value })
+                  }
+                  className="mt-2 min-h-[100px]"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-definition">
+                  Định nghĩa / Câu trả lời <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="edit-definition"
+                  placeholder="Nhập định nghĩa hoặc câu trả lời..."
+                  value={editingTerm.definition}
+                  onChange={(e) =>
+                    setEditingTerm({ ...editingTerm, definition: e.target.value })
+                  }
+                  className="mt-2 min-h-[100px]"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-example">Ví dụ (tùy chọn)</Label>
+                <Textarea
+                  id="edit-example"
+                  placeholder="Nhập ví dụ để minh họa..."
+                  value={editingTerm.example || ""}
+                  onChange={(e) =>
+                    setEditingTerm({ ...editingTerm, example: e.target.value })
+                  }
+                  className="mt-2 min-h-[60px]"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={updating}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleSaveSingleTermDialog}
+              disabled={updating || !editingTerm?.term_text.trim() || !editingTerm?.definition.trim()}
+            >
+              {updating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Đang lưu...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Lưu thay đổi
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* CSS for backface visibility */}
       <style>{`
