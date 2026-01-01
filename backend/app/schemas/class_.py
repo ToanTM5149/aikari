@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlmodel import SQLModel
 
-from app.models.enums import ClassRole
+from app.models.enums import ClassRole, MembershipStatus
 
 
 # Base schemas
@@ -16,6 +16,7 @@ class ClassBase(SQLModel):
 
 class ClassMemberBase(SQLModel):
     role: ClassRole = ClassRole.MEMBER
+    status: MembershipStatus = MembershipStatus.PENDING
 
 
 # Create schemas
@@ -37,6 +38,7 @@ class ClassUpdate(SQLModel):
 
 class ClassMemberUpdate(SQLModel):
     role: ClassRole | None = None
+    status: MembershipStatus | None = None
 
 
 # Public schemas (response models)
@@ -54,6 +56,9 @@ class ClassMemberPublic(ClassMemberBase):
     class_id: uuid.UUID
     user_id: uuid.UUID
     joined_at: datetime
+    invited_by: uuid.UUID | None = None
+    approved_at: datetime | None = None
+    user: "UserPublic | None" = None  # Nested user info
     
     model_config = {"from_attributes": True}
 
@@ -67,4 +72,13 @@ class ClassesPublic(SQLModel):
 class ClassMembersPublic(SQLModel):
     data: list[ClassMemberPublic]
     count: int
+
+
+# User info for nested relationship
+class UserPublic(SQLModel):
+    user_id: uuid.UUID
+    username: str
+    email: str
+    
+    model_config = {"from_attributes": True}
 

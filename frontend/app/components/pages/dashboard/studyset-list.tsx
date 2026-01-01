@@ -17,6 +17,7 @@ import {
   Clock,
   FileText,
   Layers,
+  Play,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -217,21 +218,17 @@ export function StudySetList() {
                       transition={{ delay: index * 0.05 }}
                     >
                       <Card
-                        className="cursor-pointer hover:shadow-md transition-all group"
+                        className="cursor-pointer hover:shadow-lg transition-all group overflow-hidden"
                         onClick={() => handleViewDetail(studySet.studyset_id)}
                       >
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <Layers className="w-5 h-5 text-primary" />
-                              </div>
-                              <div className="min-w-0">
-                                <h3 className="font-semibold truncate">{studySet.title}</h3>
-                                <Badge variant="outline" className="mt-1">
-                                  {studySet.content_type}
-                                </Badge>
-                              </div>
+                        <CardContent className="p-6 space-y-4">
+                          {/* Header */}
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-lg truncate mb-2">{studySet.title}</h3>
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {studySet.description || "No description"}
+                              </p>
                             </div>
                             <div onClick={(e) => e.stopPropagation()}>
                               <DropdownMenu>
@@ -264,18 +261,56 @@ export function StudySetList() {
                             </div>
                           </div>
 
-                          {studySet.description && (
-                            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                              {studySet.description}
-                            </p>
-                          )}
-
-                          <div className="flex items-center justify-between text-sm text-muted-foreground pt-4 border-t border-border">
+                          {/* Metadata */}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <Badge variant="secondary" className="rounded-full">
+                              {studySet.content_type}
+                            </Badge>
+                            <span className="flex items-center gap-1">
+                              <BookOpen className="w-4 h-4" />
+                              {studySet.content_type === 'FLASHCARD' ? '25 cards' : '0 cards'}
+                            </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {new Date(studySet.created_at).toLocaleDateString()}
+                              {(() => {
+                                const now = new Date()
+                                const created = new Date(studySet.created_at)
+                                const diffHours = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60))
+                                if (diffHours < 1) return 'Just now'
+                                if (diffHours < 24) return `${diffHours} hours ago`
+                                const diffDays = Math.floor(diffHours / 24)
+                                return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+                              })()}
                             </span>
                           </div>
+
+                          {/* Progress */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Progress</span>
+                              <span className="font-medium">80%</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                              <motion.div 
+                                className="bg-foreground rounded-full h-2"
+                                initial={{ width: 0 }}
+                                animate={{ width: "80%" }}
+                                transition={{ delay: index * 0.05 + 0.2, duration: 0.6, ease: "easeOut" }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Continue Button */}
+                          <Button 
+                            className="w-full bg-foreground hover:bg-foreground/90 text-background"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleViewDetail(studySet.studyset_id)
+                            }}
+                          >
+                            <Play className="w-4 h-4 mr-2" />
+                            Continue Studying
+                          </Button>
                         </CardContent>
                       </Card>
                     </motion.div>

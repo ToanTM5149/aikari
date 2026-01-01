@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.models.enums import ClassRole
+from app.models.enums import ClassRole, MembershipStatus
 
 
 class Class(SQLModel, table=True):
@@ -33,11 +33,17 @@ class ClassMember(SQLModel, table=True):
     class_id: uuid.UUID = Field(foreign_key="Class.class_id", primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="User.user_id", primary_key=True)
     role: ClassRole = Field(default=ClassRole.MEMBER)
+    status: MembershipStatus = Field(default=MembershipStatus.PENDING)
+    invited_by: uuid.UUID | None = Field(default=None, foreign_key="User.user_id")  # Who invited/approved
     joined_at: datetime = Field(default_factory=datetime.utcnow)
+    approved_at: datetime | None = Field(default=None)  # When approved
     
     # Relationships - use sa_relationship_kwargs to avoid 'class' keyword conflict
     class_obj: "Class" = Relationship(back_populates="members", sa_relationship_kwargs={"foreign_keys": "[ClassMember.class_id]"})
-    user: "User" = Relationship(back_populates="class_memberships")
+    user: "User" = Relationship(
+        back_populates="class_memberships",
+        sa_relationship_kwargs={"foreign_keys": "[ClassMember.user_id]"}
+    )
     
     __table_args__ = (
         Index("ix_classmember_user_class", "user_id", "class_id"),

@@ -6,7 +6,7 @@ from sqlmodel import Session, select, or_
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
-from app.models import Class, ClassMember, ClassRole, User
+from app.models import Class, ClassMember, ClassRole, MembershipStatus, User
 from app.schemas import (
     ClassCreate,
     ClassMemberCreate,
@@ -213,23 +213,29 @@ def read_class_members(
     class_id: uuid.UUID,
     current_user: CurrentUser,
     session: SessionDep,
+    status: str = Query("ACTIVE", description="Filter by status"),
 ) -> Any:
     """
-    Get class members.
+    Get class members, default ACTIVE only.
+    Owner/Co-Teacher can see all statuses.
     """
     # Check if user is member
     membership = crud.get_user_class_membership(
         session=session, class_id=class_id, user_id=current_user.user_id
     )
-    if not membership:
+    if not membership or membership.status != MembershipStatus.ACTIVE:
+        raise HTTPException(status_code=403, detail="Not a member of this class")
+    
+    # Only owner/co-teacher can see non-active members
+    if status != "ACTIVE" and membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    members = crud.get_class_members(session=session, class_id=class_id)
+    members = crud.get_class_members(session=session, class_id=class_id, status=status)
     return {"data": members, "count": len(members)}
 
 
 @router.post("/{class_id}/members/", response_model=ClassMemberPublic)
-def add_class_member(
+def invite_member(
     *,
     current_user: CurrentUser,
     session: SessionDep,
@@ -237,18 +243,43 @@ def add_class_member(
     member_in: ClassMemberCreate,
 ) -> Any:
     """
-    Add member to class.
+    Owner/Co-Teacher invites a user to class.
+    Creates INVITED membership that user must accept.
     """
-    # Check if user is owner or admin
+    # Check if user is owner or co-teacher
     membership = crud.get_user_class_membership(
         session=session, class_id=class_id, user_id=current_user.user_id
     )
-    if not membership or membership.role not in [ClassRole.owner, ClassRole.admin]:
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    member_in.class_id = class_id
+    # Check if user already exists
+    existing = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=member_in.user_id
+    )
+    if existing:
+        if existing.status == MembershipStatus.ACTIVE:
+            raise HTTPException(status_code=400, detail="User already a member")
+        elif existing.status == MembershipStatus.INVITED:
+            raise HTTPException(status_code=400, detail="User already invited")
+        elif existing.status == MembershipStatus.PENDING:
+            # If pending request exists, approve it directly
+            from datetime import datetime
+            existing.status = MembershipStatus.ACTIVE
+            existing.approved_at = datetime.utcnow()
+            existing.invited_by = current_user.user_id
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            return existing
+    
+    # Create invited membership
     member = crud.create_class_member(
-        session=session, member_in=member_in, invited_by=current_user.user_id
+        session=session,
+        member_in=member_in,
+        class_id=class_id,
+        invited_by=current_user.user_id,
+        status="INVITED"
     )
     return member
 
@@ -263,17 +294,21 @@ def update_class_member(
     member_in: ClassMemberUpdate,
 ) -> Any:
     """
-    Update class member.
+    Update class member role or status.
+    Owner/Co-Teacher only.
     """
-    # Check if user is owner or admin
+    # Check if user is owner or co-teacher
     membership = crud.get_user_class_membership(
         session=session, class_id=class_id, user_id=current_user.user_id
     )
-    if not membership or membership.role not in [ClassRole.owner, ClassRole.admin]:
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    member = session.get(ClassMember, member_id)
-    if not member or member.class_id != class_id:
+    # Get member by class_id and member_id (user_id)
+    member = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=member_id
+    )
+    if not member:
         raise HTTPException(status_code=404, detail="Member not found")
     
     member = crud.update_class_member(session=session, db_member=member, member_in=member_in)
@@ -289,19 +324,29 @@ def remove_class_member(
 ) -> Any:
     """
     Remove member from class.
+    Owner/Co-Teacher only.
     """
-    # Check if user is owner or admin
+    # Check if user is owner or co-teacher
     membership = crud.get_user_class_membership(
         session=session, class_id=class_id, user_id=current_user.user_id
     )
-    if not membership or membership.role not in [ClassRole.owner, ClassRole.admin]:
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    member = session.get(ClassMember, member_id)
-    if not member or member.class_id != class_id:
+    # Get member to remove
+    member = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=member_id
+    )
+    if not member:
         raise HTTPException(status_code=404, detail="Member not found")
     
-    crud.delete_class_member(session=session, member_id=member_id)
+    # Cannot remove owner
+    if member.role == ClassRole.OWNER:
+        raise HTTPException(status_code=400, detail="Cannot remove class owner")
+    
+    crud.delete_class_member_by_user_and_class(
+        session=session, user_id=member_id, class_id=class_id
+    )
     return Message(message="Member removed successfully")
 
 
@@ -312,39 +357,54 @@ def join_class(
     session: SessionDep,
 ) -> Any:
     """
-    Student joins a public class.
-    Class must be public or user must have the class code.
+    Student requests to join a class.
+    Creates PENDING membership for approval, or accepts INVITED if already invited.
     """
     # Get class
     class_obj = crud.get_class(session=session, class_id=class_id)
     if not class_obj:
         raise HTTPException(status_code=404, detail="Class not found")
     
-    # Check if class is public
-    if not class_obj.is_public:
-        raise HTTPException(
-            status_code=403, 
-            detail="This class is not public. You need an invitation from the teacher."
-        )
-    
     # Check if user is already a member
-    existing_membership = crud.get_user_class_membership(
+    existing = crud.get_user_class_membership(
         session=session, class_id=class_id, user_id=current_user.user_id
     )
-    if existing_membership:
-        raise HTTPException(status_code=400, detail="You are already a member of this class")
     
-    # Create membership with MEMBER role
+    if existing:
+        if existing.status == MembershipStatus.ACTIVE:
+            raise HTTPException(status_code=400, detail="Already a member")
+        elif existing.status == MembershipStatus.PENDING:
+            raise HTTPException(status_code=400, detail="Join request already pending")
+        elif existing.status == MembershipStatus.INVITED:
+            # If invited, accept invitation directly
+            from datetime import datetime
+            existing.status = MembershipStatus.ACTIVE
+            existing.approved_at = datetime.utcnow()
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            return existing
+    
+    # Check if class is public (private classes need invitation)
+    if not class_obj.is_public:
+        raise HTTPException(
+            status_code=403,
+            detail="This class is private. You need an invitation to join."
+        )
+    
+    # Create PENDING membership
     member_in = ClassMemberCreate(
         user_id=current_user.user_id,
-        role=ClassRole.MEMBER
+        role=ClassRole.MEMBER,
+        status=MembershipStatus.PENDING
     )
-    member_in.class_id = class_id
     
     member = crud.create_class_member(
-        session=session, 
-        member_in=member_in, 
-        invited_by=class_obj.owner_user_id
+        session=session,
+        member_in=member_in,
+        class_id=class_id,
+        invited_by=current_user.user_id,  # Self-requested
+        status="PENDING"
     )
     
     return member
@@ -387,3 +447,130 @@ def leave_class(
         session.commit()
     
     return Message(message="You have left the class successfully")
+
+
+# ==================== APPROVAL SYSTEM ENDPOINTS ====================
+
+@router.get("/{class_id}/pending/", response_model=ClassMembersPublic)
+def read_pending_requests(
+    class_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Get pending join requests for this class.
+    Only owner/co-teacher can access.
+    """
+    # Check permission
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    pending = crud.get_pending_requests(session=session, class_id=class_id)
+    return ClassMembersPublic(data=pending, count=len(pending))
+
+
+@router.get("/{class_id}/invitations/", response_model=ClassMembersPublic)
+def read_invitations(
+    class_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Get pending invitations for this class.
+    Only owner/co-teacher can access.
+    """
+    # Check permission
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    invitations = crud.get_invitations(session=session, class_id=class_id)
+    return ClassMembersPublic(data=invitations, count=len(invitations))
+
+
+@router.post("/{class_id}/members/{user_id}/approve/", response_model=ClassMemberPublic)
+def approve_member(
+    class_id: uuid.UUID,
+    user_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Approve a pending join request or invitation.
+    Owner/Co-Teacher only.
+    """
+    # Check permission
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Get pending member
+    pending_member = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=user_id
+    )
+    if not pending_member:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if pending_member.status not in [MembershipStatus.PENDING, MembershipStatus.INVITED]:
+        raise HTTPException(status_code=400, detail="Not a pending request or invitation")
+    
+    # Approve
+    from app.schemas import ClassMemberUpdate
+    update_data = ClassMemberUpdate(status=MembershipStatus.ACTIVE)
+    updated = crud.update_class_member(
+        session=session,
+        db_member=pending_member,
+        member_in=update_data
+    )
+    
+    # Set who approved
+    updated.invited_by = current_user.user_id
+    session.add(updated)
+    session.commit()
+    session.refresh(updated)
+    
+    return updated
+
+
+@router.post("/{class_id}/members/{user_id}/reject/", response_model=Message)
+def reject_member(
+    class_id: uuid.UUID,
+    user_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Reject a pending join request or invitation.
+    Owner/Co-Teacher only.
+    """
+    # Check permission
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Get pending member
+    pending_member = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=user_id
+    )
+    if not pending_member:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if pending_member.status not in [MembershipStatus.PENDING, MembershipStatus.INVITED]:
+        raise HTTPException(status_code=400, detail="Not a pending request or invitation")
+    
+    # Delete the request/invitation
+    crud.delete_class_member_by_user_and_class(
+        session=session, user_id=user_id, class_id=class_id
+    )
+    
+    return Message(message="Request rejected successfully")
+

@@ -38,11 +38,21 @@ export interface Class {
   updated_at: string;
 }
 
+export type MembershipStatus = 'ACTIVE' | 'PENDING' | 'INVITED' | 'REJECTED' | 'LEFT';
+
 export interface ClassMember {
   class_id: string;
   user_id: string;
   role: ClassRole;
+  status: MembershipStatus;
   joined_at: string;
+  invited_by?: string;
+  approved_at?: string;
+  user?: {
+    user_id: string;
+    username: string;
+    email: string;
+  };
 }
 
 export interface ClassCreate {
@@ -67,10 +77,12 @@ export interface ClassesResponse {
 export interface ClassMemberCreate {
   user_id: string;
   role?: ClassRole;
+  status?: MembershipStatus;
 }
 
 export interface ClassMemberUpdate {
-  role: ClassRole;
+  role?: ClassRole;
+  status?: MembershipStatus;
 }
 
 export interface ClassMembersResponse {

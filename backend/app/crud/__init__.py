@@ -21,6 +21,9 @@ from .crud import (
     create_class_member,
     delete_class_member,
     get_class_members,
+    get_invitations,
+    get_pending_requests,
+    get_user_invitations,
     update_class_member,
     # StudySet CRUD
     create_studyset,
@@ -57,6 +60,9 @@ __all__ = [
     "create_class_member",
     "delete_class_member",
     "get_class_members",
+    "get_invitations",
+    "get_pending_requests",
+    "get_user_invitations",
     "update_class_member",
     # StudySet
     "create_studyset",

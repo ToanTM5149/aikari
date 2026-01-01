@@ -1,6 +1,7 @@
 import uuid
 from typing import Any
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
@@ -106,11 +107,14 @@ def create_class(*, session: Session, class_in: ClassCreate, owner_id: uuid.UUID
   session.commit()
   session.refresh(db_obj)
   
-  # Auto-add owner as member with OWNER role
+  # Auto-add owner as member with OWNER role and ACTIVE status
+  from app.models.enums import MembershipStatus
   member = ClassMember(
     class_id=db_obj.class_id,
     user_id=owner_id,
-    role="OWNER"
+    role="OWNER",
+    status=MembershipStatus.ACTIVE,
+    invited_by=owner_id  # Owner invited themselves
   )
   session.add(member)
   session.commit()
@@ -148,11 +152,13 @@ def delete_class(*, session: Session, class_id: uuid.UUID) -> None:
 def get_user_classes(
     *, session: Session, user_id: uuid.UUID, skip: int = 0, limit: int = 100
 ) -> list[Class]:
-  """Get all classes where user is a member"""
+  """Get all classes where user is an ACTIVE member"""
+  from app.models.enums import MembershipStatus
   statement = (
     select(Class)
     .join(ClassMember)
     .where(ClassMember.user_id == user_id)
+    .where(ClassMember.status == MembershipStatus.ACTIVE)  # Only ACTIVE members
     .offset(skip)
     .limit(limit)
   )
@@ -162,12 +168,14 @@ def get_user_classes(
 def get_classes_by_owner(
     *, session: Session, owner_id: uuid.UUID, skip: int = 0, limit: int = 100
 ) -> list[Class]:
-  """Get all classes owned by user"""
+  """Get all classes owned by user (owner is always ACTIVE)"""
+  from app.models.enums import MembershipStatus
   statement = (
     select(Class)
     .join(ClassMember)
     .where(ClassMember.user_id == owner_id)
     .where(ClassMember.role == "OWNER")
+    .where(ClassMember.status == MembershipStatus.ACTIVE)  # Redundant but explicit
     .offset(skip)
     .limit(limit)
   )
@@ -187,17 +195,61 @@ def get_user_class_membership(
   return session.exec(statement).first()
 
 
-def get_class_members(*, session: Session, class_id: uuid.UUID) -> list[ClassMember]:
-  """Get all members of a class"""
-  statement = select(ClassMember).where(ClassMember.class_id == class_id)
+def get_class_members(*, session: Session, class_id: uuid.UUID, status: str | None = None) -> list[ClassMember]:
+  """Get all members of a class, optionally filtered by status"""
+  statement = select(ClassMember).where(ClassMember.class_id == class_id).options(
+    selectinload(ClassMember.user)  # Eager load user relationship
+  )
+  if status:
+    from app.models.enums import MembershipStatus
+    statement = statement.where(ClassMember.status == MembershipStatus(status))
+  return list(session.exec(statement).all())
+
+
+def get_pending_requests(*, session: Session, class_id: uuid.UUID) -> list[ClassMember]:
+  """Get pending join requests for a class"""
+  from app.models.enums import MembershipStatus
+  statement = select(ClassMember).where(
+    ClassMember.class_id == class_id,
+    ClassMember.status == MembershipStatus.PENDING
+  ).options(
+    selectinload(ClassMember.user)  # Eager load user relationship
+  )
+  return list(session.exec(statement).all())
+
+
+def get_invitations(*, session: Session, class_id: uuid.UUID) -> list[ClassMember]:
+  """Get pending invitations for a class"""
+  from app.models.enums import MembershipStatus
+  statement = select(ClassMember).where(
+    ClassMember.class_id == class_id,
+    ClassMember.status == MembershipStatus.INVITED
+  ).options(
+    selectinload(ClassMember.user)  # Eager load user relationship
+  )
+  return list(session.exec(statement).all())
+
+
+def get_user_invitations(*, session: Session, user_id: uuid.UUID) -> list[ClassMember]:
+  """Get all class invitations for a user"""
+  from app.models.enums import MembershipStatus
+  statement = select(ClassMember).where(
+    ClassMember.user_id == user_id,
+    ClassMember.status == MembershipStatus.INVITED
+  ).options(
+    selectinload(ClassMember.class_obj)  # Eager load class relationship
+  )
   return list(session.exec(statement).all())
 
 
 def create_class_member(
-    *, session: Session, member_in: ClassMemberCreate, invited_by: uuid.UUID
+    *, session: Session, member_in: ClassMemberCreate, class_id: uuid.UUID, invited_by: uuid.UUID, status: str = "PENDING"
 ) -> ClassMember:
-  """Add member to class"""
-  db_obj = ClassMember.model_validate(member_in)
+  """Add member to class with status"""
+  from app.models.enums import MembershipStatus
+  db_obj = ClassMember.model_validate(member_in, update={"class_id": class_id})
+  db_obj.invited_by = invited_by
+  db_obj.status = MembershipStatus(status)
   session.add(db_obj)
   session.commit()
   session.refresh(db_obj)
@@ -208,7 +260,13 @@ def update_class_member(
     *, session: Session, db_member: ClassMember, member_in: ClassMemberUpdate
 ) -> ClassMember:
   """Update class member"""
+  from datetime import datetime
   member_data = member_in.model_dump(exclude_unset=True)
+  
+  # If status is being changed to ACTIVE, set approved_at
+  if "status" in member_data and member_data["status"] == "ACTIVE":
+    db_member.approved_at = datetime.utcnow()
+  
   db_member.sqlmodel_update(member_data)
   session.add(db_member)
   session.commit()

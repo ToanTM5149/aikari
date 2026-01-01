@@ -214,6 +214,60 @@ export const classApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Class'],
     }),
+    
+    /**
+     * Get Pending Requests - Lấy danh sách join requests chờ approve
+     * GET /classes/{class_id}/pending
+     */
+    getPendingRequests: builder.query<ClassMembersResponse, string>({
+      query: (classId) => `/classes/${classId}/pending/`,
+      providesTags: (result, error, classId) => [
+        { type: 'Class', id: `${classId}-pending` },
+      ],
+    }),
+    
+    /**
+     * Get Invitations - Lấy danh sách người được mời chưa accept
+     * GET /classes/{class_id}/invitations
+     */
+    getInvitations: builder.query<ClassMembersResponse, string>({
+      query: (classId) => `/classes/${classId}/invitations/`,
+      providesTags: (result, error, classId) => [
+        { type: 'Class', id: `${classId}-invitations` },
+      ],
+    }),
+    
+    /**
+     * Approve Member - Approve join request hoặc accept invitation
+     * POST /classes/{class_id}/members/{user_id}/approve
+     */
+    approveMember: builder.mutation<ClassMember, { classId: string; userId: string }>({
+      query: ({ classId, userId }) => ({
+        url: `/classes/${classId}/members/${userId}/approve/`,
+        method: 'POST',
+      }),
+      invalidatesTags: (result, error, { classId }) => [
+        { type: 'Class', id: `${classId}-members` },
+        { type: 'Class', id: `${classId}-pending` },
+        { type: 'Class', id: `${classId}-invitations` },
+        'Class',
+      ],
+    }),
+    
+    /**
+     * Reject Member - Reject join request hoặc invitation
+     * POST /classes/{class_id}/members/{user_id}/reject
+     */
+    rejectMember: builder.mutation<MessageResponse, { classId: string; userId: string }>({
+      query: ({ classId, userId }) => ({
+        url: `/classes/${classId}/members/${userId}/reject/`,
+        method: 'POST',
+      }),
+      invalidatesTags: (result, error, { classId }) => [
+        { type: 'Class', id: `${classId}-pending` },
+        { type: 'Class', id: `${classId}-invitations` },
+      ],
+    }),
   }),
 });
 
@@ -237,4 +291,8 @@ export const {
   useSearchClassesQuery,
   useJoinClassMutation,
   useLeaveClassMutation,
+  useGetPendingRequestsQuery,
+  useGetInvitationsQuery,
+  useApproveMemberMutation,
+  useRejectMemberMutation,
 } = classApi;

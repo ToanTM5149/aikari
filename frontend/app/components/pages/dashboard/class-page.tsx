@@ -21,6 +21,8 @@ import {
   LogOut,
   Globe,
   Lock,
+  Users,
+  BookOpen,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -148,108 +150,143 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
   }
 
   const renderClassCard = (cls: any, isMyClass: boolean) => (
-    <Card
-      className="cursor-pointer hover:shadow-md transition-all group"
-      onClick={() => navigate(`/dashboard/class/${cls.class_id}`)}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
     >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <GraduationCap className="w-6 h-6 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold truncate">{cls.class_name}</h3>
-              <div className="flex items-center gap-2 mt-1">
+      <Card
+        className="cursor-pointer hover:shadow-lg transition-all group overflow-hidden"
+        onClick={() => navigate(`/dashboard/class/${cls.class_id}`)}
+      >
+        <CardContent className="p-6 space-y-4">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-14 h-14 rounded-lg bg-blue-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <GraduationCap className="w-7 h-7 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-lg truncate">{cls.class_name}</h3>
                 {cls.class_code && (
-                  <Badge variant="outline" className="text-xs">
-                    {cls.class_code}
-                  </Badge>
-                )}
-                {cls.is_public ? (
-                  <Badge variant="secondary" className="text-xs">
-                    <Globe className="w-3 h-3 mr-1" />
-                    Public
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-xs">
-                    <Lock className="w-3 h-3 mr-1" />
-                    Private
-                  </Badge>
+                  <p className="text-sm text-muted-foreground">{cls.class_code}</p>
                 )}
               </div>
+            </div>
+            <div onClick={(e) => e.stopPropagation()}>
+              {isMyClass ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {canCreateClass && (
+                      <>
+                        <DropdownMenuItem>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleInviteMember(cls.class_id, cls.class_name)}>
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Invite Members
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Settings className="w-4 h-4 mr-2" />
+                          Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    <DropdownMenuItem
+                      onClick={() => handleLeaveClass(cls.class_id, cls.class_name, cls.is_public)}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Leave Class
+                    </DropdownMenuItem>
+                    {canCreateClass && (
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteClass(cls.class_id, cls.class_name)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleJoinClass(cls.class_id, cls.class_name)
+                  }}
+                  disabled={isJoining || isAlreadyMember(cls.class_id)}
+                >
+                  {isAlreadyMember(cls.class_id) ? "Joined" : "Join"}
+                </Button>
+              )}
             </div>
           </div>
-          <div onClick={(e) => e.stopPropagation()}>
-            {isMyClass ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {canCreateClass && (
-                    <>
-                      <DropdownMenuItem>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleInviteMember(cls.class_id, cls.class_name)}>
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Invite Members
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Settings className="w-4 h-4 mr-2" />
-                        Settings
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem
-                    onClick={() => handleLeaveClass(cls.class_id, cls.class_name, cls.is_public)}
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Leave Class
-                  </DropdownMenuItem>
-                  {canCreateClass && (
-                    <DropdownMenuItem
-                      onClick={() => handleDeleteClass(cls.class_id, cls.class_name)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleJoinClass(cls.class_id, cls.class_name)
-                }}
-                disabled={isJoining || isAlreadyMember(cls.class_id)}
-              >
-                {isAlreadyMember(cls.class_id) ? "Joined" : "Join"}
-              </Button>
-            )}
-              </div>
+
+          {/* Description */}
+          {cls.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {cls.description}
+            </p>
+          )}
+
+          {/* Class Stats */}
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              32 members
+            </span>
+            <span className="flex items-center gap-1">
+              <BookOpen className="w-4 h-4" />
+              12 sets
+            </span>
+          </div>
+
+          {/* Class Progress */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Class Progress</span>
+              <span className="font-medium">75%</span>
             </div>
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <motion.div 
+                className="bg-foreground rounded-full h-2"
+                initial={{ width: 0 }}
+                animate={{ width: "75%" }}
+                transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
+              />
+            </div>
+          </div>
 
-        {cls.description && (
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-            {cls.description}
-          </p>
-        )}
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-4 border-t text-sm">
+            <span className="text-muted-foreground">Dr. {cls.created_by}</span>
+            <span className="text-muted-foreground">Active today</span>
+          </div>
 
-        <div className="flex items-center justify-between text-sm text-muted-foreground pt-4 border-t border-border">
-          <span>Instructor: {cls.created_by}</span>
-          <span>{new Date(cls.created_at).toLocaleDateString()}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
+          {/* View Class Link */}
+          <Button 
+            variant="ghost" 
+            className="w-full justify-between hover:bg-muted/50"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate(`/dashboard/class/${cls.class_id}`)
+            }}
+          >
+            View class
+            <span className="text-xl">›</span>
+          </Button>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 
   const renderEmptyState = (isMyClass: boolean, searchQuery: string) => (

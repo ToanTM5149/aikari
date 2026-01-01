@@ -13,6 +13,15 @@ class ClassRole(str, Enum):
     CO_TEACHER = "CO_TEACHER"
 
 
+class MembershipStatus(str, Enum):
+    """Status of class membership"""
+    ACTIVE = "ACTIVE"           # Approved and active member
+    PENDING = "PENDING"         # Waiting for approval (join request)
+    INVITED = "INVITED"         # Invited but not yet accepted
+    REJECTED = "REJECTED"       # Join request was rejected
+    LEFT = "LEFT"               # User left the class
+
+
 class ContentType(str, Enum):
     DEFAULT = "DEFAULT"
     AI_GENERATED = "AI_GENERATED"

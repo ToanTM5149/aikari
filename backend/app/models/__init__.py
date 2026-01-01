@@ -5,6 +5,7 @@ from app.models.user import User
 # Enums
 from app.models.enums import (
     ClassRole,
+    MembershipStatus,
     ContentType,
     GenerateType,
     TestType,
@@ -28,6 +29,7 @@ __all__ = [
     # Enums
     "UserRole",
     "ClassRole",
+    "MembershipStatus",
     "ContentType",
     "GenerateType",
     "TestType",
