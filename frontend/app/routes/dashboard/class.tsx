@@ -1,8 +1,11 @@
 import { useNavigate } from "react-router"
 import { ClassPage } from "~/components/pages/dashboard/class-page"
+import { useAppSelector } from "~/redux/store"
+import { selectCurrentUser } from "~/redux/features/auth/slice"
 
 export default function ClassPageRoute() {
   const navigate = useNavigate()
+  const user = useAppSelector(selectCurrentUser)
 
   const handleStudySetClick = () => {
     navigate("/dashboard/flashcard")
@@ -16,6 +19,7 @@ export default function ClassPageRoute() {
     <ClassPage 
       onStudySetClick={handleStudySetClick}
       onStatisticsClick={handleStatisticsClick}
+      userRole={user?.role as 'STUDENT' | 'TEACHER' | 'ADMIN' || 'STUDENT'}
     />
   )
 }

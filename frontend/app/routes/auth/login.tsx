@@ -10,8 +10,16 @@ export default function LoginRoute() {
 
   const handleLogin = (data?: any) => {
     console.log("Login data:", data)
-    // Navigate to dashboard after successful login
-    navigate("/dashboard")
+    
+    // Role-based redirect after login
+    const userRole = data?.userType?.toUpperCase()
+    if (userRole === 'ADMIN') {
+      // Admin chỉ có 3 sections: Statistics, User Management, Token Management
+      navigate("/statistics")
+    } else {
+      // Student/Teacher redirect đến dashboard/home
+      navigate("/dashboard")
+    }
   }
 
   const handleSwitchToSignup = () => {

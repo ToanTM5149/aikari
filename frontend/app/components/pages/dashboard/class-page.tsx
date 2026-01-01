@@ -6,22 +6,21 @@ import { Button } from "~/components/ui/button"
 import { Badge } from "~/components/ui/badge"
 import { Input } from "~/components/ui/input"
 import { Skeleton } from "~/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import {
   GraduationCap,
-  Users,
-  BookOpen,
   Search,
   MoreVertical,
   Grid,
   List,
-  Star,
   Trash2,
   Edit,
   Settings,
   UserPlus,
   Plus,
-  Filter,
   LogOut,
+  Globe,
+  Lock,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -33,12 +32,17 @@ import {
 import { toast } from "sonner"
 import {
   useGetClassesQuery,
+  useGetPublicClassesQuery,
   useDeleteClassMutation,
   useLeaveClassMutation,
+  useJoinClassMutation,
 } from "~/redux/features/class"
+import { useAppSelector } from "~/redux/store"
+import { selectCurrentUser } from "~/redux/features/auth/slice"
 import { CreateClassDialog } from "./create-class-dialog"
-import { JoinClassDialog } from "./join-class-dialog"
 import { InviteMemberDialog } from "./invite-member-dialog"
+import { DeleteClassDialog } from "./delete-class-dialog"
+import { LeaveClassDialog } from "./leave-class-dialog"
 
 interface ClassPageProps {
   onStudySetClick?: () => void
@@ -47,49 +51,94 @@ interface ClassPageProps {
 
 export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps) {
   const navigate = useNavigate()
+  const user = useAppSelector(selectCurrentUser)
+  const userRole = user?.role?.toUpperCase() || 'STUDENT'
+  
+  // Only TEACHER and ADMIN can create classes
+  const canCreateClass = userRole === 'TEACHER' || userRole === 'ADMIN'
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [searchQuery, setSearchQuery] = useState("")
+  const [myClassesSearch, setMyClassesSearch] = useState("")
+  const [publicClassesSearch, setPublicClassesSearch] = useState("")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [joinDialogOpen, setJoinDialogOpen] = useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const [selectedClass, setSelectedClass] = useState<{
     id: string
     name: string
+    isPublic?: boolean
   } | null>(null)
 
   // API calls
-  const { data, isLoading, error } = useGetClassesQuery()
-  const [deleteClass] = useDeleteClassMutation()
-  const [leaveClass] = useLeaveClassMutation()
+  const { data: myClassesData, isLoading: isLoadingMy, error: errorMy } = useGetClassesQuery()
+  const { data: publicClassesData, isLoading: isLoadingPublic, error: errorPublic } = useGetPublicClassesQuery()
+  const [deleteClass, { isLoading: isDeleting }] = useDeleteClassMutation()
+  const [leaveClass, { isLoading: isLeaving }] = useLeaveClassMutation()
+  const [joinClass, { isLoading: isJoining }] = useJoinClassMutation()
 
-  const classes = data?.data || []
+  const myClasses = myClassesData?.data || []
+  const publicClasses = publicClassesData?.data || []
 
   // Filter classes based on search
-  const filteredClasses = classes.filter(cls =>
-    cls.class_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cls.class_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cls.created_by.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredMyClasses = myClasses.filter(cls =>
+    cls.class_name.toLowerCase().includes(myClassesSearch.toLowerCase()) ||
+    cls.class_code?.toLowerCase().includes(myClassesSearch.toLowerCase()) ||
+    cls.created_by.toLowerCase().includes(myClassesSearch.toLowerCase())
   )
 
+  const filteredPublicClasses = publicClasses.filter(cls =>
+    cls.class_name.toLowerCase().includes(publicClassesSearch.toLowerCase()) ||
+    cls.class_code?.toLowerCase().includes(publicClassesSearch.toLowerCase()) ||
+    cls.created_by.toLowerCase().includes(publicClassesSearch.toLowerCase())
+  )
+
+  // Check if user is already member of a class
+  const isAlreadyMember = (classId: string) => {
+    return myClasses.some(c => c.class_id === classId)
+  }
+
   const handleDeleteClass = async (classId: string, className: string) => {
-    if (confirm(`Delete "${className}"? This action cannot be undone.`)) {
-      try {
-        await deleteClass(classId).unwrap()
-        toast.success("Class deleted successfully")
-      } catch (error) {
-        toast.error("Failed to delete class")
-      }
+    setSelectedClass({ id: classId, name: className })
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteClass = async () => {
+    if (!selectedClass) return
+    
+    try {
+      await deleteClass(selectedClass.id).unwrap()
+      toast.success("Class deleted successfully")
+      setDeleteDialogOpen(false)
+      setSelectedClass(null)
+    } catch (error) {
+      toast.error("Failed to delete class")
     }
   }
 
-  const handleLeaveClass = async (classId: string, className: string) => {
-    if (confirm(`Leave "${className}"? You can rejoin later if it's public.`)) {
-      try {
-        await leaveClass(classId).unwrap()
-        toast.success("You have left the class")
-      } catch (error: any) {
-        toast.error(error?.data?.detail || "Failed to leave class")
-      }
+  const handleLeaveClass = async (classId: string, className: string, isPublic: boolean) => {
+    setSelectedClass({ id: classId, name: className, isPublic })
+    setLeaveDialogOpen(true)
+  }
+
+  const confirmLeaveClass = async () => {
+    if (!selectedClass) return
+    
+    try {
+      await leaveClass(selectedClass.id).unwrap()
+      toast.success("You have left the class")
+      setLeaveDialogOpen(false)
+      setSelectedClass(null)
+    } catch (error: any) {
+      toast.error(error?.data?.detail || "Failed to leave class")
+    }
+  }
+
+  const handleJoinClass = async (classId: string, className: string) => {
+    try {
+      await joinClass(classId).unwrap()
+      toast.success(`Successfully joined "${className}"!`)
+    } catch (error: any) {
+      toast.error(error?.data?.detail || "Failed to join class")
     }
   }
 
@@ -98,46 +147,144 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
     setInviteDialogOpen(true)
   }
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="h-full">
-        <Card className="h-full flex flex-col">
-          <CardHeader className="border-b border-border">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-10 w-32" />
+  const renderClassCard = (cls: any, isMyClass: boolean) => (
+    <Card
+      className="cursor-pointer hover:shadow-md transition-all group"
+      onClick={() => navigate(`/dashboard/class/${cls.class_id}`)}
+    >
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <GraduationCap className="w-6 h-6 text-primary" />
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-48 w-full" />
-              ))}
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold truncate">{cls.class_name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                {cls.class_code && (
+                  <Badge variant="outline" className="text-xs">
+                    {cls.class_code}
+                  </Badge>
+                )}
+                {cls.is_public ? (
+                  <Badge variant="secondary" className="text-xs">
+                    <Globe className="w-3 h-3 mr-1" />
+                    Public
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs">
+                    <Lock className="w-3 h-3 mr-1" />
+                    Private
+                  </Badge>
+                )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+          </div>
+          <div onClick={(e) => e.stopPropagation()}>
+            {isMyClass ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {canCreateClass && (
+                    <>
+                      <DropdownMenuItem>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleInviteMember(cls.class_id, cls.class_name)}>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Invite Members
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Settings className="w-4 h-4 mr-2" />
+                        Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem
+                    onClick={() => handleLeaveClass(cls.class_id, cls.class_name, cls.is_public)}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Leave Class
+                  </DropdownMenuItem>
+                  {canCreateClass && (
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteClass(cls.class_id, cls.class_name)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleJoinClass(cls.class_id, cls.class_name)
+                }}
+                disabled={isJoining || isAlreadyMember(cls.class_id)}
+              >
+                {isAlreadyMember(cls.class_id) ? "Joined" : "Join"}
+              </Button>
+            )}
+              </div>
+            </div>
 
-  // Error state
-  if (error) {
-    return (
-      <div className="h-full">
-        <Card className="h-full flex items-center justify-center">
-          <CardContent className="text-center">
-            <GraduationCap className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-lg font-medium mb-2">Failed to load classes</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Please check if the backend server is running.
+        {cls.description && (
+          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+            {cls.description}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between text-sm text-muted-foreground pt-4 border-t border-border">
+          <span>Instructor: {cls.created_by}</span>
+          <span>{new Date(cls.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+  )
+
+  const renderEmptyState = (isMyClass: boolean, searchQuery: string) => (
+    <div className="flex items-center justify-center h-64 text-muted-foreground">
+      <div className="text-center">
+        <GraduationCap className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        {searchQuery ? (
+          <>
+            <p>No classes found</p>
+            <p className="text-sm mt-2">Try adjusting your search</p>
+          </>
+        ) : isMyClass ? (
+          <>
+            <p>No classes yet</p>
+            <p className="text-sm mt-2">
+              {canCreateClass 
+                ? "Create a class or join an existing one"
+                : "Join a public class to get started"}
             </p>
-            <Button onClick={() => window.location.reload()}>Refresh</Button>
-          </CardContent>
-        </Card>
-      </div>
+            {canCreateClass && (
+              <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Class
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            <p>No public classes available</p>
+            <p className="text-sm mt-2">Check back later or create your own class</p>
+          </>
+                              )}
+                            </div>
+                </div>
     )
-  }
 
   return (
     <div className="h-full">
@@ -149,9 +296,9 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
                 <GraduationCap className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <CardTitle>My Classes</CardTitle>
+                <CardTitle>Classes</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {filteredClasses.length} class{filteredClasses.length !== 1 ? 'es' : ''}
+                  Manage and browse classes
                 </p>
               </div>
             </div>
@@ -174,251 +321,159 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
                   <List className="w-4 h-4" />
                 </Button>
               </div>
-              <Button size="sm" variant="outline" onClick={() => setJoinDialogOpen(true)}>
-                <Search className="w-4 h-4 mr-2" />
-                Join Class
-              </Button>
-              <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+              {canCreateClass && (
+                <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Class
+                  Create Class
               </Button>
+              )}
             </div>
-          </div>
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search classes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-auto p-6">
-          {filteredClasses.length === 0 ? (
-            <div className="flex items-center justify-center h-64 text-muted-foreground">
-              <div className="text-center">
-                <GraduationCap className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                {searchQuery ? (
-                  <>
-                    <p>No classes found</p>
-                    <p className="text-sm mt-2">Try adjusting your search</p>
-                  </>
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <Tabs defaultValue="my-classes" className="h-full flex flex-col">
+            <TabsList className="mx-6 mt-6 grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="my-classes">
+                My Classes ({myClasses.length})
+              </TabsTrigger>
+              <TabsTrigger value="public-classes">
+                Public Classes ({publicClasses.length})
+              </TabsTrigger>
+            </TabsList>
+
+            {/* My Classes Tab */}
+            <TabsContent value="my-classes" className="flex-1 overflow-hidden flex flex-col m-0 p-6">
+              <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+                  placeholder="Search my classes..."
+                  value={myClassesSearch}
+                  onChange={(e) => setMyClassesSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+              <div className="flex-1 overflow-auto">
+                {isLoadingMy ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="h-48 w-full" />
+                    ))}
+                  </div>
+                ) : errorMy ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-destructive">Failed to load classes</p>
+                  </div>
+                ) : filteredMyClasses.length === 0 ? (
+                  renderEmptyState(true, myClassesSearch)
                 ) : (
-                  <>
-                    <p>No classes yet</p>
-                    <p className="text-sm mt-2">Create a class or join an existing one</p>
-                    <div className="flex items-center justify-center gap-2 mt-4">
-                      <Button onClick={() => setCreateDialogOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Class
-                      </Button>
-                      <Button variant="outline" onClick={() => setJoinDialogOpen(true)}>
-                        <Search className="w-4 h-4 mr-2" />
-                        Join Class
-                      </Button>
-                    </div>
-                  </>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                    className={viewMode === "grid" 
+                      ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                      : "space-y-2"
+                    }
+                  >
+                    {filteredMyClasses.map((cls, index) => (
+                  <motion.div
+                        key={cls.class_id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                        {renderClassCard(cls, true)}
+                      </motion.div>
+                    ))}
+                  </motion.div>
                 )}
+                            </div>
+            </TabsContent>
+
+            {/* Public Classes Tab */}
+            <TabsContent value="public-classes" className="flex-1 overflow-hidden flex flex-col m-0 p-6">
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search public classes..."
+                  value={publicClassesSearch}
+                  onChange={(e) => setPublicClassesSearch(e.target.value)}
+                  className="pl-10"
+                />
+                        </div>
+
+              <div className="flex-1 overflow-auto">
+                {isLoadingPublic ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="h-48 w-full" />
+                    ))}
+                          </div>
+                ) : errorPublic ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-destructive">Failed to load public classes</p>
+                            </div>
+                ) : filteredPublicClasses.length === 0 ? (
+                  renderEmptyState(false, publicClassesSearch)
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                    className={viewMode === "grid" 
+                      ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                      : "space-y-2"
+                    }
+                  >
+                    {filteredPublicClasses.map((cls, index) => (
+                      <motion.div
+                        key={cls.class_id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        {renderClassCard(cls, false)}
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
               </div>
-            </div>
-          ) : (
-            <AnimatePresence mode="wait">
-              {viewMode === "grid" ? (
-                <motion.div
-                  key="grid"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                >
-                  {filteredClasses.map((cls, index) => (
-                    <motion.div
-                      key={cls.class_id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Card
-                        className="cursor-pointer hover:shadow-md transition-all group"
-                        onClick={() => navigate(`/dashboard/class/${cls.class_id}`)}
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <GraduationCap className="w-6 h-6 text-primary" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <h3 className="font-semibold truncate">{cls.class_name}</h3>
-                                <div className="flex items-center gap-2 mt-1">
-                                  {cls.class_code && (
-                                    <Badge variant="outline">{cls.class_code}</Badge>
-                                  )}
-                                  {cls.is_public && (
-                                    <Badge variant="secondary">Public</Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleInviteMember(cls.class_id, cls.class_name)}>
-                                    <UserPlus className="w-4 h-4 mr-2" />
-                                    Invite Members
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem>
-                                    <Settings className="w-4 h-4 mr-2" />
-                                    Settings
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() => handleLeaveClass(cls.class_id, cls.class_name)}
-                                  >
-                                    <LogOut className="w-4 h-4 mr-2" />
-                                    Leave Class
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeleteClass(cls.class_id, cls.class_name)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-
-                          {cls.description && (
-                            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                              {cls.description}
-                            </p>
-                          )}
-
-                          <div className="flex items-center justify-between text-sm text-muted-foreground pt-4 border-t border-border">
-                            <span>Instructor: {cls.created_by}</span>
-                            <span>{new Date(cls.created_at).toLocaleDateString()}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="list"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="space-y-2"
-                >
-                  {filteredClasses.map((cls, index) => (
-                    <motion.div
-                      key={cls.class_id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Card
-                        className="cursor-pointer hover:shadow-sm transition-shadow"
-                        onClick={() => navigate(`/dashboard/class/${cls.class_id}`)}
-                      >
-                        <CardContent className="flex items-center gap-4 p-4">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <GraduationCap className="w-5 h-5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold truncate">{cls.class_name}</h3>
-                              {cls.class_code && (
-                                <Badge variant="outline" className="shrink-0">
-                                  {cls.class_code}
-                                </Badge>
-                              )}
-                              {cls.is_public && (
-                                <Badge variant="secondary" className="shrink-0">Public</Badge>
-                              )}
-                            </div>
-                            {cls.description && (
-                              <p className="text-sm text-muted-foreground truncate">
-                                {cls.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-4 shrink-0 text-sm text-muted-foreground">
-                            <span>{cls.created_by}</span>
-                            <span>{new Date(cls.created_at).toLocaleDateString()}</span>
-                          </div>
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleInviteMember(cls.class_id, cls.class_name)}>
-                                  <UserPlus className="w-4 h-4 mr-2" />
-                                  Invite Members
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Settings className="w-4 h-4 mr-2" />
-                                  Settings
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleLeaveClass(cls.class_id, cls.class_name)}
-                                >
-                                  <LogOut className="w-4 h-4 mr-2" />
-                                  Leave Class
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteClass(cls.class_id, cls.class_name)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
       {/* Dialogs */}
       <CreateClassDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
-      <JoinClassDialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen} />
       {selectedClass && (
         <InviteMemberDialog
           open={inviteDialogOpen}
           onOpenChange={setInviteDialogOpen}
           classId={selectedClass.id}
           className={selectedClass.name}
+        />
+      )}
+      
+      {/* Delete Confirmation Dialog */}
+      {selectedClass && (
+        <DeleteClassDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          className={selectedClass.name}
+          onConfirm={confirmDeleteClass}
+          isDeleting={isDeleting}
+        />
+      )}
+      
+      {/* Leave Confirmation Dialog */}
+      {selectedClass && (
+        <LeaveClassDialog
+          open={leaveDialogOpen}
+          onOpenChange={setLeaveDialogOpen}
+          className={selectedClass.name}
+          isPublic={selectedClass.isPublic || false}
+          onConfirm={confirmLeaveClass}
+          isLeaving={isLeaving}
         />
       )}
     </div>

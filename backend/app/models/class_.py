@@ -21,7 +21,10 @@ class Class(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    members: list["ClassMember"] = Relationship(back_populates="class_obj")
+    members: list["ClassMember"] = Relationship(
+        back_populates="class_obj",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
 class ClassMember(SQLModel, table=True):

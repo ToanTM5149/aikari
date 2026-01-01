@@ -17,46 +17,56 @@ import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 
+type UserRole = 'STUDENT' | 'TEACHER' | 'ADMIN';
+
 const menuItems = [
   {
     title: "Home",
     icon: Home,
     id: "home",
+    roles: ['STUDENT', 'TEACHER'] as UserRole[], // Admin không cần
   },
   {
     title: "Study Sets",
     icon: Layers,
     id: "studysets",
+    roles: ['STUDENT', 'TEACHER'] as UserRole[],
   },
   {
     title: "Classes",
     icon: GraduationCap,
     id: "class",
+    roles: ['STUDENT', 'TEACHER'] as UserRole[],
   },
   {
     title: "Create Flashcards",
     icon: Plus,
     id: "create",
+    roles: ['STUDENT', 'TEACHER'] as UserRole[],
   },
   {
     title: "History",
     icon: History,
     id: "history",
+    roles: ['STUDENT', 'TEACHER'] as UserRole[],
   },
   {
     title: "Statistics",
     icon: BarChart3,
     id: "statistics",
+    roles: ['ADMIN'] as UserRole[], // Chỉ Admin
   },
   {
     title: "User Management",
     icon: Users,
     id: "user-management",
+    roles: ['ADMIN'] as UserRole[], // Chỉ Admin
   },
   {
     title: "Token Management",
     icon: Key,
     id: "token-management",
+    roles: ['ADMIN'] as UserRole[], // Chỉ Admin
   },
 ];
 
@@ -67,6 +77,7 @@ interface AppSidebarProps {
   userName?: string;
   userEmail?: string;
   onProfileClick?: () => void;
+  userRole?: UserRole;
 }
 
 export function AppSidebar({
@@ -76,9 +87,15 @@ export function AppSidebar({
   userName = "John Doe",
   userEmail = "john.doe@example.com",
   onProfileClick,
+  userRole = 'STUDENT',
 }: AppSidebarProps) {
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  // Filter menu items based on user role
+  const visibleMenuItems = menuItems.filter(item => {
+    return item.roles.includes(userRole);
+  });
 
   // Get initials from name
   const getInitials = (name: string) => {
@@ -125,7 +142,7 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {visibleMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   {isCollapsed ? (
                     <Tooltip>

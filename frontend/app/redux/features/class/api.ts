@@ -167,6 +167,18 @@ export const classApi = baseApi.injectEndpoints({
     }),
     
     /**
+     * Get Public Classes - Lấy tất cả public classes
+     * GET /classes/public
+     */
+    getPublicClasses: builder.query<ClassesResponse, PaginationParams | void>({
+      query: (params) => ({
+        url: '/classes/public/',
+        ...(params && { params }),
+      }),
+      providesTags: ['Class'],
+    }),
+    
+    /**
      * Search Classes - Tìm kiếm public classes
      * GET /classes/search?q={query}
      */
@@ -213,6 +225,7 @@ export const classApi = baseApi.injectEndpoints({
 export const {
   useGetClassesQuery,
   useGetOwnedClassesQuery,
+  useGetPublicClassesQuery,
   useGetClassByIdQuery,
   useCreateClassMutation,
   useUpdateClassMutation,

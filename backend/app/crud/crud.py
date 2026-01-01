@@ -131,9 +131,16 @@ def update_class(*, session: Session, db_class: Class, class_in: ClassUpdate) ->
 
 
 def delete_class(*, session: Session, class_id: uuid.UUID) -> None:
-  """Delete class"""
+  """Delete class and all its members"""
   db_class = session.get(Class, class_id)
   if db_class:
+    # Delete all members first (explicit for clarity, even with cascade)
+    statement = select(ClassMember).where(ClassMember.class_id == class_id)
+    members = session.exec(statement).all()
+    for member in members:
+      session.delete(member)
+    
+    # Then delete the class
     session.delete(db_class)
     session.commit()
 

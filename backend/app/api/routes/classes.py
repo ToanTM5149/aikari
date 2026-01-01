@@ -54,6 +54,27 @@ def read_owned_classes(
     return ClassesPublic(data=classes, count=len(classes))
 
 
+@router.get("/public/", response_model=ClassesPublic)
+def read_public_classes(
+    current_user: CurrentUser,
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    """
+    Retrieve all public classes that user can browse and join.
+    """
+    statement = (
+        select(Class)
+        .where(Class.is_public == True)
+        .offset(skip)
+        .limit(limit)
+    )
+    
+    classes = session.exec(statement).all()
+    return ClassesPublic(data=list(classes), count=len(classes))
+
+
 @router.get("/search/", response_model=ClassesPublic)
 def search_classes(
     current_user: CurrentUser,
@@ -120,7 +141,16 @@ def create_class(
 ) -> Any:
     """
     Create new class.
+    Only TEACHER.
     """
+    # Check permission
+    from app.models.enums import UserRole
+    if current_user.role not in [UserRole.TEACHER]:
+        raise HTTPException(
+            status_code=403, 
+            detail="Only teachers can create classes"
+        )
+    
     class_obj = crud.create_class(
         session=session, class_in=class_in, owner_id=current_user.user_id
     )
@@ -161,12 +191,18 @@ def delete_class(
 ) -> Any:
     """
     Delete a class.
+    Only the owner (TEACHER/ADMIN) can delete.
     """
     class_obj = crud.get_class(session=session, class_id=class_id)
     if not class_obj:
         raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Check if user is the owner
     if class_obj.owner_user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise HTTPException(
+            status_code=403, 
+            detail="Only the class owner can delete this class"
+        )
     
     crud.delete_class(session=session, class_id=class_id)
     return Message(message="Class deleted successfully")

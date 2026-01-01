@@ -53,6 +53,30 @@ export default function AuthenticatedLayout() {
     }
   }, [isAuthenticated, navigate]);
 
+  // Role-based route protection
+  useEffect(() => {
+    if (!user?.role) return;
+    
+    const userRole = user.role.toUpperCase();
+    const currentPath = location.pathname;
+    
+    // Define role-based access rules
+    const adminOnlyRoutes = ['/statistics', '/user-management', '/token-management'];
+    const studentTeacherOnlyRoutes = ['/dashboard', '/dashboard/studysets', '/dashboard/class', '/create', '/history'];
+    
+    // Admin trying to access student/teacher routes
+    if (userRole === 'ADMIN' && studentTeacherOnlyRoutes.some(route => currentPath.startsWith(route))) {
+      navigate('/statistics', { replace: true });
+      return;
+    }
+    
+    // Student/Teacher trying to access admin routes
+    if ((userRole === 'STUDENT' || userRole === 'TEACHER') && adminOnlyRoutes.some(route => currentPath.startsWith(route))) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+  }, [user, location.pathname, navigate]);
+
   // Get current view from pathname
   const getCurrentView = () => {
     const path = location.pathname;
@@ -120,6 +144,9 @@ export default function AuthenticatedLayout() {
     return null;
   }
 
+  // Ensure role is uppercase and valid
+  const userRole = (user?.role?.toUpperCase() as 'STUDENT' | 'TEACHER' | 'ADMIN') || 'STUDENT';
+
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
@@ -131,6 +158,7 @@ export default function AuthenticatedLayout() {
           userName={user?.full_name || user?.username || "User"}
           userEmail={user?.email || "user@example.com"}
           onProfileClick={handleProfileClick}
+          userRole={userRole}
         />
         
         {/* Main Content with Header */}
