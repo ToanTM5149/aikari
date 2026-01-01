@@ -26,7 +26,10 @@ export default [
     route("dashboard/class", "routes/dashboard/class.tsx"),
     route("dashboard/class/:className/statistics", "routes/dashboard/class.$className.statistics.tsx"),
     route("create", "routes/dashboard/create.tsx"),
-    route("flashcard", "routes/dashboard/flashcard.tsx"),
+    route("history", "routes/history.tsx"),
+    route("statistics", "routes/statistics.tsx"),
+    route("user-management", "routes/user-management.tsx"),
+    route("token-management", "routes/token-management.tsx"),
     route("profile", "routes/dashboard/profile.tsx"),
   ]),
 ] satisfies RouteConfig;

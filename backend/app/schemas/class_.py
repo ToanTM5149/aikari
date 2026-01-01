@@ -10,6 +10,8 @@ from app.models.enums import ClassRole
 class ClassBase(SQLModel):
     class_name: str
     description: str | None = None
+    is_public: bool = False
+    class_code: str | None = None
 
 
 class ClassMemberBase(SQLModel):
@@ -29,6 +31,8 @@ class ClassMemberCreate(ClassMemberBase):
 class ClassUpdate(SQLModel):
     class_name: str | None = None
     description: str | None = None
+    is_public: bool | None = None
+    class_code: str | None = None
 
 
 class ClassMemberUpdate(SQLModel):
@@ -39,7 +43,9 @@ class ClassMemberUpdate(SQLModel):
 class ClassPublic(ClassBase):
     class_id: uuid.UUID
     created_by: str
+    owner_user_id: uuid.UUID
     created_at: datetime
+    updated_at: datetime
     
     model_config = {"from_attributes": True}
 

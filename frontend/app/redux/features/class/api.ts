@@ -165,6 +165,43 @@ export const classApi = baseApi.injectEndpoints({
         'Class',
       ],
     }),
+    
+    /**
+     * Search Classes - Tìm kiếm public classes
+     * GET /classes/search?q={query}
+     */
+    searchClasses: builder.query<ClassesResponse, { q: string } & PaginationParams>({
+      query: ({ q, ...params }) => ({
+        url: '/classes/search/',
+        params: { q, ...params },
+      }),
+      // Don't cache search results
+      keepUnusedDataFor: 0,
+    }),
+    
+    /**
+     * Join Class - Student tự join vào public class
+     * POST /classes/{class_id}/join
+     */
+    joinClass: builder.mutation<ClassMember, string>({
+      query: (classId) => ({
+        url: `/classes/${classId}/join/`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Class'],
+    }),
+    
+    /**
+     * Leave Class - Rời khỏi class
+     * POST /classes/{class_id}/leave
+     */
+    leaveClass: builder.mutation<MessageResponse, string>({
+      query: (classId) => ({
+        url: `/classes/${classId}/leave/`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Class'],
+    }),
   }),
 });
 
@@ -184,4 +221,7 @@ export const {
   useAddClassMemberMutation,
   useUpdateClassMemberMutation,
   useRemoveClassMemberMutation,
+  useSearchClassesQuery,
+  useJoinClassMutation,
+  useLeaveClassMutation,
 } = classApi;

@@ -13,8 +13,12 @@ class Class(SQLModel, table=True):
     class_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     class_name: str = Field(max_length=255)
     description: str | None = Field(default=None, max_length=256)
-    created_by: str = Field(max_length=255)
+    created_by: str = Field(max_length=255)  # username
+    owner_user_id: uuid.UUID = Field(foreign_key="User.user_id")
+    is_public: bool = Field(default=False)  # Public classes can be searched and joined
+    class_code: str | None = Field(default=None, max_length=20, unique=True, index=True)  # Optional join code
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
     members: list["ClassMember"] = Relationship(back_populates="class_obj")

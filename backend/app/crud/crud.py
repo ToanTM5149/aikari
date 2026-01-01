@@ -100,7 +100,7 @@ def create_class(*, session: Session, class_in: ClassCreate, owner_id: uuid.UUID
     raise ValueError("User not found")
   
   db_obj = Class.model_validate(
-    class_in, update={"created_by": user.username}
+    class_in, update={"created_by": user.username, "owner_user_id": owner_id}
   )
   session.add(db_obj)
   session.commit()
@@ -120,7 +120,9 @@ def create_class(*, session: Session, class_in: ClassCreate, owner_id: uuid.UUID
 
 def update_class(*, session: Session, db_class: Class, class_in: ClassUpdate) -> Class:
   """Update class"""
+  from datetime import datetime
   class_data = class_in.model_dump(exclude_unset=True)
+  class_data["updated_at"] = datetime.utcnow()
   db_class.sqlmodel_update(class_data)
   session.add(db_class)
   session.commit()

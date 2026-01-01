@@ -60,7 +60,10 @@ export default function AuthenticatedLayout() {
     if (path.startsWith("/dashboard/studysets")) return "studysets";
     if (path.startsWith("/dashboard/class")) return "class";
     if (path.startsWith("/create")) return "create";
-    if (path.startsWith("/flashcard")) return "flashcard";
+    if (path.startsWith("/history")) return "history";
+    if (path.startsWith("/statistics")) return "statistics";
+    if (path.startsWith("/user-management")) return "user-management";
+    if (path.startsWith("/token-management")) return "token-management";
     return "home";
   };
 
@@ -78,8 +81,17 @@ export default function AuthenticatedLayout() {
       case "create":
         navigate("/create");
         break;
-      case "flashcard":
-        navigate("/flashcard");
+      case "history":
+        navigate("/history");
+        break;
+      case "statistics":
+        navigate("/statistics");
+        break;
+      case "user-management":
+        navigate("/user-management");
+        break;
+      case "token-management":
+        navigate("/token-management");
         break;
       default:
         navigate("/dashboard");

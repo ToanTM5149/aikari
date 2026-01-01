@@ -11,7 +11,7 @@ import {
   useSidebar,
 } from "~/components/ui/sidebar";
 import { Logo } from "~/components/ui/logo";
-import { Home, GraduationCap, BookOpen, LogOut, Plus, Layers, ChevronLeft, ChevronRight } from "lucide-react";
+import { Home, GraduationCap, History, LogOut, Plus, Layers, ChevronLeft, ChevronRight, BarChart3, Users, Key } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -39,9 +39,24 @@ const menuItems = [
     id: "create",
   },
   {
-    title: "Flashcard Set",
-    icon: BookOpen,
-    id: "flashcard",
+    title: "History",
+    icon: History,
+    id: "history",
+  },
+  {
+    title: "Statistics",
+    icon: BarChart3,
+    id: "statistics",
+  },
+  {
+    title: "User Management",
+    icon: Users,
+    id: "user-management",
+  },
+  {
+    title: "Token Management",
+    icon: Key,
+    id: "token-management",
   },
 ];
 

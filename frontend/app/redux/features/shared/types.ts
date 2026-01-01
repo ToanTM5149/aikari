@@ -31,7 +31,11 @@ export interface Class {
   class_name: string;
   description?: string;
   created_by: string;
+  owner_user_id: string;
+  is_public: boolean;
+  class_code?: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface ClassMember {
@@ -44,11 +48,15 @@ export interface ClassMember {
 export interface ClassCreate {
   class_name: string;
   description?: string;
+  is_public?: boolean;
+  class_code?: string;
 }
 
 export interface ClassUpdate {
   class_name?: string;
   description?: string;
+  is_public?: boolean;
+  class_code?: string;
 }
 
 export interface ClassesResponse {
