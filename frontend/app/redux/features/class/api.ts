@@ -31,9 +31,9 @@ export const classApi = baseApi.injectEndpoints({
      * GET /classes
      */
     getClasses: builder.query<ClassesResponse, PaginationParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: '/classes/',
-        params,
+        ...(params && { params }),
       }),
       providesTags: ['Class'],
     }),
@@ -43,9 +43,9 @@ export const classApi = baseApi.injectEndpoints({
      * GET /classes/owned
      */
     getOwnedClasses: builder.query<ClassesResponse, PaginationParams | void>({
-      query: (params = {}) => ({
+      query: (params) => ({
         url: '/classes/owned/',
-        params,
+        ...(params && { params }),
       }),
       providesTags: ['Class'],
     }),
@@ -268,6 +268,45 @@ export const classApi = baseApi.injectEndpoints({
         { type: 'Class', id: `${classId}-invitations` },
       ],
     }),
+    
+    /**
+     * Get Class Study Sets - Lấy tất cả study sets trong class
+     * GET /classes/{class_id}/studysets
+     */
+    getClassStudySets: builder.query<any, string>({
+      query: (classId) => `/classes/${classId}/studysets/`,
+      providesTags: (result, error, classId) => [
+        { type: 'Class', id: `${classId}-studysets` },
+      ],
+    }),
+    
+    /**
+     * Add Study Set to Class - Thêm study set vào class (teacher only)
+     * POST /classes/{class_id}/studysets/{studyset_id}
+     */
+    addStudySetToClass: builder.mutation<MessageResponse, { classId: string; studysetId: string }>({
+      query: ({ classId, studysetId }) => ({
+        url: `/classes/${classId}/studysets/${studysetId}/`,
+        method: 'POST',
+      }),
+      invalidatesTags: (result, error, { classId }) => [
+        { type: 'Class', id: `${classId}-studysets` },
+      ],
+    }),
+    
+    /**
+     * Remove Study Set from Class - Xóa study set khỏi class (teacher only)
+     * DELETE /classes/{class_id}/studysets/{studyset_id}
+     */
+    removeStudySetFromClass: builder.mutation<MessageResponse, { classId: string; studysetId: string }>({
+      query: ({ classId, studysetId }) => ({
+        url: `/classes/${classId}/studysets/${studysetId}/`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { classId }) => [
+        { type: 'Class', id: `${classId}-studysets` },
+      ],
+    }),
   }),
 });
 
@@ -295,4 +334,7 @@ export const {
   useGetInvitationsQuery,
   useApproveMemberMutation,
   useRejectMemberMutation,
+  useGetClassStudySetsQuery,
+  useAddStudySetToClassMutation,
+  useRemoveStudySetFromClassMutation,
 } = classApi;

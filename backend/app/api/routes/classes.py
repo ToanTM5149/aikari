@@ -1,12 +1,14 @@
 import uuid
 from typing import Any
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, or_
+from sqlalchemy.orm import selectinload
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
-from app.models import Class, ClassMember, ClassRole, MembershipStatus, User
+from app.models import Class, ClassMember, ClassRole, MembershipStatus, User, ClassStudySet, StudySet
 from app.schemas import (
     ClassCreate,
     ClassMemberCreate,
@@ -208,7 +210,7 @@ def delete_class(
     return Message(message="Class deleted successfully")
 
 
-@router.get("/{class_id}/members/")
+@router.get("/{class_id}/members/", response_model=ClassMembersPublic)
 def read_class_members(
     class_id: uuid.UUID,
     current_user: CurrentUser,
@@ -231,7 +233,7 @@ def read_class_members(
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     members = crud.get_class_members(session=session, class_id=class_id, status=status)
-    return {"data": members, "count": len(members)}
+    return ClassMembersPublic(data=members, count=len(members))
 
 
 @router.post("/{class_id}/members/", response_model=ClassMemberPublic)
@@ -573,4 +575,97 @@ def reject_member(
     )
     
     return Message(message="Request rejected successfully")
+
+
+
+# ==================== CLASS STUDYSET ENDPOINTS ====================
+
+@router.get("/{class_id}/studysets/")
+def get_class_studysets(
+    class_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """Get all study sets in a class."""
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.status != MembershipStatus.ACTIVE:
+        raise HTTPException(status_code=403, detail="Not a member of this class")
+    
+    statement = (
+        select(ClassStudySet)
+        .where(ClassStudySet.class_id == class_id)
+        .options(selectinload(ClassStudySet.studyset))
+    )
+    class_studysets = session.exec(statement).all()
+    studysets = [cs.studyset for cs in class_studysets]
+    return {"data": studysets, "count": len(studysets)}
+
+
+@router.post("/{class_id}/studysets/{studyset_id}/")
+def add_studyset_to_class(
+    class_id: uuid.UUID,
+    studyset_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """Add a study set to a class (teacher only)."""
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
+        raise HTTPException(status_code=403, detail="Only teachers can add study sets")
+    
+    studyset = session.get(StudySet, studyset_id)
+    if not studyset:
+        raise HTTPException(status_code=404, detail="Study set not found")
+    
+    existing = session.exec(
+        select(ClassStudySet).where(
+            ClassStudySet.class_id == class_id,
+            ClassStudySet.studyset_id == studyset_id
+        )
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Study set already in class")
+    
+    class_studyset = ClassStudySet(
+        class_id=class_id,
+        studyset_id=studyset_id,
+        added_by=current_user.user_id
+    )
+    session.add(class_studyset)
+    session.commit()
+    return Message(message="Study set added to class successfully")
+
+
+@router.delete("/{class_id}/studysets/{studyset_id}/")
+def remove_studyset_from_class(
+    class_id: uuid.UUID,
+    studyset_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """Remove a study set from a class (teacher only)."""
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
+        raise HTTPException(status_code=403, detail="Only teachers can remove study sets")
+    
+    class_studyset = session.exec(
+        select(ClassStudySet).where(
+            ClassStudySet.class_id == class_id,
+            ClassStudySet.studyset_id == studyset_id
+        )
+    ).first()
+    
+    if not class_studyset:
+        raise HTTPException(status_code=404, detail="Study set not in this class")
+    
+    session.delete(class_studyset)
+    session.commit()
+    return Message(message="Study set removed from class successfully")
 

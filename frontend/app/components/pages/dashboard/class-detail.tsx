@@ -28,6 +28,7 @@ import {
   AlertCircle,
   Check,
   Clock,
+  Plus,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -42,6 +43,8 @@ import {
   useGetClassMembersQuery,
   useGetPendingRequestsQuery,
   useGetInvitationsQuery,
+  useGetClassStudySetsQuery,
+  useRemoveStudySetFromClassMutation,
   useUpdateClassMutation,
   useDeleteClassMutation,
   useRemoveClassMemberMutation,
@@ -52,6 +55,7 @@ import {
 import { useAppSelector } from "~/redux/store"
 import { selectCurrentUser } from "~/redux/features/auth/slice"
 import { InviteMemberDialog } from "./invite-member-dialog"
+import { AddStudySetDialog } from "./add-studyset-dialog"
 import { DeleteClassDialog } from "./delete-class-dialog"
 import { LeaveClassDialog } from "./leave-class-dialog"
 
@@ -88,6 +92,11 @@ export function ClassDetail() {
     isLoading: loadingInvitations,
   } = useGetInvitationsQuery(classId!, { skip: !classId || !canManage })
 
+  const {
+    data: studySetsData,
+    isLoading: loadingStudySets,
+  } = useGetClassStudySetsQuery(classId!, { skip: !classId })
+
   // Mutations
   const [updateClass, { isLoading: updating }] = useUpdateClassMutation()
   const [deleteClass] = useDeleteClassMutation()
@@ -95,6 +104,7 @@ export function ClassDetail() {
   const [updateMemberRole] = useUpdateClassMemberMutation()
   const [approveMember] = useApproveMemberMutation()
   const [rejectMember] = useRejectMemberMutation()
+  const [removeStudySet] = useRemoveStudySetFromClassMutation()
 
   // Local state
   const [isEditing, setIsEditing] = useState(false)
@@ -102,12 +112,14 @@ export function ClassDetail() {
   const [editedDescription, setEditedDescription] = useState("")
   const [editedIsPublic, setEditedIsPublic] = useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [addStudySetDialogOpen, setAddStudySetDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
 
   const members = membersData?.data || []
   const pendingRequests = pendingData?.data || []
   const invitations = invitationsData?.data || []
+  const studySets = studySetsData?.data || []
 
   const handleBack = () => {
     navigate("/dashboard/class")
@@ -433,8 +445,15 @@ export function ClassDetail() {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="members" className="w-full">
+        <Tabs defaultValue="studysets" className="w-full">
           <TabsList className={`grid w-full ${canManage ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            <TabsTrigger value="studysets">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Study Sets
+            </TabsTrigger>
+            <TabsTrigger value="activity">
+              Activity
+            </TabsTrigger>
             <TabsTrigger value="members">
               <Users className="w-4 h-4 mr-2" />
               Members ({members.length})
@@ -445,13 +464,6 @@ export function ClassDetail() {
                 Pending ({pendingRequests.length + invitations.length})
               </TabsTrigger>
             )}
-            <TabsTrigger value="studysets">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Study Sets
-            </TabsTrigger>
-            <TabsTrigger value="activity">
-              Activity
-            </TabsTrigger>
           </TabsList>
 
           {/* Members Tab */}
@@ -733,12 +745,90 @@ export function ClassDetail() {
           <TabsContent value="studysets">
             <Card>
               <CardHeader>
-                <CardTitle>Shared Study Sets</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Shared Study Sets</CardTitle>
+                  {canManage && (
+                    <Button size="sm" onClick={() => setAddStudySetDialogOpen(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Study Set
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  No study sets shared yet
-                </div>
+                {loadingStudySets ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-20 w-full" />
+                    ))}
+                  </div>
+                ) : studySets.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No study sets shared yet</p>
+                    {canManage && (
+                      <p className="text-sm mt-2">
+                        Add study sets to share with your class members
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {studySets.map((studySet: any) => (
+                      <motion.div
+                        key={studySet.studyset_id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <Card className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                  <BookOpen className="w-5 h-5 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium truncate">{studySet.title}</h4>
+                                  <Badge variant="outline" className="mt-1 text-xs">
+                                    {studySet.content_type}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              {canManage && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (confirm(`Remove "${studySet.title}" from this class?`)) {
+                                      try {
+                                        await removeStudySet({
+                                          classId: classId!,
+                                          studysetId: studySet.studyset_id,
+                                        }).unwrap()
+                                        toast.success("Study set removed from class")
+                                      } catch (error) {
+                                        toast.error("Failed to remove study set")
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                            
+                            {studySet.description && (
+                              <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                                {studySet.description}
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -783,6 +873,13 @@ export function ClassDetail() {
           // Leave class logic
           navigate("/dashboard/class")
         }}
+      />
+
+      {/* Add Study Set Dialog */}
+      <AddStudySetDialog
+        open={addStudySetDialogOpen}
+        onOpenChange={setAddStudySetDialogOpen}
+        classId={classId!}
       />
     </div>
   )

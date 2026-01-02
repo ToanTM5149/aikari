@@ -239,15 +239,26 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
           )}
 
           {/* Class Stats */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
+          <div className="flex items-center gap-4 text-sm">
+            <span className="flex items-center gap-1 text-muted-foreground">
               <Users className="w-4 h-4" />
               32 members
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-muted-foreground">
               <BookOpen className="w-4 h-4" />
               12 sets
             </span>
+            {cls.is_public ? (
+              <Badge variant="secondary" className="text-xs">
+                <Globe className="w-3 h-3 mr-1" />
+                Public
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                <Lock className="w-3 h-3 mr-1" />
+                Private
+              </Badge>
+            )}
           </div>
 
           {/* Class Progress */}

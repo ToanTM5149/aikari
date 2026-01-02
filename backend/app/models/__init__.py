@@ -14,7 +14,7 @@ from app.models.enums import (
 
 # Models
 from app.models.activity import StudyActivity
-from app.models.class_ import Class, ClassMember
+from app.models.class_ import Class, ClassMember, ClassStudySet
 from app.models.progress import ProgressSummary
 from app.models.content import AIGeneratedContents, Attribute
 from app.models.studyset import StudySet
@@ -37,6 +37,7 @@ __all__ = [
     "User",
     "Class",
     "ClassMember",
+    "ClassStudySet",
     "StudySet",
     "Term",
     "Test",
