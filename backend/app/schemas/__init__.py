@@ -58,6 +58,22 @@ from app.schemas.class_ import (
     ClassUpdate,
 )
 
+# Learning Schemas
+from app.schemas.learning import (
+    LearningSessionStart,
+    LearningSessionStartResponse,
+    NextTermResponse,
+    ReviewSubmission,
+    ReviewResponse,
+    SessionSummary,
+    ProgressSummaryPublic,
+    StudyActivityPublic,
+    UserProgressOverview,
+    ProgressHistory,
+    WeakTerm,
+    StudyStats,
+)
+
 __all__ = [
     # Common Schemas
     "Message",
@@ -101,5 +117,18 @@ __all__ = [
     "ClassMemberUpdate",
     "ClassMemberPublic",
     "ClassMembersPublic",
+    # Learning Schemas
+    "LearningSessionStart",
+    "LearningSessionStartResponse",
+    "NextTermResponse",
+    "ReviewSubmission",
+    "ReviewResponse",
+    "SessionSummary",
+    "ProgressSummaryPublic",
+    "StudyActivityPublic",
+    "UserProgressOverview",
+    "ProgressHistory",
+    "WeakTerm",
+    "StudyStats",
 ]
 

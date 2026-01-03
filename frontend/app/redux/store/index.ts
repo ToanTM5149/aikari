@@ -14,6 +14,7 @@ import type { TypedUseSelectorHook } from 'react-redux';
 // Import các slice reducers từ features
 import authReducer from '../features/auth/slice';
 import userReducer from '../features/user/slice';
+import learningReducer from '../features/learning/slice';
 
 // Import RTK Query base API
 import { baseApi } from './api/baseApi';
@@ -22,6 +23,7 @@ import { baseApi } from './api/baseApi';
 import '../features/auth/api';
 import '../features/user/api';
 import '../features/class/api';
+import '../features/learning/api';
 
 /**
  * Root Reducer - Kết hợp tất cả reducers
@@ -32,6 +34,7 @@ import '../features/class/api';
 const rootReducer = combineReducers({
   auth: authReducer,
   user: userReducer,
+  learning: learningReducer,
   // RTK Query reducer - tự động quản lý cache, loading states
   [baseApi.reducerPath]: baseApi.reducer,
 });
