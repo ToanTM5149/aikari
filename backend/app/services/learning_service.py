@@ -82,7 +82,8 @@ class LearningService:
     def get_next_term_to_review(
         session: Session,
         user_id: uuid.UUID,
-        studyset_id: uuid.UUID
+        studyset_id: uuid.UUID,
+        exclude_recent_minutes: int = 5
     ) -> Term | None:
         """
         Get the next term that needs review based on spaced repetition
@@ -91,6 +92,10 @@ class LearningService:
         1. Terms that are due for review (next_review_date <= now)
         2. Terms never studied before
         3. Terms with lowest EF (hardest ones)
+        
+        Args:
+            exclude_recent_minutes: Exclude terms reviewed in the last N minutes
+                                   to avoid showing the same term multiple times in one session
         """
         # Get all terms in studyset
         terms_statement = select(Term).where(Term.studyset_id == studyset_id)
@@ -125,6 +130,7 @@ class LearningService:
         reviewed_terms = []
         
         now = datetime.utcnow()
+        recent_threshold = now - timedelta(minutes=exclude_recent_minutes)
         
         for term in all_terms:
             activity = term_activity_map.get(term.term_id)
@@ -132,6 +138,9 @@ class LearningService:
             if not activity:
                 # Never studied
                 new_terms.append(term)
+            elif activity.created_at > recent_threshold:
+                # Recently reviewed in this session - skip
+                continue
             elif activity.next_review_date and activity.next_review_date <= now:
                 # Due for review
                 due_terms.append((term, activity))
@@ -167,17 +176,89 @@ class LearningService:
         
         Returns up to 'limit' terms prioritized by review schedule
         """
-        terms = []
-        for _ in range(limit):
-            term = LearningService.get_next_term_to_review(session, user_id, studyset_id)
-            if term:
-                terms.append(term)
-                # TODO: Mark as "in session" to avoid duplicates
-                # For now, break after getting terms
-            else:
-                break
+        # Get all terms in studyset
+        terms_statement = select(Term).where(Term.studyset_id == studyset_id)
+        all_terms = list(session.exec(terms_statement).all())
         
-        return terms
+        if not all_terms:
+            return []
+        
+        # Limit session size to available terms
+        actual_limit = min(limit, len(all_terms))
+        
+        # Get user's study activities for this studyset
+        activities_statement = (
+            select(StudyActivity)
+            .where(
+                StudyActivity.user_id == user_id,
+                StudyActivity.studyset_id == studyset_id
+            )
+        )
+        activities = session.exec(activities_statement).all()
+        
+        # Create map of term_id -> latest activity
+        term_activity_map: dict[uuid.UUID, StudyActivity] = {}
+        for activity in activities:
+            if activity.term_id not in term_activity_map:
+                term_activity_map[activity.term_id] = activity
+            else:
+                # Keep the most recent activity
+                if activity.created_at > term_activity_map[activity.term_id].created_at:
+                    term_activity_map[activity.term_id] = activity
+        
+        # Categorize terms
+        due_terms = []
+        new_terms = []
+        reviewed_terms = []
+        
+        now = datetime.utcnow()
+        recent_threshold = now - timedelta(minutes=5)
+        
+        for term in all_terms:
+            activity = term_activity_map.get(term.term_id)
+            
+            if not activity:
+                # Never studied
+                new_terms.append(term)
+            elif activity.created_at > recent_threshold:
+                # Recently reviewed in this session - skip
+                continue
+            elif activity.next_review_date and activity.next_review_date <= now:
+                # Due for review
+                due_terms.append((term, activity))
+            else:
+                # Already reviewed, not due yet
+                reviewed_terms.append((term, activity))
+        
+        # Sort by priority
+        # Due terms: oldest first
+        due_terms.sort(key=lambda x: x[1].next_review_date)
+        
+        # Reviewed terms: lowest EF first (hardest)
+        reviewed_terms.sort(key=lambda x: x[1].ef)
+        
+        # Collect terms for session
+        session_terms = []
+        
+        # Add due terms first
+        for term, _ in due_terms:
+            if len(session_terms) >= actual_limit:
+                break
+            session_terms.append(term)
+        
+        # Add new terms
+        for term in new_terms:
+            if len(session_terms) >= actual_limit:
+                break
+            session_terms.append(term)
+        
+        # Add reviewed terms if still need more
+        for term, _ in reviewed_terms:
+            if len(session_terms) >= actual_limit:
+                break
+            session_terms.append(term)
+        
+        return session_terms
     
     @staticmethod
     def record_review(

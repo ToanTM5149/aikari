@@ -4,27 +4,28 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../../redux/store/hooks';
+import { useParams, useNavigate } from 'react-router';
+import { useAppDispatch, useAppSelector } from '~/redux/store/hooks';
 import {
   useStartLearningSessionMutation,
   useLazyGetNextTermQuery,
   useSubmitReviewMutation,
   useEndLearningSessionMutation,
-} from '../../redux/features/learning';
+} from '~/redux/features/learning';
 import {
   startSession,
   setCurrentTerm,
   flipCard,
   recordReview,
   resetSession,
-} from '../../redux/features/learning';
+} from '~/redux/features/learning';
 
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
+import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
+import { Button } from '~/components/ui/button';
+import { Badge } from '~/components/ui/badge';
+import { Progress } from '~/components/ui/progress';
 import { ArrowLeft, RefreshCw, Check, X, HelpCircle } from 'lucide-react';
+import type { RootState } from '~/redux/store';
 
 export function FlashcardLearningPage() {
   const { studysetId } = useParams<{ studysetId: string }>();
@@ -32,7 +33,7 @@ export function FlashcardLearningPage() {
   const dispatch = useAppDispatch();
 
   // Redux state
-  const learningState = useAppSelector((state) => state.learning);
+  const learningState = useAppSelector((state: RootState) => state.learning);
 
   // API hooks
   const [startSessionMutation] = useStartLearningSessionMutation();
@@ -58,7 +59,7 @@ export function FlashcardLearningPage() {
     };
   }, [studysetId]);
 
-  // Load next term when term changes
+  // Load next term when term data is available
   useEffect(() => {
     if (nextTerm) {
       dispatch(setCurrentTerm(nextTerm));
@@ -71,7 +72,7 @@ export function FlashcardLearningPage() {
     try {
       const response = await startSessionMutation({
         studyset_id: studysetId,
-        session_size: 20,
+        session_size: 10,  // Start with 10 cards per session
       }).unwrap();
 
       dispatch(
@@ -86,7 +87,11 @@ export function FlashcardLearningPage() {
       setStartTime(Date.now());
 
       // Load first term
-      await getNextTerm(studysetId);
+      const result = await getNextTerm(studysetId);
+      if (result.isError) {
+        // No terms available
+        dispatch(setCurrentTerm(undefined));
+      }
     } catch (error) {
       console.error('Failed to start session:', error);
     }
@@ -118,25 +123,37 @@ export function FlashcardLearningPage() {
 
       // Load next term
       setStartTime(Date.now());
-      await getNextTerm(studysetId);
+      const result = await getNextTerm(studysetId);
+      
+      // Check if no more terms available (404 response)
+      if (result.isError) {
+        dispatch(setCurrentTerm(undefined));
+      }
     } catch (error) {
       console.error('Failed to submit review:', error);
+      // Clear current term on error
+      dispatch(setCurrentTerm(undefined));
     }
   };
 
   const handleEndSession = async () => {
-    if (!studysetId || !learningState.sessionStartTime) return;
+    if (!studysetId) return;
 
     try {
-      await endSessionMutation({
-        studysetId,
-        sessionStart: learningState.sessionStartTime,
-      }).unwrap();
+      if (learningState.sessionStartTime) {
+        await endSessionMutation({
+          studysetId,
+          sessionStart: learningState.sessionStartTime,
+        }).unwrap();
+      }
 
       dispatch(resetSession());
-      navigate(`/studysets/${studysetId}`);
+      navigate(`/dashboard/studysets/${studysetId}`);
     } catch (error) {
       console.error('Failed to end session:', error);
+      // Navigate anyway even if end session fails
+      dispatch(resetSession());
+      navigate(`/dashboard/studysets/${studysetId}`);
     }
   };
 
@@ -225,7 +242,7 @@ export function FlashcardLearningPage() {
         <CardContent>
           <div
             onClick={handleFlipCard}
-            className="min-h-[300px] flex items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg p-8 transition-colors"
+            className="min-h-[300px] flex items-center justify-center cursor-pointer rounded-lg p-8"
           >
             <div className="text-center">
               <p className="text-3xl font-bold mb-4">

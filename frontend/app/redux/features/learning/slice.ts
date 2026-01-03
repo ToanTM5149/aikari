@@ -42,7 +42,7 @@ export const learningSlice = createSlice({
       state.isFlipped = false;
     },
 
-    setCurrentTerm: (state, action: PayloadAction<NextTermResponse>) => {
+    setCurrentTerm: (state, action: PayloadAction<NextTermResponse | undefined>) => {
       state.currentTerm = action.payload;
       state.isFlipped = false;
     },

@@ -22,6 +22,7 @@ import {
   Loader2,
   BookOpen,
   Edit,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -457,6 +458,14 @@ export function StudySetDetail() {
                   >
                     <BookOpen className="w-4 h-4 mr-2" />
                     Học
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/dashboard/studysets/${studysetId}/progress`)}
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Tiến độ
                   </Button>
                   <Button
                     variant="outline"

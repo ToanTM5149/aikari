@@ -1,6 +1,6 @@
-import { StudyMode } from "~/components/pages/dashboard/study-mode";
+import { FlashcardLearningPage } from "~/components/pages/learn/flashcard-learning-page";
 
 export default function StudyModePage() {
-  return <StudyMode />;
+  return <FlashcardLearningPage />;
 }
 

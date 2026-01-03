@@ -4,16 +4,17 @@
  */
 
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import {
   useGetStudysetProgressQuery,
   useGetStudysetStatsQuery,
-} from '../../redux/features/learning';
+  type WeakTerm,
+} from '~/redux/features/learning';
 
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Progress } from '../ui/progress';
-import { Badge } from '../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
+import { Progress } from '~/components/ui/progress';
+import { Badge } from '~/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import {
   CheckCircle,
   Clock,
@@ -243,7 +244,7 @@ export function ProgressDashboard() {
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {stats.weak_terms.map((term) => (
+                  {stats.weak_terms.map((term: WeakTerm) => (
                     <div
                       key={term.term_id}
                       className="border rounded-lg p-4 hover:bg-gray-50"
