@@ -65,7 +65,7 @@ export function ResetPasswordPage({ token: tokenProp }: ResetPasswordPageProps) 
       
       // Redirect to login sau 2 giây
       setTimeout(() => {
-        navigate("/auth/login")
+        navigate("/login")
       }, 2000)
     } catch (error: any) {
       const errorMessage = error?.data?.detail || authError || "Không thể đặt lại mật khẩu. Vui lòng thử lại."
@@ -155,7 +155,7 @@ export function ResetPasswordPage({ token: tokenProp }: ResetPasswordPageProps) 
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
               <Button
-                onClick={() => navigate("/auth/forgot-password")}
+                onClick={() => navigate("/forgot-password")}
                 className="w-full"
               >
                 Yêu cầu link mới

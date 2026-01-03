@@ -49,7 +49,7 @@ export default function AuthenticatedLayout() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate("/auth/login", { replace: true });
+      navigate("/login", { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -131,7 +131,7 @@ export default function AuthenticatedLayout() {
     } finally {
       // Always clear Redux state and navigate to login
       // The logout action is already dispatched by the API
-      navigate("/auth/login");
+      navigate("/login");
     }
   };
 

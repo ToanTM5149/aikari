@@ -23,11 +23,11 @@ export default function LoginRoute() {
   }
 
   const handleSwitchToSignup = () => {
-    navigate("/auth/signup")
+    navigate("/signup")
   }
 
   const handleSwitchToForgotPassword = () => {
-    navigate("/auth/forgot-password")
+    navigate("/forgot-password")
   }
 
   return (

@@ -100,6 +100,9 @@ export interface StudySet {
   content_type: ContentType;
   created_at: string;
   updated_at: string;
+  term_count?: number;  // Number of terms (cards) in this studyset
+  last_activity_at?: string | null;  // Last time user studied this set
+  progress?: number;  // Completion rate (0-100)
 }
 
 export interface StudySetCreate {

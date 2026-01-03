@@ -14,7 +14,7 @@ export default function SignupRoute() {
   }
 
   const handleSwitchToLogin = () => {
-    navigate("/auth/login")
+    navigate("/login")
   }
 
   return (

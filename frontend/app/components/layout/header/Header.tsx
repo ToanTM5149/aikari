@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Logo } from "~/components/ui/logo";
 
@@ -10,9 +11,11 @@ export default function Header() {
             <Logo size="sm" showText={true} />
           </div>
           <nav className="flex items-center gap-4">
-            <Button variant="outline" size="sm">
-              Sign In
-            </Button>
+            <Link to="/login">
+              <Button variant="outline" size="sm">
+                Sign In
+              </Button>
+            </Link>
           </nav>
         </div>
       </div>

@@ -80,6 +80,21 @@ const authSlice = createSlice({
      */
     updateAccessToken: (state, action: PayloadAction<string>) => {
       state.accessToken = action.payload;
+      // Nếu có user trong localStorage nhưng chưa authenticated → restore user
+      if (!state.user) {
+        const savedUserStr = localStorage.getItem('user');
+        if (savedUserStr) {
+          try {
+            state.user = JSON.parse(savedUserStr);
+            state.isAuthenticated = true;
+          } catch (error) {
+            console.error('Failed to parse user from localStorage:', error);
+          }
+        }
+      } else {
+        // Đã có user → chỉ cần set authenticated
+        state.isAuthenticated = true;
+      }
       // ⚠️ KHÔNG lưu vào localStorage
     },
     

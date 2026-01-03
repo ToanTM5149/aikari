@@ -127,7 +127,7 @@ export function useAuth() {
  * }
  * ```
  */
-export function useAuthGuard(redirectTo: string = '/auth/login') {
+export function useAuthGuard(redirectTo: string = '/login') {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const loading = useAppSelector(selectAuthLoading);
 

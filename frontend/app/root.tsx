@@ -11,6 +11,7 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { Provider } from "~/components/shared/provider";
 import { ReduxProvider } from "~/redux/store/Provider";
+import { AuthInitializer } from "~/components/shared/auth-initializer";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -56,7 +57,9 @@ export default function App() {
   return (
     <ReduxProvider>
       <Provider>
-        <Outlet />
+        <AuthInitializer>
+          <Outlet />
+        </AuthInitializer>
       </Provider>
     </ReduxProvider>
   );

@@ -9,7 +9,7 @@ export default function ForgotPasswordRoute() {
   const navigate = useNavigate()
 
   const handleBackToLogin = () => {
-    navigate("/auth/login")
+    navigate("/login")
   }
 
   return (

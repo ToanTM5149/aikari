@@ -110,7 +110,7 @@ export function StudySetList() {
                 : "Please check if the backend server is running."}
             </p>
             {isUnauthorized ? (
-              <Button onClick={() => navigate('/auth/login')}>
+              <Button onClick={() => navigate('/login')}>
                 Go to Login
               </Button>
             ) : (
@@ -268,14 +268,17 @@ export function StudySetList() {
                             </Badge>
                             <span className="flex items-center gap-1">
                               <BookOpen className="w-4 h-4" />
-                              {studySet.content_type === 'FLASHCARD' ? '25 cards' : '0 cards'}
+                              {studySet.term_count || 0} cards
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
                               {(() => {
+                                // Use last_activity_at if available, otherwise fall back to created_at
+                                const activityTime = studySet.last_activity_at 
+                                  ? new Date(studySet.last_activity_at)
+                                  : new Date(studySet.created_at)
                                 const now = new Date()
-                                const created = new Date(studySet.created_at)
-                                const diffHours = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60))
+                                const diffHours = Math.floor((now.getTime() - activityTime.getTime()) / (1000 * 60 * 60))
                                 if (diffHours < 1) return 'Just now'
                                 if (diffHours < 24) return `${diffHours} hours ago`
                                 const diffDays = Math.floor(diffHours / 24)
@@ -288,13 +291,13 @@ export function StudySetList() {
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">Progress</span>
-                              <span className="font-medium">80%</span>
+                              <span className="font-medium">{Math.round(studySet.progress || 0)}%</span>
                             </div>
                             <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                               <motion.div 
                                 className="bg-foreground rounded-full h-2"
                                 initial={{ width: 0 }}
-                                animate={{ width: "80%" }}
+                                animate={{ width: `${studySet.progress || 0}%` }}
                                 transition={{ delay: index * 0.05 + 0.2, duration: 0.6, ease: "easeOut" }}
                               />
                             </div>

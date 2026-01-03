@@ -29,4 +29,7 @@ class StudySetPublic(StudySetBase):
     created_at: datetime
     updated_at: datetime
     attributes: list[dict[str, Any]] | None = None
+    term_count: int = 0  # Number of terms (cards) in this studyset
+    last_activity_at: datetime | None = None  # Last time user studied this set
+    progress: float = 0.0  # Completion rate (0-100)
 
