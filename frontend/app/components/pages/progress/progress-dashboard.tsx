@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { useParams } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import {
   useGetStudysetProgressQuery,
   useGetStudysetStatsQuery,
@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Progress } from '~/components/ui/progress';
 import { Badge } from '~/components/ui/badge';
+import { Button } from '~/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import {
   CheckCircle,
@@ -21,10 +22,12 @@ import {
   TrendingUp,
   Target,
   AlertCircle,
+  ArrowLeft,
 } from 'lucide-react';
 
 export function ProgressDashboard() {
   const { studysetId } = useParams<{ studysetId: string }>();
+  const navigate = useNavigate();
 
   const {
     data: progress,
@@ -39,6 +42,14 @@ export function ProgressDashboard() {
   } = useGetStudysetStatsQuery(studysetId || '', {
     skip: !studysetId,
   });
+
+  const handleBack = () => {
+    if (studysetId) {
+      navigate(`/dashboard/studysets/${studysetId}`);
+    } else {
+      navigate('/dashboard/studysets');
+    }
+  };
 
   if (isLoadingProgress || isLoadingStats) {
     return (
@@ -65,6 +76,15 @@ export function ProgressDashboard() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Quay lại
+        </Button>
         <h1 className="text-3xl font-bold mb-2">Learning Progress</h1>
         <p className="text-gray-600">Track your progress and performance</p>
       </div>

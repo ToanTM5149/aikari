@@ -174,4 +174,5 @@ export interface MessageResponse {
 export interface PaginationParams {
   skip?: number;
   limit?: number;
+  q?: string;  // Search query
 }

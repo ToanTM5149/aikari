@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { useNavigate } from "react-router"
+import { useDebounce } from "~/hooks/useDebounce"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
 import { Button } from "~/components/ui/button"
 import { Badge } from "~/components/ui/badge"
@@ -45,6 +46,7 @@ import { CreateClassDialog } from "./create-class-dialog"
 import { InviteMemberDialog } from "./invite-member-dialog"
 import { DeleteClassDialog } from "./delete-class-dialog"
 import { LeaveClassDialog } from "./leave-class-dialog"
+import { DataPagination } from "~/components/common/data-pagination"
 
 interface ClassPageProps {
   onStudySetClick?: () => void
@@ -70,29 +72,54 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
     name: string
     isPublic?: boolean
   } | null>(null)
+  
+  // Pagination state for My Classes
+  const [myClassesPage, setMyClassesPage] = useState(1)
+  const [myClassesPerPage, setMyClassesPerPage] = useState(4)
+  
+  // Pagination state for Public Classes
+  const [publicClassesPage, setPublicClassesPage] = useState(1)
+  const [publicClassesPerPage, setPublicClassesPerPage] = useState(4)
 
-  // API calls
-  const { data: myClassesData, isLoading: isLoadingMy, error: errorMy } = useGetClassesQuery()
-  const { data: publicClassesData, isLoading: isLoadingPublic, error: errorPublic } = useGetPublicClassesQuery()
+  // Debounce search queries với 500ms delay
+  const debouncedMyClassesSearch = useDebounce(myClassesSearch, 500)
+  const debouncedPublicClassesSearch = useDebounce(publicClassesSearch, 500)
+
+  // Reset to page 1 when debounced search changes
+  useEffect(() => {
+    setMyClassesPage(1)
+  }, [debouncedMyClassesSearch])
+
+  useEffect(() => {
+    setPublicClassesPage(1)
+  }, [debouncedPublicClassesSearch])
+
+  // API calls with pagination and search
+  const { data: myClassesData, isLoading: isLoadingMy, error: errorMy } = useGetClassesQuery({
+    skip: (myClassesPage - 1) * myClassesPerPage,
+    limit: myClassesPerPage,
+    q: debouncedMyClassesSearch || undefined,  // Send debounced search query to backend
+  })
+  const { data: publicClassesData, isLoading: isLoadingPublic, error: errorPublic } = useGetPublicClassesQuery({
+    skip: (publicClassesPage - 1) * publicClassesPerPage,
+    limit: publicClassesPerPage,
+    q: debouncedPublicClassesSearch || undefined,  // Send debounced search query to backend
+  })
   const [deleteClass, { isLoading: isDeleting }] = useDeleteClassMutation()
   const [leaveClass, { isLoading: isLeaving }] = useLeaveClassMutation()
   const [joinClass, { isLoading: isJoining }] = useJoinClassMutation()
 
   const myClasses = myClassesData?.data || []
+  const myClassesTotal = myClassesData?.count || 0
+  const myClassesTotalPages = Math.ceil(myClassesTotal / myClassesPerPage)
+  
   const publicClasses = publicClassesData?.data || []
+  const publicClassesTotal = publicClassesData?.count || 0
+  const publicClassesTotalPages = Math.ceil(publicClassesTotal / publicClassesPerPage)
 
-  // Filter classes based on search
-  const filteredMyClasses = myClasses.filter(cls =>
-    cls.class_name.toLowerCase().includes(myClassesSearch.toLowerCase()) ||
-    cls.class_code?.toLowerCase().includes(myClassesSearch.toLowerCase()) ||
-    cls.created_by.toLowerCase().includes(myClassesSearch.toLowerCase())
-  )
-
-  const filteredPublicClasses = publicClasses.filter(cls =>
-    cls.class_name.toLowerCase().includes(publicClassesSearch.toLowerCase()) ||
-    cls.class_code?.toLowerCase().includes(publicClassesSearch.toLowerCase()) ||
-    cls.created_by.toLowerCase().includes(publicClassesSearch.toLowerCase())
-  )
+  // No need for client-side filtering anymore - backend handles it
+  const filteredMyClasses = myClasses
+  const filteredPublicClasses = publicClasses
 
   // Check if user is already member of a class
   const isAlreadyMember = (classId: string) => {
@@ -383,10 +410,10 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
           <Tabs defaultValue="my-classes" className="h-full flex flex-col">
             <TabsList className="mx-6 mt-6 grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="my-classes">
-                My Classes ({myClasses.length})
+                My Classes ({myClassesTotal})
               </TabsTrigger>
               <TabsTrigger value="public-classes">
-                Public Classes ({publicClasses.length})
+                Public Classes ({publicClassesTotal})
               </TabsTrigger>
             </TabsList>
 
@@ -436,7 +463,23 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
                     ))}
                   </motion.div>
                 )}
-                            </div>
+              </div>
+              
+              {/* My Classes Pagination */}
+              {filteredMyClasses.length > 0 && myClassesTotalPages > 1 && (
+                <div className="mt-4">
+                  <DataPagination
+                    currentPage={myClassesPage}
+                    totalPages={myClassesTotalPages}
+                    totalItems={myClassesTotal}
+                    itemsPerPage={myClassesPerPage}
+                    onPageChange={(page) => {
+                      setMyClassesPage(page)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                  />
+                </div>
+              )}
             </TabsContent>
 
             {/* Public Classes Tab */}
@@ -486,6 +529,22 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
               </motion.div>
             )}
               </div>
+              
+              {/* Public Classes Pagination */}
+              {filteredPublicClasses.length > 0 && publicClassesTotalPages > 1 && (
+                <div className="mt-4">
+                  <DataPagination
+                    currentPage={publicClassesPage}
+                    totalPages={publicClassesTotalPages}
+                    totalItems={publicClassesTotal}
+                    itemsPerPage={publicClassesPerPage}
+                    onPageChange={(page) => {
+                      setPublicClassesPage(page)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                  />
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

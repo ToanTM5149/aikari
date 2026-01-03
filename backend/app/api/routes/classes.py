@@ -3,7 +3,7 @@ from typing import Any
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import Session, select, or_
+from sqlmodel import Session, select, or_, func
 from sqlalchemy.orm import selectinload
 
 from app import crud
@@ -30,14 +30,52 @@ def read_classes(
     session: SessionDep,
     skip: int = 0,
     limit: int = 100,
+    q: str | None = Query(None, description="Search query for class name or code"),
 ) -> Any:
     """
     Retrieve classes where user is a member.
+    Supports search by class name, code, or created_by.
     """
-    classes = crud.get_user_classes(
-        session=session, user_id=current_user.user_id, skip=skip, limit=limit
+    from app.models.enums import MembershipStatus
+    
+    # Build base query
+    base_query = (
+        select(Class)
+        .join(ClassMember)
+        .where(ClassMember.user_id == current_user.user_id)
+        .where(ClassMember.status == MembershipStatus.ACTIVE)
     )
-    return ClassesPublic(data=classes, count=len(classes))
+    
+    # Add search filter if provided
+    if q:
+        search_filter = or_(
+            Class.class_name.ilike(f"%{q}%"),
+            Class.class_code.ilike(f"%{q}%"),
+            Class.created_by.ilike(f"%{q}%")
+        )
+        base_query = base_query.where(search_filter)
+    
+    # Count total classes matching search before pagination
+    total_count_statement = (
+        select(func.count(Class.class_id))
+        .join(ClassMember)
+        .where(ClassMember.user_id == current_user.user_id)
+        .where(ClassMember.status == MembershipStatus.ACTIVE)
+    )
+    if q:
+        search_filter = or_(
+            Class.class_name.ilike(f"%{q}%"),
+            Class.class_code.ilike(f"%{q}%"),
+            Class.created_by.ilike(f"%{q}%")
+        )
+        total_count_statement = total_count_statement.where(search_filter)
+    total_count = session.exec(total_count_statement).one() or 0
+    
+    # Get paginated classes
+    statement = base_query.offset(skip).limit(limit)
+    classes = list(session.exec(statement).all())
+    
+    return ClassesPublic(data=classes, count=total_count)
 
 
 @router.get("/owned/", response_model=ClassesPublic)
@@ -50,10 +88,21 @@ def read_owned_classes(
     """
     Retrieve classes owned by current user.
     """
+    # Count total owned classes before pagination
+    from app.models.enums import MembershipStatus
+    total_count_statement = (
+        select(func.count(Class.class_id))
+        .join(ClassMember)
+        .where(ClassMember.user_id == current_user.user_id)
+        .where(ClassMember.role == "OWNER")
+        .where(ClassMember.status == MembershipStatus.ACTIVE)
+    )
+    total_count = session.exec(total_count_statement).one() or 0
+    
     classes = crud.get_classes_by_owner(
         session=session, owner_id=current_user.user_id, skip=skip, limit=limit
     )
-    return ClassesPublic(data=classes, count=len(classes))
+    return ClassesPublic(data=classes, count=total_count)
 
 
 @router.get("/public/", response_model=ClassesPublic)
@@ -62,19 +111,41 @@ def read_public_classes(
     session: SessionDep,
     skip: int = 0,
     limit: int = 100,
+    q: str | None = Query(None, description="Search query for class name or code"),
 ) -> Any:
     """
     Retrieve all public classes that user can browse and join.
+    Supports search by class name or code.
     """
-    statement = (
-        select(Class)
-        .where(Class.is_public == True)
-        .offset(skip)
-        .limit(limit)
-    )
+    # Build base query
+    base_query = select(Class).where(Class.is_public == True)
     
+    # Add search filter if provided
+    if q:
+        search_filter = or_(
+            Class.class_name.ilike(f"%{q}%"),
+            Class.class_code.ilike(f"%{q}%")
+        )
+        base_query = base_query.where(search_filter)
+    
+    # Count total public classes matching search before pagination
+    total_count_statement = (
+        select(func.count(Class.class_id))
+        .where(Class.is_public == True)
+    )
+    if q:
+        search_filter = or_(
+            Class.class_name.ilike(f"%{q}%"),
+            Class.class_code.ilike(f"%{q}%")
+        )
+        total_count_statement = total_count_statement.where(search_filter)
+    total_count = session.exec(total_count_statement).one() or 0
+    
+    # Get paginated classes
+    statement = base_query.offset(skip).limit(limit)
     classes = session.exec(statement).all()
-    return ClassesPublic(data=list(classes), count=len(classes))
+    
+    return ClassesPublic(data=list(classes), count=total_count)
 
 
 @router.get("/search/", response_model=ClassesPublic)

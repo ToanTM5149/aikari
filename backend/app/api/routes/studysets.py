@@ -28,13 +28,39 @@ def read_studysets(
     session: SessionDep,
     skip: int = 0,
     limit: int = 100,
+    q: str | None = None,
 ) -> Any:
     """
     Retrieve study sets owned by current user with additional metadata.
+    Supports search by title and description.
     """
-    sets = crud.get_studysets_by_owner(
-        session=session, owner_id=current_user.user_id, skip=skip, limit=limit
+    from sqlmodel import or_
+    
+    # Build base query with search filter
+    base_query = select(StudySet).where(StudySet.owner_id == current_user.user_id)
+    
+    if q:
+        search_filter = or_(
+            StudySet.title.ilike(f"%{q}%"),
+            StudySet.description.ilike(f"%{q}%")
+        )
+        base_query = base_query.where(search_filter)
+    
+    # Count total studysets matching search before pagination
+    total_count_statement = select(func.count(StudySet.studyset_id)).where(
+        StudySet.owner_id == current_user.user_id
     )
+    if q:
+        search_filter = or_(
+            StudySet.title.ilike(f"%{q}%"),
+            StudySet.description.ilike(f"%{q}%")
+        )
+        total_count_statement = total_count_statement.where(search_filter)
+    total_count = session.exec(total_count_statement).one() or 0
+    
+    # Get paginated sets
+    statement = base_query.offset(skip).limit(limit)
+    sets = list(session.exec(statement).all())
     
     # Enrich each studyset with term_count, last_activity_at, and progress
     enriched_sets = []
@@ -80,7 +106,7 @@ def read_studysets(
         )
         enriched_sets.append(enriched_set)
     
-    return {"data": enriched_sets, "count": len(enriched_sets)}
+    return {"data": enriched_sets, "count": total_count}
 
 
 @router.get("/{studyset_id}/")

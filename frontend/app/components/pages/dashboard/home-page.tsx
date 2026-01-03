@@ -26,7 +26,7 @@ interface HomePageProps {
 
 export function HomePage({ onStudySetClick }: HomePageProps) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6">
       {/* Recent Study Sets */}
       <section>
         <div className="flex items-center justify-between mb-6">

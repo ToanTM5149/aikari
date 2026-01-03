@@ -3,7 +3,7 @@ import { type RouteConfig, index, route, layout } from "@react-router/dev/routes
 export default [
   route(".well-known/*", "routes/.well-known.tsx"),
   
-  // Auth routes (login, signup, etc.) - cho user chưa đăng nhập
+  // Auth routes (login, signup, etc.)
   layout("routes/_layouts/auth-layout.tsx", [
     route("login", "routes/auth/login.tsx"),
     route("signup", "routes/auth/signup.tsx"),

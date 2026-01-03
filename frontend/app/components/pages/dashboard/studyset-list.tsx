@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { useNavigate } from "react-router"
+import { useDebounce } from "~/hooks/useDebounce"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
 import { Button } from "~/components/ui/button"
 import { Badge } from "~/components/ui/badge"
@@ -33,24 +34,44 @@ import {
 } from "~/redux/features/studyset"
 import { CreateStudySetDialog } from "./create-studyset-dialog"
 import { Skeleton } from "~/components/ui/skeleton"
+import { DataPagination } from "~/components/common/data-pagination"
 
 export function StudySetList() {
   const navigate = useNavigate()
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(9)
 
-  // API calls
-  const { data, isLoading, error } = useGetStudySetsQuery()
+  // Debounce search query với 500ms delay
+  const debouncedSearchQuery = useDebounce(searchQuery, 500)
+
+  // Reset to page 1 when debounced search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearchQuery])
+
+  // API calls with pagination and search
+  const { data, isLoading, isFetching, error } = useGetStudySetsQuery({
+    skip: (currentPage - 1) * itemsPerPage,
+    limit: itemsPerPage,
+    q: debouncedSearchQuery || undefined,  // Send debounced search query to backend
+  })
   const [deleteStudySet] = useDeleteStudySetMutation()
 
   const studySets = data?.data || []
+  const totalItems = data?.count || 0
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
 
-  // Filter studysets based on search
-  const filteredStudySets = studySets.filter(set =>
-    set.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    set.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // No need for client-side filtering anymore - backend handles it
+  const filteredStudySets = studySets
+
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // Handle delete
   const handleDelete = async (id: string, title: string) => {
@@ -175,7 +196,17 @@ export function StudySetList() {
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-auto p-6">
+        <CardContent className="flex-1 overflow-auto p-6 relative">
+          {/* Loading overlay khi đang fetch data mới (chuyển trang) */}
+          {isFetching && !isLoading && (
+            <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-sm text-muted-foreground">Đang tải...</p>
+              </div>
+            </div>
+          )}
+          
           {filteredStudySets.length === 0 ? (
             <div className="flex items-center justify-center h-64 text-muted-foreground">
               <div className="text-center">
@@ -397,6 +428,19 @@ export function StudySetList() {
                 </motion.div>
               )}
             </AnimatePresence>
+          )}
+
+          {/* Pagination */}
+          {filteredStudySets.length > 0 && totalPages > 1 && (
+            <div className="mt-6">
+              <DataPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={handlePageChange}
+              />
+            </div>
           )}
         </CardContent>
       </Card>
