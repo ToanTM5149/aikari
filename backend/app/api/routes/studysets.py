@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, func
 
 from app import crud
-from app.api.deps import CurrentUser, SessionDep
-from app.models import StudySet, Term, StudyActivity, ProgressSummary
+from app.api.deps import CurrentUser, SessionDep, check_studyset_access
+from app.models import StudySet, Term, StudyActivity, ProgressSummary, ClassStudySet, ClassMember, MembershipStatus
 from app.schemas import (
     Message,
     StudySetCreate,
@@ -122,8 +122,8 @@ def read_studyset(
     if not studyset:
         raise HTTPException(status_code=404, detail="Study set not found")
     
-    # Check if user owns the set
-    if studyset.owner_id != current_user.user_id:
+    # Check if user has access (owner or class member)
+    if not check_studyset_access(session, studyset_id, current_user.user_id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     return studyset
@@ -203,8 +203,8 @@ def read_terms(
     if not studyset:
         raise HTTPException(status_code=404, detail="Study set not found")
     
-    # Check if user owns the set
-    if studyset.owner_id != current_user.user_id:
+    # Check if user has access (owner or class member)
+    if not check_studyset_access(session, studyset_id, current_user.user_id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     terms = crud.get_terms_by_studyset(
@@ -227,7 +227,8 @@ def read_term(
     if not studyset:
         raise HTTPException(status_code=404, detail="Study set not found")
     
-    if studyset.owner_id != current_user.user_id:
+    # Check if user has access (owner or class member)
+    if not check_studyset_access(session, studyset_id, current_user.user_id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     term = crud.get_term(session=session, term_id=term_id)

@@ -104,6 +104,7 @@ class StudyActivityPublic(BaseModel):
     ef: float
     interval: int
     next_review_date: datetime | None
+    response_time: float
     created_at: datetime
 
 

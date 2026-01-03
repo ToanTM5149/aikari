@@ -20,6 +20,7 @@ class StudyActivity(SQLModel, table=True):
     ef: float = Field(default=2.5)  # Easiness Factor (min = 1.3)
     interval: int = Field(default=0)  # next review date
     next_review_date: datetime | None = Field(default=None)
+    response_time: float = Field(default=0.0)  # Response time in seconds
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     

@@ -780,10 +780,16 @@ export function ClassDetail() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
-                        <Card className="hover:shadow-md transition-shadow">
+                        <Card 
+                          className="hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => navigate(`/dashboard/studysets/${studySet.studyset_id}`)}
+                        >
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div 
+                                className="flex items-center gap-3 flex-1 min-w-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                                   <BookOpen className="w-5 h-5 text-primary" />
                                 </div>
@@ -799,7 +805,8 @@ export function ClassDetail() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={async () => {
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
                                     if (confirm(`Remove "${studySet.title}" from this class?`)) {
                                       try {
                                         await removeStudySet({

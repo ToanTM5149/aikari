@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, check_studyset_access
 from app.models import StudySet, Term, StudyActivity, ProgressSummary
 from app.schemas import (
     LearningSessionStart,
@@ -45,9 +45,8 @@ def start_learning_session(
     if not studyset:
         raise HTTPException(status_code=404, detail="Study set not found")
     
-    # For now, we allow access to own studysets
-    # TODO: Check if user has access (own or class member)
-    if studyset.owner_id != current_user.user_id:
+    # Check if user has access (owner or class member)
+    if not check_studyset_access(session, session_data.studyset_id, current_user.user_id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     # Get terms for session
@@ -85,8 +84,8 @@ def get_next_term(
     if not studyset:
         raise HTTPException(status_code=404, detail="Study set not found")
     
-    # Check access
-    if studyset.owner_id != current_user.user_id:
+    # Check if user has access (owner or class member)
+    if not check_studyset_access(session, studyset_id, current_user.user_id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     # Get next term
@@ -139,8 +138,8 @@ def submit_review(
     if not studyset:
         raise HTTPException(status_code=404, detail="Study set not found")
     
-    # Check access
-    if studyset.owner_id != current_user.user_id:
+    # Check if user has access (owner or class member)
+    if not check_studyset_access(session, studyset_id, current_user.user_id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     # Verify term belongs to studyset
@@ -190,6 +189,10 @@ def end_learning_session(
     End a learning session and return summary
     """
     # Calculate session duration
+    # Normalize session_start to UTC naive datetime if it's timezone-aware
+    if session_start.tzinfo is not None:
+        session_start = session_start.replace(tzinfo=None)
+    
     session_end = datetime.utcnow()
     duration_minutes = (session_end - session_start).total_seconds() / 60
     

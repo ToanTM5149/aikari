@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core import security
 from app.core.config import settings
@@ -90,3 +90,38 @@ def get_current_active_teacher_or_admin(current_user: CurrentUser) -> User:
       status_code=403, detail="The user doesn't have enough privileges"
     )
   return current_user
+
+
+def check_studyset_access(
+    session: Session,
+    studyset_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> bool:
+  """
+  Check if user has access to a studyset.
+  User has access if:
+  1. They own the studyset, OR
+  2. The studyset is part of a class they are an active member of
+  """
+  from app.crud.crud import get_studyset
+  from app.models import ClassStudySet, ClassMember, MembershipStatus
+  
+  studyset = get_studyset(session=session, studyset_id=studyset_id)
+  if not studyset:
+    return False
+  
+  # Check ownership
+  if studyset.owner_id == user_id:
+    return True
+  
+  # Check if studyset is in any class where user is an active member
+  statement = (
+    select(ClassStudySet)
+    .join(ClassMember, ClassMember.class_id == ClassStudySet.class_id)
+    .where(ClassStudySet.studyset_id == studyset_id)
+    .where(ClassMember.user_id == user_id)
+    .where(ClassMember.status == MembershipStatus.ACTIVE)
+  )
+  class_studyset = session.exec(statement).first()
+  
+  return class_studyset is not None

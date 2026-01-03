@@ -324,7 +324,8 @@ class LearningService:
             recall_score=recall_score,
             ef=new_ef,
             interval=new_interval,
-            next_review_date=next_review_date
+            next_review_date=next_review_date,
+            response_time=response_time
         )
         
         session.add(activity)
@@ -408,8 +409,13 @@ class LearningService:
         
         # Calculate averages
         total_activities = len(activities)
-        avg_recall_score = sum(a.recall_score for a in activities) / total_activities
-        avg_response_time = 0.0  # TODO: Track response time
+        avg_recall_score = sum(a.recall_score for a in activities) / total_activities if total_activities > 0 else 0.0
+        
+        activities_with_time = [a for a in activities if a.response_time and a.response_time > 0]
+        avg_response_time = (
+            sum(a.response_time for a in activities_with_time) / len(activities_with_time)
+            if activities_with_time else 0.0
+        )
         
         # Update progress
         progress.mastered_terms = mastered
@@ -447,6 +453,10 @@ class LearningService:
         """
         if not since:
             since = datetime.utcnow() - timedelta(hours=1)
+        else:
+            # Normalize to UTC naive datetime if timezone-aware
+            if since.tzinfo is not None:
+                since = since.replace(tzinfo=None)
         
         activities_statement = (
             select(StudyActivity)

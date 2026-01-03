@@ -90,7 +90,7 @@ export function ProgressDashboard() {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -139,6 +139,27 @@ export function ProgressDashboard() {
             </div>
             <p className="text-xs text-muted-foreground">
               Avg recall: {stats.average_recall_score.toFixed(1)}/5
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Avg Response Time
+            </CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {progress.average_response_time > 0 
+                ? `${progress.average_response_time.toFixed(1)}s`
+                : 'N/A'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {progress.average_response_time > 0 
+                ? 'Time to answer per card'
+                : 'Start learning to see stats'}
             </p>
           </CardContent>
         </Card>
