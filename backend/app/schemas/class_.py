@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlmodel import SQLModel
 
@@ -81,4 +82,76 @@ class UserPublic(SQLModel):
     email: str
     
     model_config = {"from_attributes": True}
+
+
+# Analytics Schemas
+
+class StudentProgressDetail(SQLModel):
+    """Individual student progress in a class"""
+    user_id: uuid.UUID
+    username: str
+    email: str
+    total_studysets: int
+    completed_studysets: int
+    total_terms_studied: int
+    average_accuracy: float  # 0-100
+    total_study_time: int  # in seconds
+    last_activity: datetime | None = None
+    mastery_percentage: float  # 0-100
+    weak_terms_count: int
+
+
+class ClassAnalyticsOverview(SQLModel):
+    """Overview analytics for a class"""
+    class_id: uuid.UUID
+    class_name: str
+    total_members: int
+    active_members: int  # Members who studied in last 7 days
+    total_studysets: int
+    total_terms: int
+    average_completion_rate: float  # 0-100
+    average_accuracy: float  # 0-100
+    total_study_sessions: int
+    total_study_time: int  # in seconds
+    most_active_student: StudentProgressDetail | None = None
+    least_active_student: StudentProgressDetail | None = None
+
+
+class StudySetAnalytics(SQLModel):
+    """Analytics for a specific studyset in a class"""
+    studyset_id: uuid.UUID
+    studyset_name: str
+    total_terms: int
+    students_started: int
+    students_completed: int
+    average_progress: float  # 0-100
+    average_accuracy: float  # 0-100
+    average_completion_time: int | None = None  # in seconds
+    most_difficult_terms: list[dict[str, Any]]  # [{term_id, term_text, error_rate}]
+
+
+class LeaderboardEntry(SQLModel):
+    """Single entry in class leaderboard"""
+    rank: int
+    user_id: uuid.UUID
+    username: str
+    email: str
+    total_terms_mastered: int
+    accuracy: float  # 0-100
+    study_streak_days: int
+    total_study_time: int  # in seconds
+    last_study_date: datetime | None = None
+
+
+class ClassLeaderboard(SQLModel):
+    """Leaderboard for a class"""
+    class_id: uuid.UUID
+    entries: list[LeaderboardEntry]
+    count: int
+
+
+class StudentProgressList(SQLModel):
+    """List of student progress details"""
+    data: list[StudentProgressDetail]
+    count: int
 

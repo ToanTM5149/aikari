@@ -19,7 +19,12 @@ from app.schemas import (
     ClassesPublic,
     ClassUpdate,
     Message,
+    ClassAnalyticsOverview,
+    StudentProgressList,
+    StudySetAnalytics,
+    ClassLeaderboard,
 )
+from app.services.analytics_service import AnalyticsService
 
 router = APIRouter()
 
@@ -739,4 +744,164 @@ def remove_studyset_from_class(
     session.delete(class_studyset)
     session.commit()
     return Message(message="Study set removed from class successfully")
+
+
+# ============================================================================
+# ANALYTICS ENDPOINTS
+# ============================================================================
+
+@router.get("/{class_id}/analytics/overview/", response_model=ClassAnalyticsOverview)
+def get_class_analytics_overview(
+    class_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Get overview analytics for a class.
+    Accessible by class teachers and members.
+    """
+    # Verify user is a member of the class
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this class")
+    
+    # Get analytics
+    analytics = AnalyticsService.get_class_overview(session=session, class_id=class_id)
+    
+    if not analytics:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    return analytics
+
+
+@router.get("/{class_id}/analytics/progress/", response_model=StudentProgressList)
+def get_class_student_progress(
+    class_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Get progress details for all students in a class.
+    Accessible by class teachers only.
+    """
+    # Verify user is a teacher
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
+        raise HTTPException(
+            status_code=403, 
+            detail="Only teachers can view detailed student progress"
+        )
+    
+    # Get all approved members
+    from app.models.enums import MembershipStatus
+    members = session.exec(
+        select(ClassMember)
+        .where(
+            ClassMember.class_id == class_id,
+            ClassMember.status == MembershipStatus.ACTIVE
+        )
+    ).all()
+    
+    # Get progress for each student
+    student_progress = []
+    for member in members:
+        progress = AnalyticsService.get_student_progress_detail(
+            session=session,
+            class_id=class_id,
+            user_id=member.user_id
+        )
+        if progress:
+            student_progress.append(progress)
+    
+    return StudentProgressList(
+        data=student_progress,
+        count=len(student_progress)
+    )
+
+
+@router.get(
+    "/{class_id}/analytics/studysets/{studyset_id}/", 
+    response_model=StudySetAnalytics
+)
+def get_studyset_analytics(
+    class_id: uuid.UUID,
+    studyset_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Get analytics for a specific studyset in a class.
+    Accessible by class teachers only.
+    """
+    # Verify user is a teacher
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership or membership.role not in [ClassRole.OWNER, ClassRole.CO_TEACHER]:
+        raise HTTPException(
+            status_code=403, 
+            detail="Only teachers can view studyset analytics"
+        )
+    
+    # Get analytics
+    analytics = AnalyticsService.get_studyset_analytics(
+        session=session,
+        class_id=class_id,
+        studyset_id=studyset_id
+    )
+    
+    if not analytics:
+        raise HTTPException(
+            status_code=404, 
+            detail="Study set not found in this class"
+        )
+    
+    return analytics
+
+
+@router.get("/{class_id}/analytics/leaderboard/", response_model=ClassLeaderboard)
+def get_class_leaderboard(
+    class_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+    sort_by: str = Query(
+        "mastery",
+        description="Sort by: mastery, accuracy, streak, or time"
+    ),
+) -> Any:
+    """
+    Get leaderboard for a class.
+    Accessible by all class members.
+    """
+    # Verify user is a member
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this class")
+    
+    # Validate sort_by parameter
+    valid_sort_options = ["mastery", "accuracy", "streak", "time"]
+    if sort_by not in valid_sort_options:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid sort_by parameter. Must be one of: {', '.join(valid_sort_options)}"
+        )
+    
+    # Get leaderboard
+    entries = AnalyticsService.get_class_leaderboard(
+        session=session,
+        class_id=class_id,
+        sort_by=sort_by
+    )
+    
+    return ClassLeaderboard(
+        class_id=class_id,
+        entries=entries,
+        count=len(entries)
+    )
 

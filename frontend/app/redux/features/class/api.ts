@@ -17,6 +17,10 @@ import type {
   ClassMembersResponse,
   MessageResponse,
   PaginationParams,
+  ClassAnalyticsOverview,
+  StudentProgressList,
+  StudySetAnalytics,
+  ClassLeaderboard,
 } from '../shared/types';
 
 /**
@@ -307,6 +311,55 @@ export const classApi = baseApi.injectEndpoints({
         { type: 'Class', id: `${classId}-studysets` },
       ],
     }),
+    
+    // ==================== ANALYTICS ENDPOINTS ====================
+    
+    /**
+     * Get Class Analytics Overview
+     * GET /classes/{class_id}/analytics/overview/
+     */
+    getClassAnalyticsOverview: builder.query<ClassAnalyticsOverview, string>({
+      query: (classId) => `/classes/${classId}/analytics/overview/`,
+      providesTags: (result, error, classId) => [
+        { type: 'Class', id: `${classId}-analytics` },
+      ],
+    }),
+    
+    /**
+     * Get Student Progress in Class
+     * GET /classes/{class_id}/analytics/progress/
+     */
+    getClassStudentProgress: builder.query<StudentProgressList, string>({
+      query: (classId) => `/classes/${classId}/analytics/progress/`,
+      providesTags: (result, error, classId) => [
+        { type: 'Class', id: `${classId}-progress` },
+      ],
+    }),
+    
+    /**
+     * Get StudySet Analytics
+     * GET /classes/{class_id}/analytics/studysets/{studyset_id}/
+     */
+    getStudySetAnalytics: builder.query<StudySetAnalytics, { classId: string; studysetId: string }>({
+      query: ({ classId, studysetId }) => `/classes/${classId}/analytics/studysets/${studysetId}/`,
+      providesTags: (result, error, { classId, studysetId }) => [
+        { type: 'Class', id: `${classId}-studyset-${studysetId}` },
+      ],
+    }),
+    
+    /**
+     * Get Class Leaderboard
+     * GET /classes/{class_id}/analytics/leaderboard/
+     */
+    getClassLeaderboard: builder.query<ClassLeaderboard, { classId: string; sortBy?: string }>({
+      query: ({ classId, sortBy = 'mastery' }) => ({
+        url: `/classes/${classId}/analytics/leaderboard/`,
+        params: { sort_by: sortBy },
+      }),
+      providesTags: (result, error, { classId }) => [
+        { type: 'Class', id: `${classId}-leaderboard` },
+      ],
+    }),
   }),
 });
 
@@ -337,4 +390,10 @@ export const {
   useGetClassStudySetsQuery,
   useAddStudySetToClassMutation,
   useRemoveStudySetFromClassMutation,
+  // Analytics hooks
+  useGetClassAnalyticsOverviewQuery,
+  useGetClassStudentProgressQuery,
+  useGetStudySetAnalyticsQuery,
+  useGetClassLeaderboardQuery,
 } = classApi;
+

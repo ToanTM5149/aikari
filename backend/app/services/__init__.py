@@ -13,6 +13,9 @@ from app.services.auth_service import (
     verify_password_reset_token,
 )
 
+# Dify Service
+from app.services.dify_service import DifyService, dify_service
+
 __all__ = [
     # Email Service
     "EmailData",
@@ -23,5 +26,8 @@ __all__ = [
     # Auth Service
     "generate_password_reset_token",
     "verify_password_reset_token",
+    # Dify Service
+    "DifyService",
+    "dify_service",
 ]
 

@@ -72,6 +72,13 @@ from app.schemas.class_ import (
     ClassPublic,
     ClassesPublic,
     ClassUpdate,
+    # Analytics Schemas
+    StudentProgressDetail,
+    ClassAnalyticsOverview,
+    StudySetAnalytics,
+    LeaderboardEntry,
+    ClassLeaderboard,
+    StudentProgressList,
 )
 
 # Learning Schemas
@@ -149,6 +156,13 @@ __all__ = [
     "ClassMemberUpdate",
     "ClassMemberPublic",
     "ClassMembersPublic",
+    # Analytics Schemas
+    "StudentProgressDetail",
+    "ClassAnalyticsOverview",
+    "StudySetAnalytics",
+    "LeaderboardEntry",
+    "ClassLeaderboard",
+    "StudentProgressList",
     # Learning Schemas
     "LearningSessionStart",
     "LearningSessionStartResponse",

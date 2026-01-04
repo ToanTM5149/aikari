@@ -176,3 +176,73 @@ export interface PaginationParams {
   limit?: number;
   q?: string;  // Search query
 }
+
+// ==================== ANALYTICS TYPES ====================
+
+export interface StudentProgressDetail {
+  user_id: string;
+  username: string;
+  email: string;
+  total_studysets: number;
+  completed_studysets: number;
+  total_terms_studied: number;
+  average_accuracy: number;  // 0-100
+  total_study_time: number;  // in seconds
+  last_activity: string | null;
+  mastery_percentage: number;  // 0-100
+  weak_terms_count: number;
+}
+
+export interface ClassAnalyticsOverview {
+  class_id: string;
+  class_name: string;
+  total_members: number;
+  active_members: number;
+  total_studysets: number;
+  total_terms: number;
+  average_completion_rate: number;  // 0-100
+  average_accuracy: number;  // 0-100
+  total_study_sessions: number;
+  total_study_time: number;  // in seconds
+  most_active_student: StudentProgressDetail | null;
+  least_active_student: StudentProgressDetail | null;
+}
+
+export interface StudySetAnalytics {
+  studyset_id: string;
+  studyset_name: string;
+  total_terms: number;
+  students_started: number;
+  students_completed: number;
+  average_progress: number;  // 0-100
+  average_accuracy: number;  // 0-100
+  average_completion_time: number | null;  // in seconds
+  most_difficult_terms: Array<{
+    term_id: string;
+    term_text: string;
+    error_rate: number;
+  }>;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  username: string;
+  email: string;
+  total_terms_mastered: number;
+  accuracy: number;  // 0-100
+  study_streak_days: number;
+  total_study_time: number;  // in seconds
+  last_study_date: string | null;
+}
+
+export interface ClassLeaderboard {
+  class_id: string;
+  entries: LeaderboardEntry[];
+  count: number;
+}
+
+export interface StudentProgressList {
+  data: StudentProgressDetail[];
+  count: number;
+}

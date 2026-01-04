@@ -31,6 +31,7 @@ import {
   Plus,
   FileText,
   RefreshCw,
+  BarChart3,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -334,41 +335,53 @@ export function ClassDetail() {
             Back to Classes
           </Button>
 
-          {canManage && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Manage
-                  <MoreVertical className="w-4 h-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleEditStart}>
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  Edit Class
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setInviteDialogOpen(true)}>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Invite Members
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleDeleteClass}
-                  className="text-destructive"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Class
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
-          {!canManage && (
-            <Button variant="outline" size="sm" onClick={handleLeaveClass}>
-              Leave Class
+          <div className="flex items-center gap-2">
+            {/* Analytics Button - Visible to all members */}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate(`/dashboard/class/${classId}/analytics`)}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
             </Button>
-          )}
+
+            {canManage && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage
+                    <MoreVertical className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleEditStart}>
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit Class
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setInviteDialogOpen(true)}>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Invite Members
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleDeleteClass}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Class
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {!canManage && (
+              <Button variant="outline" size="sm" onClick={handleLeaveClass}>
+                Leave Class
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Class Info Card */}

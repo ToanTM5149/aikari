@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
+    # Dify AI Integration
+    DIFY_API_KEY: str | None = None
+    DIFY_BASE_URL: str = "http://localhost/v1"
+
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
             message = (
