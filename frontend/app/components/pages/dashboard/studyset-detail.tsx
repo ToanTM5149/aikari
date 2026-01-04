@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -7,6 +7,7 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { Badge } from "~/components/ui/badge";
+import { Chatbot } from "~/components/shared/chatbot";
 import {
   Plus,
   Trash2,
@@ -23,6 +24,8 @@ import {
   BookOpen,
   Edit,
   BarChart3,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -53,7 +56,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
+import { useAppSelector } from "~/redux/store";
+import { selectCurrentUser } from "~/redux/features/auth/slice";
 
 interface TermInput {
   id?: string; // UUID nếu đã tồn tại, undefined nếu mới
@@ -67,6 +79,7 @@ interface TermInput {
 export function StudySetDetail() {
   const { studysetId } = useParams<{ studysetId: string }>();
   const navigate = useNavigate();
+  const user = useAppSelector(selectCurrentUser);
 
   // Queries
   const {
@@ -74,6 +87,9 @@ export function StudySetDetail() {
     isLoading: loadingStudySet,
     error: studysetError,
   } = useGetStudySetByIdQuery(studysetId!, { skip: !studysetId });
+  
+  // Check if user is owner of this studyset
+  const isOwner = studyset?.owner_id === user?.user_id;
   
   const {
     data: termsData,
@@ -102,6 +118,35 @@ export function StudySetDetail() {
     example?: string;
     category?: string;
   } | null>(null);
+
+  // Chatbot state
+  const [isChatbotCollapsed, setIsChatbotCollapsed] = useState(false);
+  const [chatbotWidth, setChatbotWidth] = useState(320); // Default 320px
+
+  // Load saved preferences from localStorage
+  useEffect(() => {
+    const savedCollapsed = localStorage.getItem("chatbot-collapsed");
+    const savedWidth = localStorage.getItem("chatbot-width");
+    
+    if (savedCollapsed) {
+      setIsChatbotCollapsed(savedCollapsed === "true");
+    }
+    if (savedWidth) {
+      setChatbotWidth(parseInt(savedWidth, 10));
+    }
+  }, []);
+
+  // Save preferences to localStorage
+  const handleToggleChatbot = () => {
+    const newState = !isChatbotCollapsed;
+    setIsChatbotCollapsed(newState);
+    localStorage.setItem("chatbot-collapsed", String(newState));
+  };
+
+  const handleChatbotWidthChange = (width: number) => {
+    setChatbotWidth(width);
+    localStorage.setItem("chatbot-width", String(width));
+  };
 
   // Initialize editing terms from API data
   const initializeEditMode = () => {
@@ -419,8 +464,9 @@ export function StudySetDetail() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <Card className="h-full flex flex-col">
+    <div className="h-full flex overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Card className="h-full flex flex-col">
         <CardHeader className="border-b border-border shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -450,15 +496,34 @@ export function StudySetDetail() {
 
               {!isEditing && (
                 <>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => navigate(`/dashboard/studysets/${studysetId}/study`)}
-                    disabled={!termsData?.data || termsData.data.length === 0}
+                  <Select
+                    value="study"
+                    onValueChange={(value) => {
+                      if (value === "study") {
+                        navigate(`/dashboard/studysets/${studysetId}/study`);
+                      } else if (value === "test") {
+                        navigate(`/dashboard/studysets/${studysetId}/test`);
+                      }
+                    }}
                   >
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Học
-                  </Button>
+                    <SelectTrigger className="w-[140px] h-8" disabled={!termsData?.data || termsData.data.length === 0}>
+                      <SelectValue placeholder="Chọn chế độ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="study">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4" />
+                          <span>Học</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="test">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          <span>Test</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="outline"
                     size="sm"
@@ -484,10 +549,12 @@ export function StudySetDetail() {
                       </>
                     )}
                   </Button>
-                  <Button size="sm" onClick={initializeEditMode}>
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Chỉnh sửa tất cả
-                  </Button>
+                  {isOwner && (
+                    <Button size="sm" onClick={initializeEditMode}>
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Chỉnh sửa tất cả
+                    </Button>
+                  )}
                 </>
               )}
 
@@ -521,16 +588,17 @@ export function StudySetDetail() {
                 </>
               )}
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </AlertDialogTrigger>
+              {isOwner && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Xóa Study Set?</AlertDialogTitle>
@@ -550,6 +618,7 @@ export function StudySetDetail() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -904,15 +973,17 @@ export function StudySetDetail() {
                                 )}
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(term)}
-                              className="shrink-0"
-                              title="Chỉnh sửa"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
+                            {isOwner && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => navigate(`/dashboard/studysets/${studysetId}/terms/${term.term_id}`)}
+                                className="shrink-0"
+                                title="Xem chi tiết"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -933,10 +1004,10 @@ export function StudySetDetail() {
             )}
           </AnimatePresence>
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* Edit Term Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        {/* Edit Term Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa Flashcard</DialogTitle>
@@ -1026,15 +1097,32 @@ export function StudySetDetail() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
 
-      {/* CSS for backface visibility */}
-      <style>{`
-        .backface-hidden {
-          backface-visibility: hidden;
-          -webkit-backface-visibility: hidden;
-        }
-      `}</style>
+        {/* CSS for backface visibility */}
+        <style>{`
+          .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+          }
+        `}</style>
+      </div>
+      
+      {/* Right Chatbot Sidebar */}
+      <div 
+        className="flex-shrink-0 overflow-hidden border-l"
+        style={{ 
+          width: isChatbotCollapsed ? '48px' : `${chatbotWidth}px`,
+          transition: isChatbotCollapsed ? 'width 0.2s ease' : 'none'
+        }}
+      >
+        <Chatbot 
+          isCollapsed={isChatbotCollapsed}
+          onToggleCollapse={handleToggleChatbot}
+          width={chatbotWidth}
+          onWidthChange={handleChatbotWidthChange}
+        />
+      </div>
     </div>
   );
 }

@@ -9,6 +9,8 @@ from app.models.enums import (
     ContentType,
     GenerateType,
     TestType,
+    QuestionType,
+    ReattemptStatus,
     UserRole,
 )
 
@@ -19,7 +21,7 @@ from app.models.progress import ProgressSummary
 from app.models.content import AIGeneratedContents, Attribute
 from app.models.studyset import StudySet
 from app.models.term import Term
-from app.models.test import Test, TestResult
+from app.models.test import Test, TestQuestion, TestAttempt, TestAnswer, ReattemptRequest
 from app.models.token_blacklist import TokenBlacklist
 from app.models.refresh_token import RefreshToken
 
@@ -33,6 +35,8 @@ __all__ = [
     "ContentType",
     "GenerateType",
     "TestType",
+    "QuestionType",
+    "ReattemptStatus",
     # Models
     "User",
     "Class",
@@ -41,7 +45,10 @@ __all__ = [
     "StudySet",
     "Term",
     "Test",
-    "TestResult",
+    "TestQuestion",
+    "TestAttempt",
+    "TestAnswer",
+    "ReattemptRequest",
     "Attribute",
     "AIGeneratedContents",
     "StudyActivity",

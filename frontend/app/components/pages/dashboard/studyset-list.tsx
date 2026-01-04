@@ -32,12 +32,15 @@ import {
   useGetStudySetsQuery, 
   useDeleteStudySetMutation 
 } from "~/redux/features/studyset"
+import { useAppSelector } from "~/redux/store"
+import { selectCurrentUser } from "~/redux/features/auth/slice"
 import { CreateStudySetDialog } from "./create-studyset-dialog"
 import { Skeleton } from "~/components/ui/skeleton"
 import { DataPagination } from "~/components/common/data-pagination"
 
 export function StudySetList() {
   const navigate = useNavigate()
+  const user = useAppSelector(selectCurrentUser)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -275,18 +278,22 @@ export function StudySetList() {
                                     <FileText className="w-4 h-4 mr-2" />
                                     View Details
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem>
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() => handleDelete(studySet.studyset_id, studySet.title)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
+                                  {studySet.owner_id === user?.user_id && (
+                                    <>
+                                      <DropdownMenuItem>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() => handleDelete(studySet.studyset_id, studySet.title)}
+                                        className="text-destructive"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -406,18 +413,22 @@ export function StudySetList() {
                                   <FileText className="w-4 h-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(studySet.studyset_id, studySet.title)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
+                                {studySet.owner_id === user?.user_id && (
+                                  <>
+                                    <DropdownMenuItem>
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => handleDelete(studySet.studyset_id, studySet.title)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>

@@ -34,6 +34,19 @@ class GenerateType(str, Enum):
 
 class TestType(str, Enum):
     MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
-    WRITTEN = "WRITTEN"
+    TRUE_FALSE = "TRUE_FALSE"
+    ESSAY = "ESSAY"
     MIXED = "MIXED"
+
+
+class QuestionType(str, Enum):
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
+    TRUE_FALSE = "TRUE_FALSE"
+    ESSAY = "ESSAY"
+
+
+class ReattemptStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 

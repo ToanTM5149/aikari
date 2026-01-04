@@ -29,6 +29,8 @@ import {
   Check,
   Clock,
   Plus,
+  FileText,
+  RefreshCw,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -52,12 +54,19 @@ import {
   useApproveMemberMutation,
   useRejectMemberMutation,
 } from "~/redux/features/class"
+import {
+  useGetReattemptRequestsForClassQuery,
+  useUpdateReattemptRequestMutation,
+  ReattemptStatus,
+} from "~/redux/features/test"
 import { useAppSelector } from "~/redux/store"
 import { selectCurrentUser } from "~/redux/features/auth/slice"
+import { ClassRole } from "~/redux/features/shared/types"
 import { InviteMemberDialog } from "./invite-member-dialog"
 import { AddStudySetDialog } from "./add-studyset-dialog"
 import { DeleteClassDialog } from "./delete-class-dialog"
 import { LeaveClassDialog } from "./leave-class-dialog"
+import type { ReattemptRequest } from "~/redux/features/test"
 
 export function ClassDetail() {
   const { classId } = useParams<{ classId: string }>()
@@ -79,8 +88,16 @@ export function ClassDetail() {
 
   // Check permissions BEFORE using in queries
   const classInfo = classData
+  const members = membersData?.data || []
+  
+  // Find current user's role in this class
+  const currentUserMember = members.find(m => m.user_id === user?.user_id)
+  const userClassRole = currentUserMember?.role
+  
+  // Only OWNER and CO_TEACHER can manage the class
   const isOwner = classInfo?.owner_user_id === user?.user_id
-  const canManage = isOwner // Can add more roles like CO_TEACHER later
+  const isCoTeacher = userClassRole === 'CO_TEACHER'
+  const canManage = isOwner || isCoTeacher
 
   const {
     data: pendingData,
@@ -105,6 +122,18 @@ export function ClassDetail() {
   const [approveMember] = useApproveMemberMutation()
   const [rejectMember] = useRejectMemberMutation()
   const [removeStudySet] = useRemoveStudySetFromClassMutation()
+  
+  // Reattempt requests queries
+  const {
+    data: reattemptRequestsData,
+    isLoading: loadingReattemptRequests,
+    refetch: refetchReattemptRequests,
+  } = useGetReattemptRequestsForClassQuery(
+    { classId: classId!, status: ReattemptStatus.PENDING },
+    { skip: !classId || !canManage }
+  )
+  
+  const [updateReattemptRequest] = useUpdateReattemptRequestMutation()
 
   // Local state
   const [isEditing, setIsEditing] = useState(false)
@@ -116,10 +145,10 @@ export function ClassDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
 
-  const members = membersData?.data || []
   const pendingRequests = pendingData?.data || []
   const invitations = invitationsData?.data || []
   const studySets = studySetsData?.data || []
+  const reattemptRequests = reattemptRequestsData?.data || []
 
   const handleBack = () => {
     navigate("/dashboard/class")
@@ -204,7 +233,7 @@ export function ClassDetail() {
       await updateMemberRole({
         classId: classInfo.class_id,
         memberId: userId,
-        data: { role: newRole },
+        data: { role: newRole as ClassRole },
       }).unwrap()
       toast.success(`${userName}'s role updated to ${newRole}`)
     } catch (error: any) {
@@ -461,7 +490,7 @@ export function ClassDetail() {
             {canManage && (
               <TabsTrigger value="pending">
                 <AlertCircle className="w-4 h-4 mr-2" />
-                Pending ({pendingRequests.length + invitations.length})
+                Pending ({pendingRequests.length + invitations.length + reattemptRequests.length})
               </TabsTrigger>
             )}
           </TabsList>
@@ -587,157 +616,302 @@ export function ClassDetail() {
           {/* Pending Tab - Owner/Co-Teacher only */}
           {canManage && (
             <TabsContent value="pending">
-              <div className="space-y-4">
-                {/* Pending Join Requests */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Join Requests</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingPending ? (
-                      <div className="space-y-3">
-                        {[1, 2].map((i) => (
-                          <Skeleton key={i} className="h-16 w-full" />
-                        ))}
-                      </div>
-                    ) : pendingRequests.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>No pending join requests</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {pendingRequests.map((request) => (
-                          <motion.div
-                            key={request.user_id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Avatar>
-                                <AvatarFallback>
-                                  {request.user?.username?.[0]?.toUpperCase() || "?"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">{request.user?.username || "Unknown"}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {request.user?.email || ""}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Requested {new Date(request.joined_at).toLocaleDateString()}
-                                </p>
+              <Tabs defaultValue="join-requests" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="join-requests">
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Join Requests ({pendingRequests.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="pending-invitations">
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Pending Invitations ({invitations.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="pending-reattempts">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Pending Reattempt Test ({reattemptRequests.length})
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Join Requests Sub-tab */}
+                <TabsContent value="join-requests">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Join Requests</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingPending ? (
+                        <div className="space-y-3">
+                          {[1, 2].map((i) => (
+                            <Skeleton key={i} className="h-16 w-full" />
+                          ))}
+                        </div>
+                      ) : pendingRequests.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>No pending join requests</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {pendingRequests.map((request) => (
+                            <motion.div
+                              key={request.user_id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Avatar>
+                                  <AvatarFallback>
+                                    {request.user?.username?.[0]?.toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">{request.user?.username || "Unknown"}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {request.user?.email || ""}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Requested {new Date(request.joined_at).toLocaleDateString()}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
 
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-orange-600">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Pending
-                              </Badge>
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  handleApproveMember(
-                                    request.user_id,
-                                    request.user?.username || "User"
-                                  )
-                                }
-                              >
-                                <Check className="w-4 h-4 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleRejectMember(
-                                    request.user_id,
-                                    request.user?.username || "User"
-                                  )
-                                }
-                              >
-                                <X className="w-4 h-4 mr-1" />
-                                Reject
-                              </Button>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Pending Invitations */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pending Invitations</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingInvitations ? (
-                      <div className="space-y-3">
-                        {[1, 2].map((i) => (
-                          <Skeleton key={i} className="h-16 w-full" />
-                        ))}
-                      </div>
-                    ) : invitations.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <UserPlus className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>No pending invitations</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {invitations.map((invitation) => (
-                          <motion.div
-                            key={invitation.user_id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Avatar>
-                                <AvatarFallback>
-                                  {invitation.user?.username?.[0]?.toUpperCase() || "?"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">{invitation.user?.username || "Unknown"}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {invitation.user?.email || ""}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Invited {new Date(invitation.joined_at).toLocaleDateString()}
-                                </p>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-orange-600">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  Pending
+                                </Badge>
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    handleApproveMember(
+                                      request.user_id,
+                                      request.user?.username || "User"
+                                    )
+                                  }
+                                >
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleRejectMember(
+                                      request.user_id,
+                                      request.user?.username || "User"
+                                    )
+                                  }
+                                >
+                                  <X className="w-4 h-4 mr-1" />
+                                  Reject
+                                </Button>
                               </div>
-                            </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-blue-600">
-                                <UserPlus className="w-3 h-3 mr-1" />
-                                Invited
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleRejectMember(
-                                    invitation.user_id,
-                                    invitation.user?.username || "User"
-                                  )
-                                }
+                {/* Pending Invitations Sub-tab */}
+                <TabsContent value="pending-invitations">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Pending Invitations</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingInvitations ? (
+                        <div className="space-y-3">
+                          {[1, 2].map((i) => (
+                            <Skeleton key={i} className="h-16 w-full" />
+                          ))}
+                        </div>
+                      ) : invitations.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <UserPlus className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>No pending invitations</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {invitations.map((invitation) => (
+                            <motion.div
+                              key={invitation.user_id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Avatar>
+                                  <AvatarFallback>
+                                    {invitation.user?.username?.[0]?.toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">{invitation.user?.username || "Unknown"}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {invitation.user?.email || ""}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Invited {new Date(invitation.joined_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-blue-600">
+                                  <UserPlus className="w-3 h-3 mr-1" />
+                                  Invited
+                                </Badge>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleRejectMember(
+                                      invitation.user_id,
+                                      invitation.user?.username || "User"
+                                    )
+                                  }
+                                >
+                                  <X className="w-4 h-4 mr-1" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Pending Reattempt Test Sub-tab */}
+                <TabsContent value="pending-reattempts">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Pending Reattempt Test Requests</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingReattemptRequests ? (
+                        <div className="space-y-3">
+                          {[1, 2].map((i) => (
+                            <Skeleton key={i} className="h-24 w-full" />
+                          ))}
+                        </div>
+                      ) : reattemptRequests.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <RefreshCw className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                          <p>No pending reattempt requests</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {reattemptRequests.map((request) => {
+                            const requestUser = members.find(m => m.user_id === request.user_id)
+                            return (
+                              <motion.div
+                                key={request.request_id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                               >
-                                <X className="w-4 h-4 mr-1" />
-                                Cancel
-                              </Button>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <Avatar>
+                                        <AvatarFallback>
+                                          {requestUser?.user?.username?.[0]?.toUpperCase() || "?"}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <p className="font-medium">
+                                          {requestUser?.user?.username || "Unknown User"}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                          {requestUser?.user?.email || ""}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    
+                                    {request.test_title && (
+                                      <div className="ml-12 space-y-1">
+                                        <div className="flex items-center gap-2">
+                                          <FileText className="w-4 h-4 text-muted-foreground" />
+                                          <span className="font-medium">{request.test_title}</span>
+                                        </div>
+                                        {request.attempt_score !== undefined && (
+                                          <div className="text-sm text-muted-foreground">
+                                            Điểm: {request.attempt_correct_answers}/{request.attempt_total_questions} 
+                                            ({Math.round(request.attempt_score)}%)
+                                          </div>
+                                        )}
+                                        {request.attempt_completed_at && (
+                                          <div className="text-xs text-muted-foreground">
+                                            Hoàn thành: {new Date(request.attempt_completed_at).toLocaleString("vi-VN")}
+                                          </div>
+                                        )}
+                                        <div className="text-xs text-muted-foreground">
+                                          Yêu cầu: {new Date(request.requested_at).toLocaleString("vi-VN")}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-orange-600">
+                                      <Clock className="w-3 h-3 mr-1" />
+                                      Pending
+                                    </Badge>
+                                    <Button
+                                      size="sm"
+                                      onClick={async () => {
+                                        try {
+                                          await updateReattemptRequest({
+                                            requestId: request.request_id,
+                                            data: { status: ReattemptStatus.APPROVED },
+                                          }).unwrap()
+                                          toast.success("Đã phê duyệt yêu cầu làm lại test")
+                                          refetchReattemptRequests()
+                                        } catch (error: any) {
+                                          const errorMsg = error?.data?.detail || "Không thể phê duyệt yêu cầu"
+                                          toast.error(errorMsg)
+                                        }
+                                      }}
+                                    >
+                                      <Check className="w-4 h-4 mr-1" />
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={async () => {
+                                        try {
+                                          await updateReattemptRequest({
+                                            requestId: request.request_id,
+                                            data: { status: ReattemptStatus.REJECTED },
+                                          }).unwrap()
+                                          toast.success("Đã từ chối yêu cầu làm lại test")
+                                          refetchReattemptRequests()
+                                        } catch (error: any) {
+                                          const errorMsg = error?.data?.detail || "Không thể từ chối yêu cầu"
+                                          toast.error(errorMsg)
+                                        }
+                                      }}
+                                    >
+                                      <X className="w-4 h-4 mr-1" />
+                                      Reject
+                                    </Button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           )}
 
@@ -782,7 +956,7 @@ export function ClassDetail() {
                       >
                         <Card 
                           className="hover:shadow-md transition-shadow cursor-pointer"
-                          onClick={() => navigate(`/dashboard/studysets/${studySet.studyset_id}`)}
+                          onClick={() => navigate(`/dashboard/studysets/${studySet.studyset_id}?classId=${classId}`)}
                         >
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
