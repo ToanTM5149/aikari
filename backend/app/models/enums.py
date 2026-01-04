@@ -30,6 +30,22 @@ class ContentType(str, Enum):
 class GenerateType(str, Enum):
     TEST = "TEST"
     ATTRIBUTE = "ATTRIBUTE"
+    PARAGRAPH = "PARAGRAPH"
+
+
+class ConversationIntent(str, Enum):
+    GEN_TEST = "gen_test"
+    GEN_PARAGRAPH = "gen_paragraph"
+    ASK_QUESTION = "ask_question"
+    COLLECT_PARAMS = "collect_params"
+
+
+class ConversationState(str, Enum):
+    INITIAL = "initial"
+    WAITING_INTENT = "waiting_intent"
+    COLLECTING_TEST_PARAMS = "collecting_test_params"
+    GENERATING = "generating"
+    COMPLETED = "completed"
 
 
 class TestType(str, Enum):

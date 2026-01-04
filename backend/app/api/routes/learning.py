@@ -115,7 +115,7 @@ def get_next_term(
         definition=term.definition,
         example=term.example,
         image_url=term.image_url,
-        category=term.category,
+        category=None,
         is_new=prev_activity is None,
         previous_recall_score=prev_activity.recall_score if prev_activity else None,
         next_review_date=prev_activity.next_review_date if prev_activity else None

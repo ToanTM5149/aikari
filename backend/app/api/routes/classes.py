@@ -23,6 +23,7 @@ from app.schemas import (
     StudentProgressList,
     StudySetAnalytics,
     ClassLeaderboard,
+    ClassTimeSeriesAnalytics,
 )
 from app.services.analytics_service import AnalyticsService
 
@@ -904,4 +905,38 @@ def get_class_leaderboard(
         entries=entries,
         count=len(entries)
     )
+
+
+@router.get("/{class_id}/analytics/timeseries/", response_model=ClassTimeSeriesAnalytics)
+def get_class_time_series_analytics(
+    class_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+    days: int = Query(7, ge=1, le=30, description="Number of days for daily study time"),
+    weeks: int = Query(4, ge=1, le=12, description="Number of weeks for retention data"),
+) -> Any:
+    """
+    Get time-series analytics for charts and visualizations.
+    Returns daily study time, weekly retention, test performance, progress over time, etc.
+    Accessible by all class members.
+    """
+    # Verify user is a member of the class
+    membership = crud.get_user_class_membership(
+        session=session, class_id=class_id, user_id=current_user.user_id
+    )
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this class")
+    
+    # Get time-series analytics
+    analytics = AnalyticsService.get_class_time_series_analytics(
+        session=session,
+        class_id=class_id,
+        days=days,
+        weeks=weeks
+    )
+    
+    if not analytics:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    return analytics
 

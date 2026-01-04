@@ -21,6 +21,7 @@ import type {
   StudentProgressList,
   StudySetAnalytics,
   ClassLeaderboard,
+  ClassTimeSeriesAnalytics,
 } from '../shared/types';
 
 /**
@@ -360,6 +361,23 @@ export const classApi = baseApi.injectEndpoints({
         { type: 'Class', id: `${classId}-leaderboard` },
       ],
     }),
+    
+    /**
+     * Get Class Time-Series Analytics
+     * GET /classes/{class_id}/analytics/timeseries/
+     */
+    getClassTimeSeriesAnalytics: builder.query<
+      ClassTimeSeriesAnalytics, 
+      { classId: string; days?: number; weeks?: number }
+    >({
+      query: ({ classId, days = 7, weeks = 4 }) => ({
+        url: `/classes/${classId}/analytics/timeseries/`,
+        params: { days, weeks },
+      }),
+      providesTags: (result, error, { classId }) => [
+        { type: 'Class', id: `${classId}-timeseries` },
+      ],
+    }),
   }),
 });
 
@@ -395,5 +413,6 @@ export const {
   useGetClassStudentProgressQuery,
   useGetStudySetAnalyticsQuery,
   useGetClassLeaderboardQuery,
+  useGetClassTimeSeriesAnalyticsQuery,
 } = classApi;
 

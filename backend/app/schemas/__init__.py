@@ -79,6 +79,12 @@ from app.schemas.class_ import (
     LeaderboardEntry,
     ClassLeaderboard,
     StudentProgressList,
+    ClassTimeSeriesAnalytics,
+    DailyStudyTime,
+    WeeklyRetention,
+    TestPerformancePoint,
+    ProgressOverTime,
+    StudyCategoryDistribution,
 )
 
 # Learning Schemas
@@ -95,6 +101,15 @@ from app.schemas.learning import (
     ProgressHistory,
     WeakTerm,
     StudyStats,
+)
+
+# Chatbot Schemas
+from app.schemas.chatbot import (
+    ChatRequest,
+    ChatResponse,
+    QuickReplyButton,
+    ChatOption,
+    GeneratedContent,
 )
 
 __all__ = [
@@ -163,6 +178,12 @@ __all__ = [
     "LeaderboardEntry",
     "ClassLeaderboard",
     "StudentProgressList",
+    "ClassTimeSeriesAnalytics",
+    "DailyStudyTime",
+    "WeeklyRetention",
+    "TestPerformancePoint",
+    "ProgressOverTime",
+    "StudyCategoryDistribution",
     # Learning Schemas
     "LearningSessionStart",
     "LearningSessionStartResponse",
@@ -176,5 +197,11 @@ __all__ = [
     "ProgressHistory",
     "WeakTerm",
     "StudyStats",
+    # Chatbot Schemas
+    "ChatRequest",
+    "ChatResponse",
+    "QuickReplyButton",
+    "ChatOption",
+    "GeneratedContent",
 ]
 

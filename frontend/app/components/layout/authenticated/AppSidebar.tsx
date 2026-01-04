@@ -39,12 +39,6 @@ const menuItems = [
     roles: ['STUDENT', 'TEACHER'] as UserRole[],
   },
   {
-    title: "Create Flashcards",
-    icon: Plus,
-    id: "create",
-    roles: ['STUDENT', 'TEACHER'] as UserRole[],
-  },
-  {
     title: "History",
     icon: History,
     id: "history",

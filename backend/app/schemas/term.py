@@ -9,8 +9,6 @@ class TermBase(SQLModel):
     term_text: str
     definition: str
     example: str | None = None
-    category: str | None = None
-    subcategory: str | None = None
     image_url: str | None = None
     attributes: dict[str, Any] | None = None
 
@@ -20,8 +18,6 @@ class TermCreate(SQLModel):
     term_text: str
     definition: str
     example: str | None = None
-    category: str | None = None
-    subcategory: str | None = None
     image_url: str | None = None
     attributes: dict[str, Any] | None = None
 
@@ -30,6 +26,7 @@ class TermUpdate(SQLModel):
     term_text: str | None = None
     definition: str | None = None
     example: str | None = None
+    image_url: str | None = None
 
 
 class TermPublic(TermBase):

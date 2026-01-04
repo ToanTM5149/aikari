@@ -26,6 +26,7 @@ import {
   useGetClassAnalyticsOverviewQuery,
   useGetClassStudentProgressQuery,
   useGetClassLeaderboardQuery,
+  useGetClassTimeSeriesAnalyticsQuery,
 } from '~/redux/features/class';
 import {
   Users,
@@ -37,7 +38,28 @@ import {
   Activity,
   AlertCircle,
   ArrowLeft,
+  BarChart3,
+  PieChart as PieChartIcon,
 } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+} from 'recharts';
 
 /**
  * Format time in seconds to readable string
@@ -447,6 +469,499 @@ function LeaderboardTab({ classId }: { classId: string }) {
 }
 
 /**
+ * Charts Tab - Visual analytics with graphs and charts
+ */
+function ChartsTab({ classId }: { classId: string }) {
+  const { data: overview } = useGetClassAnalyticsOverviewQuery(classId);
+  const { data: progressData } = useGetClassStudentProgressQuery(classId);
+  const { data: leaderboard } = useGetClassLeaderboardQuery({ 
+    classId, 
+    sortBy: 'mastery' 
+  });
+  const { data: timeSeriesData, isLoading: isLoadingTimeSeries } = useGetClassTimeSeriesAnalyticsQuery({
+    classId,
+    days: 7,
+    weeks: 4,
+  });
+
+  // Use real data from backend
+  const studyTimeData = timeSeriesData?.daily_study_time.map(item => ({
+    day: item.date,
+    hours: item.hours,
+    sessions: item.sessions,
+  })) || [];
+
+  const retentionData = timeSeriesData?.weekly_retention.map(item => ({
+    week: item.week,
+    remember: item.remember,
+    forget: item.forget,
+  })) || [];
+
+  // Activity distribution from time-series data or fallback to student data
+  const activityDistribution = timeSeriesData?.study_categories.length > 0
+    ? timeSeriesData.study_categories.map(item => ({
+        name: item.name,
+        value: item.value,
+        color: item.color || '#3b82f6',
+      }))
+    : progressData?.data ? [
+        { 
+          name: 'High Activity', 
+          value: progressData.data.filter(s => s.total_study_time > 3600).length,
+          color: '#10b981' 
+        },
+        { 
+          name: 'Medium Activity', 
+          value: progressData.data.filter(s => s.total_study_time > 1800 && s.total_study_time <= 3600).length,
+          color: '#f59e0b' 
+        },
+        { 
+          name: 'Low Activity', 
+          value: progressData.data.filter(s => s.total_study_time <= 1800).length,
+          color: '#ef4444' 
+        },
+      ].filter(item => item.value > 0) : [];
+
+  // Performance distribution
+  const performanceData = progressData?.data ? [
+    { 
+      name: 'Excellent (>80%)', 
+      value: progressData.data.filter(s => s.average_accuracy > 80).length,
+      color: '#10b981' 
+    },
+    { 
+      name: 'Good (60-80%)', 
+      value: progressData.data.filter(s => s.average_accuracy > 60 && s.average_accuracy <= 80).length,
+      color: '#3b82f6' 
+    },
+    { 
+      name: 'Needs Help (<60%)', 
+      value: progressData.data.filter(s => s.average_accuracy <= 60).length,
+      color: '#f59e0b' 
+    },
+  ].filter(item => item.value > 0) : [];
+
+  // Test performance data from time-series
+  const testPerformanceData = timeSeriesData?.test_performance.map(item => ({
+    test: item.test_name.length > 15 ? item.test_name.substring(0, 15) + '...' : item.test_name,
+    score: item.score,
+    average: item.average,
+  })) || [];
+
+  // Top students progress
+  const topStudentsData = leaderboard?.entries?.slice(0, 8).map(student => ({
+    name: student.username.length > 10 ? student.username.substring(0, 10) + '...' : student.username,
+    mastery: student.total_terms_mastered, // Using terms mastered as proxy for mastery
+    accuracy: student.accuracy,
+  })) || [];
+
+  // Progress over time from time-series data
+  const progressOverTimeData = timeSeriesData?.progress_over_time.map(item => ({
+    month: item.period,
+    mastered: item.mastered,
+    learning: item.learning,
+    new: item.new,
+  })) || [];
+
+  // Overall progress radial
+  const overallProgress = overview ? [
+    { name: 'Completion', value: overview.average_completion_rate, fill: '#3b82f6' }
+  ] : [];
+
+  // Pass/Fail distribution from time-series
+  const passFailData = timeSeriesData?.pass_fail_distribution ? [
+    { name: 'Passed', value: timeSeriesData.pass_fail_distribution.passed, color: '#10b981' },
+    { name: 'Failed', value: timeSeriesData.pass_fail_distribution.failed, color: '#ef4444' },
+  ].filter(item => item.value > 0) : [];
+
+  if (!overview || !progressData || isLoadingTimeSeries) {
+    return <div className="text-center py-8">Loading charts...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Study Time & Retention */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Study Time Trend
+            </CardTitle>
+            <CardDescription>Average hours per day this week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={studyTimeData}>
+                <defs>
+                  <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="day" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="hours"
+                  stroke="#3b82f6"
+                  fillOpacity={1}
+                  fill="url(#colorHours)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Memory Retention
+            </CardTitle>
+            <CardDescription>Remember vs Forget by week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={retentionData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="week" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="remember" fill="#10b981" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="forget" fill="#ef4444" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Test Performance */}
+      {testPerformanceData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Test Performance Trend
+            </CardTitle>
+            <CardDescription>Test scores compared to class average</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={testPerformanceData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="test" className="text-xs" />
+                <YAxis domain={[0, 100]} className="text-xs" />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  dot={{ fill: '#3b82f6', r: 6 }}
+                  activeDot={{ r: 8 }}
+                  name="Your Score"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="average"
+                  stroke="#94a3b8"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={{ fill: '#94a3b8', r: 4 }}
+                  name="Class Average"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Progress Over Time */}
+      {progressOverTimeData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Learning Progress Timeline
+            </CardTitle>
+            <CardDescription>Terms mastered, learning, and new over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={progressOverTimeData}>
+                <defs>
+                  <linearGradient id="colorMastered" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="colorLearning" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="month" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Legend />
+                <Area
+                  type="monotone"
+                  dataKey="mastered"
+                  stackId="1"
+                  stroke="#10b981"
+                  fill="url(#colorMastered)"
+                  name="Mastered"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="learning"
+                  stackId="1"
+                  stroke="#f59e0b"
+                  fill="url(#colorLearning)"
+                  name="Learning"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="new"
+                  stackId="1"
+                  stroke="#3b82f6"
+                  fill="url(#colorNew)"
+                  name="New"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Top Students Performance */}
+      {topStudentsData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Top Students Performance
+            </CardTitle>
+            <CardDescription>Terms mastered vs Accuracy comparison</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={topStudentsData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="name" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="mastery"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  dot={{ fill: '#3b82f6', r: 5 }}
+                  activeDot={{ r: 7 }}
+                  name="Terms Mastered"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="accuracy"
+                  stroke="#8b5cf6"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={{ fill: '#8b5cf6', r: 4 }}
+                  name="Accuracy %"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Distribution Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {activityDistribution.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Activity Level
+              </CardTitle>
+              <CardDescription>Student engagement</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={activityDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {activityDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {performanceData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Performance
+              </CardTitle>
+              <CardDescription>Accuracy distribution</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={performanceData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {performanceData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {passFailData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Test Results
+              </CardTitle>
+              <CardDescription>Pass/Fail distribution</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={passFailData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {passFailData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              Overall Progress
+            </CardTitle>
+            <CardDescription>Class completion rate</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center">
+            <ResponsiveContainer width="100%" height={250}>
+              <RadialBarChart
+                cx="50%"
+                cy="50%"
+                innerRadius="60%"
+                outerRadius="90%"
+                data={overallProgress}
+                startAngle={90}
+                endAngle={-270}
+              >
+                <RadialBar
+                  minAngle={15}
+                  background
+                  clockWise
+                  dataKey="value"
+                  cornerRadius={10}
+                />
+                <text
+                  x="50%"
+                  y="50%"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="text-3xl font-bold fill-foreground"
+                >
+                  {overview.average_completion_rate.toFixed(0)}%
+                </text>
+              </RadialBarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Main Class Analytics Dashboard Component
  */
 export function ClassAnalyticsDashboard() {
@@ -478,14 +993,22 @@ export function ClassAnalyticsDashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="charts">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Charts
+          </TabsTrigger>
           <TabsTrigger value="students">Members</TabsTrigger>
           <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
           <OverviewTab classId={classId} />
+        </TabsContent>
+
+        <TabsContent value="charts" className="mt-6">
+          <ChartsTab classId={classId} />
         </TabsContent>
 
         <TabsContent value="students" className="mt-6">

@@ -242,8 +242,21 @@ export function FlashcardLearningPage() {
         <CardContent>
           <div
             onClick={handleFlipCard}
-            className="min-h-[300px] flex items-center justify-center cursor-pointer rounded-lg p-8"
+            className="min-h-[300px] flex flex-col items-center justify-center cursor-pointer rounded-lg p-8"
           >
+            {/* Image display */}
+            {learningState.currentTerm.image_url && (
+              <div className="mb-6 w-full max-w-md">
+                <img
+                  src={learningState.currentTerm.image_url}
+                  alt={learningState.isFlipped ? learningState.currentTerm.definition : learningState.currentTerm.term_text}
+                  className="w-full h-48 object-cover rounded-lg shadow-md"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
             <div className="text-center">
               <p className="text-3xl font-bold mb-4">
                 {learningState.isFlipped

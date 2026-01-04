@@ -5,7 +5,23 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import User, Class, ClassMember, StudySet, Term
+from app.models import (
+    User, 
+    Class, 
+    ClassMember, 
+    StudySet, 
+    Term,
+    ProgressSummary,
+    StudyActivity,
+    Test,
+    TestQuestion,
+    TestAttempt,
+    TestAnswer,
+    ReattemptRequest,
+    ClassStudySet,
+    Attribute,
+    AIGeneratedContents,
+)
 from app.schemas import (
     UserCreate,
     UserUpdate,
@@ -313,11 +329,94 @@ def update_studyset(
 
 
 def delete_studyset(*, session: Session, studyset_id: uuid.UUID) -> None:
-  """Delete study set"""
+  """Delete study set and all related records"""
   db_studyset = session.get(StudySet, studyset_id)
-  if db_studyset:
-    session.delete(db_studyset)
-    session.commit()
+  if not db_studyset:
+    return
+  
+  # Delete related records in correct order to avoid foreign key violations
+  
+  # 1. Delete ProgressSummary entries (has NOT NULL FK to StudySet)
+  progress_summaries = session.exec(
+    select(ProgressSummary).where(ProgressSummary.studyset_id == studyset_id)
+  ).all()
+  for progress in progress_summaries:
+    session.delete(progress)
+  
+  # 2. Delete StudyActivity entries (has FK to StudySet)
+  activities = session.exec(
+    select(StudyActivity).where(StudyActivity.studyset_id == studyset_id)
+  ).all()
+  for activity in activities:
+    session.delete(activity)
+  
+  # 3. Delete TestAttempt entries (has FK to Test, which has FK to StudySet)
+  # First get all tests for this studyset
+  tests = session.exec(
+    select(Test).where(Test.studyset_id == studyset_id)
+  ).all()
+  for test in tests:
+    # Delete TestAttempt entries for this test
+    attempts = session.exec(
+      select(TestAttempt).where(TestAttempt.test_id == test.test_id)
+    ).all()
+    for attempt in attempts:
+      # Delete ReattemptRequest entries for this attempt (has FK to TestAttempt)
+      reattempts = session.exec(
+        select(ReattemptRequest).where(ReattemptRequest.attempt_id == attempt.attempt_id)
+      ).all()
+      for reattempt in reattempts:
+        session.delete(reattempt)
+      
+      # Delete TestAnswer entries for this attempt
+      answers = session.exec(
+        select(TestAnswer).where(TestAnswer.attempt_id == attempt.attempt_id)
+      ).all()
+      for answer in answers:
+        session.delete(answer)
+      session.delete(attempt)
+    
+    # Delete TestQuestion entries for this test
+    questions = session.exec(
+      select(TestQuestion).where(TestQuestion.test_id == test.test_id)
+    ).all()
+    for question in questions:
+      session.delete(question)
+    
+    # Delete the test
+    session.delete(test)
+  
+  # 4. Delete ClassStudySet entries (junction table)
+  class_studysets = session.exec(
+    select(ClassStudySet).where(ClassStudySet.studyset_id == studyset_id)
+  ).all()
+  for css in class_studysets:
+    session.delete(css)
+  
+  # 5. Delete Term entries (has FK to StudySet)
+  terms = session.exec(
+    select(Term).where(Term.studyset_id == studyset_id)
+  ).all()
+  for term in terms:
+    session.delete(term)
+  
+  # 6. Delete Attribute entries (has FK to StudySet)
+  attributes = session.exec(
+    select(Attribute).where(Attribute.studyset_id == studyset_id)
+  ).all()
+  for attr in attributes:
+    session.delete(attr)
+  
+  # 7. Delete AIGeneratedContents entries (has FK to StudySet)
+  ai_contents = session.exec(
+    select(AIGeneratedContents).where(AIGeneratedContents.studyset_id == studyset_id)
+  ).all()
+  for content in ai_contents:
+    session.delete(content)
+  
+  # 8. Finally, delete the studyset
+  session.delete(db_studyset)
+  session.commit()
 
 
 def get_studysets_by_owner(
@@ -341,7 +440,7 @@ def get_term(*, session: Session, term_id: uuid.UUID) -> Term | None:
 
 
 def create_term(
-    *, session: Session, term_in: TermCreate, studyset_id: uuid.UUID
+  *, session: Session, term_in: TermCreate, studyset_id: uuid.UUID
 ) -> Term:
   """Create new term"""
   db_obj = Term.model_validate(term_in, update={"studyset_id": studyset_id})

@@ -37,12 +37,14 @@ import { selectCurrentUser } from "~/redux/features/auth/slice"
 import { CreateStudySetDialog } from "./create-studyset-dialog"
 import { Skeleton } from "~/components/ui/skeleton"
 import { DataPagination } from "~/components/common/data-pagination"
+import { CategoryFilter } from "~/components/category-filter"
 
 export function StudySetList() {
   const navigate = useNavigate()
   const user = useAppSelector(selectCurrentUser)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(9)
@@ -50,16 +52,17 @@ export function StudySetList() {
   // Debounce search query với 500ms delay
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
 
-  // Reset to page 1 when debounced search changes
+  // Reset to page 1 when debounced search changes or category changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearchQuery])
+  }, [debouncedSearchQuery, selectedCategory])
 
   // API calls with pagination and search
   const { data, isLoading, isFetching, error } = useGetStudySetsQuery({
     skip: (currentPage - 1) * itemsPerPage,
     limit: itemsPerPage,
     q: debouncedSearchQuery || undefined,  // Send debounced search query to backend
+    category: selectedCategory,
   })
   const [deleteStudySet] = useDeleteStudySetMutation()
 
@@ -197,6 +200,14 @@ export function StudySetList() {
               className="pl-10"
             />
           </div>
+          
+          {/* Category Filter */}
+          <div className="mt-3">
+            <CategoryFilter
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+            />
+          </div>
         </CardHeader>
 
         <CardContent className="flex-1 overflow-auto p-6 relative">
@@ -311,16 +322,31 @@ export function StudySetList() {
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
                               {(() => {
-                                // Use last_activity_at if available, otherwise fall back to created_at
-                                const activityTime = studySet.last_activity_at 
-                                  ? new Date(studySet.last_activity_at)
-                                  : new Date(studySet.created_at)
+                                // Only show time if user has actually studied (last_activity_at exists)
+                                if (!studySet.last_activity_at) {
+                                  return 'Not started'
+                                }
+                                // Parse datetime string as UTC if no timezone indicator
+                                // Backend returns naive datetime (UTC) without timezone info
+                                const dateStr = studySet.last_activity_at
+                                // Check if string has timezone indicator (Z, +HH:MM, or -HH:MM after position 10)
+                                const hasTimezone = dateStr.includes('Z') || 
+                                  (dateStr.includes('+') && dateStr.length > 19) ||
+                                  (dateStr.lastIndexOf('-') > 10) // Timezone offset like -05:00
+                                const activityTime = hasTimezone
+                                  ? new Date(dateStr)
+                                  : new Date(dateStr + 'Z') // Append 'Z' to treat as UTC
                                 const now = new Date()
-                                const diffHours = Math.floor((now.getTime() - activityTime.getTime()) / (1000 * 60 * 60))
-                                if (diffHours < 1) return 'Just now'
-                                if (diffHours < 24) return `${diffHours} hours ago`
+                                const diffMs = now.getTime() - activityTime.getTime()
+                                const diffMinutes = Math.floor(diffMs / (1000 * 60))
+                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
                                 const diffDays = Math.floor(diffHours / 24)
-                                return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+                                
+                                if (diffMinutes < 1) return 'Just now'
+                                if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`
+                                if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+                                if (diffDays === 1) return '1 day ago'
+                                return `${diffDays} days ago`
                               })()}
                             </span>
                           </div>
@@ -341,16 +367,16 @@ export function StudySetList() {
                             </div>
                           </div>
 
-                          {/* Continue Button */}
+                          {/* Continue/Start Button */}
                           <Button 
                             className="w-full bg-foreground hover:bg-foreground/90 text-background"
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleViewDetail(studySet.studyset_id)
+                              navigate(`/dashboard/studysets/${studySet.studyset_id}/study`)
                             }}
                           >
                             <Play className="w-4 h-4 mr-2" />
-                            Continue Studying
+                            {studySet.last_activity_at ? 'Continue Studying' : 'Start Learning'}
                           </Button>
                         </CardContent>
                       </Card>

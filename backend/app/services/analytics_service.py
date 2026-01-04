@@ -23,6 +23,12 @@ from app.schemas.class_ import (
     ClassAnalyticsOverview,
     StudySetAnalytics,
     LeaderboardEntry,
+    ClassTimeSeriesAnalytics,
+    DailyStudyTime,
+    WeeklyRetention,
+    TestPerformancePoint,
+    ProgressOverTime,
+    StudyCategoryDistribution,
 )
 
 
@@ -561,3 +567,324 @@ class AnalyticsService:
             entry.rank = i
         
         return entries
+    
+    @staticmethod
+    def get_class_time_series_analytics(
+        session: Session,
+        class_id: uuid.UUID,
+        days: int = 7,
+        weeks: int = 4
+    ) -> ClassTimeSeriesAnalytics | None:
+        """Get time-series analytics for charts"""
+        
+        # Get class info
+        class_obj = session.get(Class, class_id)
+        if not class_obj:
+            return None
+        
+        # Get all studysets in the class
+        class_studysets = session.exec(
+            select(ClassStudySet)
+            .where(ClassStudySet.class_id == class_id)
+        ).all()
+        studyset_ids = [cs.studyset_id for cs in class_studysets]
+        
+        if not studyset_ids:
+            # Return empty analytics if no studysets
+            return ClassTimeSeriesAnalytics(
+                class_id=class_id,
+                daily_study_time=[],
+                weekly_retention=[],
+                test_performance=[],
+                progress_over_time=[],
+                study_categories=[],
+                pass_fail_distribution={"passed": 0, "failed": 0}
+            )
+        
+        # Get all activities for this class
+        all_activities = session.exec(
+            select(StudyActivity)
+            .where(StudyActivity.studyset_id.in_(studyset_ids))
+        ).all()
+        
+        # 1. Daily Study Time (last N days)
+        now = datetime.utcnow()
+        daily_study_time = []
+        day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        
+        for i in range(days):
+            target_date = (now - timedelta(days=days - 1 - i)).date()
+            day_name = day_names[target_date.weekday()]
+            
+            # Get activities for this day
+            day_activities = [
+                a for a in all_activities
+                if a.created_at.date() == target_date
+            ]
+            
+            # Calculate total study time
+            # Method 1: Sum all response_time (time spent on each card)
+            total_response_time = sum(
+                float(a.response_time) if a.response_time and a.response_time > 0 else 0
+                for a in day_activities
+            )
+            
+            # Method 2: Calculate from start_time to end_time for each activity
+            # If end_time exists, use it; otherwise estimate from response_time
+            total_seconds = 0
+            for activity in day_activities:
+                if activity.end_time and activity.start_time:
+                    # Use actual time difference if available
+                    time_diff = (activity.end_time - activity.start_time).total_seconds()
+                    if time_diff > 0:
+                        total_seconds += time_diff
+                    elif activity.response_time and activity.response_time > 0:
+                        total_seconds += float(activity.response_time)
+                elif activity.response_time and activity.response_time > 0:
+                    # Fallback to response_time
+                    total_seconds += float(activity.response_time)
+            
+            # If no end_time data, use response_time sum
+            if total_seconds == 0:
+                total_seconds = total_response_time
+            
+            # Add minimum time per card (at least 2 seconds per card for realistic data)
+            # This helps when response_time is 0 or very small
+            if total_seconds == 0 and len(day_activities) > 0:
+                total_seconds = len(day_activities) * 2.0  # At least 2 seconds per card
+            
+            hours = total_seconds / 3600.0
+            
+            # Count unique sessions (by user_id, studyset_id, date)
+            # Group activities by user and studyset, then by time gaps (sessions are separated by >30 min)
+            unique_sessions = set()
+            activities_by_user_studyset = {}
+            
+            for activity in day_activities:
+                key = (activity.user_id, activity.studyset_id)
+                if key not in activities_by_user_studyset:
+                    activities_by_user_studyset[key] = []
+                activities_by_user_studyset[key].append(activity)
+            
+            # Count sessions: group activities that are within 30 minutes of each other
+            for (user_id, studyset_id), activities in activities_by_user_studyset.items():
+                if not activities:
+                    continue
+                
+                # Sort by created_at
+                sorted_activities = sorted(activities, key=lambda x: x.created_at)
+                
+                # Group into sessions (gap > 30 minutes = new session)
+                sessions = []
+                current_session = [sorted_activities[0]]
+                
+                for i in range(1, len(sorted_activities)):
+                    time_gap = (sorted_activities[i].created_at - sorted_activities[i-1].created_at).total_seconds()
+                    if time_gap > 1800:  # 30 minutes = 1800 seconds
+                        sessions.append(current_session)
+                        current_session = [sorted_activities[i]]
+                    else:
+                        current_session.append(sorted_activities[i])
+                
+                sessions.append(current_session)
+                unique_sessions.update([(user_id, studyset_id, target_date, idx) for idx in range(len(sessions))])
+            
+            # If no proper session grouping, use simple count
+            if len(unique_sessions) == 0 and len(day_activities) > 0:
+                unique_sessions = set([(a.user_id, a.studyset_id, target_date) for a in day_activities])
+            
+            daily_study_time.append(DailyStudyTime(
+                date=day_name,
+                hours=round(hours, 2),
+                sessions=len(unique_sessions) if unique_sessions else 0,
+                total_seconds=int(total_seconds)
+            ))
+        
+        # 2. Weekly Retention (last N weeks)
+        weekly_retention = []
+        for i in range(weeks):
+            week_start = now - timedelta(weeks=weeks - i, days=now.weekday())
+            week_end = week_start + timedelta(days=6)
+            
+            # Get activities for this week
+            week_activities = [
+                a for a in all_activities
+                if week_start.date() <= a.created_at.date() <= week_end.date()
+            ]
+            
+            if week_activities:
+                correct_count = sum(1 for a in week_activities if a.is_correct)
+                incorrect_count = len(week_activities) - correct_count
+                total = len(week_activities)
+                
+                remember_pct = (correct_count / total * 100) if total > 0 else 0
+                forget_pct = (incorrect_count / total * 100) if total > 0 else 0
+                
+                weekly_retention.append(WeeklyRetention(
+                    week=f"Week {i + 1}",
+                    remember=round(remember_pct, 2),
+                    forget=round(forget_pct, 2),
+                    total_activities=total
+                ))
+            else:
+                weekly_retention.append(WeeklyRetention(
+                    week=f"Week {i + 1}",
+                    remember=0.0,
+                    forget=0.0,
+                    total_activities=0
+                ))
+        
+        # 3. Test Performance
+        from app.models.test import TestAttempt, Test
+        # Get all completed test attempts for this class
+        all_test_attempts = session.exec(
+            select(TestAttempt)
+            .where(
+                and_(
+                    TestAttempt.class_id == class_id,
+                    TestAttempt.is_completed == True
+                )
+            )
+        ).all()
+        
+        # Get all tests in class studysets
+        tests = session.exec(
+            select(Test)
+            .where(Test.studyset_id.in_(studyset_ids))
+        ).all()
+        
+        test_performance = []
+        for test in tests:
+            # Get all completed attempts for this test in this class
+            all_attempts_for_test = [
+                a for a in all_test_attempts 
+                if a.test_id == test.test_id
+            ]
+            
+            if not all_attempts_for_test:
+                continue
+            
+            # Calculate class average
+            avg_score = sum(a.score for a in all_attempts_for_test) / len(all_attempts_for_test)
+            
+            # Get best score (highest score from all attempts)
+            best_attempt = max(all_attempts_for_test, key=lambda x: x.score)
+            
+            test_performance.append(TestPerformancePoint(
+                test_id=test.test_id,
+                test_name=test.title,
+                score=round(best_attempt.score, 2),
+                average=round(avg_score, 2),
+                completed_at=best_attempt.completed_at or best_attempt.started_at,
+                attempt_number=1
+            ))
+        
+        # Sort by completion date
+        test_performance.sort(key=lambda x: x.completed_at)
+        
+        # 4. Progress Over Time (monthly, last 4 months)
+        progress_over_time = []
+        for i in range(4):
+            # Calculate month start
+            month_date = now.replace(day=1) - timedelta(days=30 * (3 - i))
+            month_start = month_date.replace(day=1)
+            if i < 3:
+                month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+            else:
+                month_end = now.date()
+            
+            # Get progress summaries updated in this month
+            month_progress = session.exec(
+                select(ProgressSummary)
+                .where(
+                    and_(
+                        ProgressSummary.studyset_id.in_(studyset_ids),
+                        ProgressSummary.updated_at >= datetime.combine(month_start, datetime.min.time()),
+                        ProgressSummary.updated_at <= datetime.combine(month_end, datetime.max.time())
+                    )
+                )
+            ).all()
+            
+            if month_progress:
+                mastered = sum(p.mastered_terms for p in month_progress)
+                learning = sum(p.reviewing_terms for p in month_progress)
+                new_terms = sum(p.forgotten_terms for p in month_progress)
+                total = mastered + learning + new_terms
+            else:
+                mastered = learning = new_terms = total = 0
+            
+            month_name = month_start.strftime("%b")
+            progress_over_time.append(ProgressOverTime(
+                period=month_name,
+                mastered=mastered,
+                learning=learning,
+                new=new_terms,
+                total=total
+            ))
+        
+        # 5. Study Categories Distribution
+        # Group study activities by studyset category
+        study_categories = []
+        
+        # Get category distribution from studysets
+        category_counts = {}
+        for activity in all_activities:
+            # Get the studyset for this activity
+            studyset = session.get(StudySet, activity.studyset_id)
+            if studyset and studyset.category:
+                category = studyset.category
+                category_counts[category] = category_counts.get(category, 0) + 1
+            else:
+                # Uncategorized studysets
+                category_counts["Uncategorized"] = category_counts.get("Uncategorized", 0) + 1
+        
+        # Define colors for categories
+        color_palette = [
+            "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
+            "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1"
+        ]
+        
+        # Convert to StudyCategoryDistribution objects
+        for idx, (category, count) in enumerate(sorted(category_counts.items(), key=lambda x: x[1], reverse=True)):
+            study_categories.append(StudyCategoryDistribution(
+                name=category,
+                value=count,
+                color=color_palette[idx % len(color_palette)]
+            ))
+        
+        # Add test attempts as separate category if exists
+        if all_test_attempts:
+            study_categories.append(StudyCategoryDistribution(
+                name="Practice Tests",
+                value=len(all_test_attempts),
+                color="#8b5cf6"
+            ))
+        
+        # If no categories found, use fallback
+        if not study_categories:
+            study_categories = [
+                StudyCategoryDistribution(
+                    name="Flashcards",
+                    value=len(all_activities),
+                    color="#3b82f6"
+                )
+            ]
+        
+        # 6. Pass/Fail Distribution for Tests
+        passed_tests = sum(1 for a in all_test_attempts if a.score >= 60.0)
+        failed_tests = len(all_test_attempts) - passed_tests
+        
+        pass_fail_distribution = {
+            "passed": passed_tests,
+            "failed": failed_tests
+        }
+        
+        return ClassTimeSeriesAnalytics(
+            class_id=class_id,
+            daily_study_time=daily_study_time,
+            weekly_retention=weekly_retention,
+            test_performance=test_performance,
+            progress_over_time=progress_over_time,
+            study_categories=study_categories,
+            pass_fail_distribution=pass_fail_distribution
+        )

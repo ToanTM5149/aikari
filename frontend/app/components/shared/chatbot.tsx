@@ -1,27 +1,112 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { MessageCircle, Send, ChevronRight, ChevronLeft } from "lucide-react";
+import { MessageCircle, Send, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { useSendChatMessageMutation } from "~/redux/features/chatbot";
+import type { ChatMessage, QuickReplyButton } from "~/redux/features/chatbot/types";
+import { QuickReplyButtons } from "./quick-reply-buttons";
 
 interface ChatbotProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   width: number;
   onWidthChange: (width: number) => void;
+  studysetId: string;
 }
 
-export function Chatbot({ isCollapsed, onToggleCollapse, width, onWidthChange }: ChatbotProps) {
+export function Chatbot({ 
+  isCollapsed, 
+  onToggleCollapse, 
+  width, 
+  onWidthChange,
+  studysetId 
+}: ChatbotProps) {
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isResizing, setIsResizing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<HTMLDivElement>(null);
+  const hasInitializedRef = useRef(false);
+  
+  const [sendChatMessage, { isLoading }] = useSendChatMessageMutation();
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
-    // TODO: Implement chat functionality later
-    console.log("Message:", message);
-    setMessage("");
+  // Auto scroll to bottom when new message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async (text?: string, buttonValue?: string, isInitial = false) => {
+    const messageToSend = text || message.trim();
+    if (!messageToSend && !buttonValue && !isInitial) return;
+
+    // Don't show initial message in UI
+    if (!isInitial) {
+      // Add user message to UI (skip for initial message)
+      const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: buttonValue || messageToSend,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setMessage("");
+    }
+
+    try {
+      const response = await sendChatMessage({
+        studyset_id: studysetId,
+        message: isInitial ? "" : (buttonValue || messageToSend),
+        conversation_id: conversationId || undefined,
+        button_clicked: buttonValue || undefined,
+      }).unwrap();
+
+      // Update conversation ID
+      if (response.conversation_id) {
+        setConversationId(response.conversation_id);
+      }
+
+      // Add assistant message to UI (always show assistant response)
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: response.message,
+        timestamp: new Date(),
+        quick_replies: response.quick_replies || undefined,
+        metadata: response.metadata || undefined,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Handle navigation if test_id in metadata
+      if (response.metadata?.test_id) {
+        // Navigate to test page after a short delay
+        setTimeout(() => {
+          navigate(`/dashboard/studysets/${studysetId}/test/${response.metadata.test_id}`);
+        }, 2000);
+      }
+    } catch (error: any) {
+      // Add error message
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: `❌ Lỗi: ${error?.data?.detail || error?.message || "Có lỗi xảy ra"}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      if (isInitial) {
+        setIsInitializing(false);
+      }
+    }
+  };
+
+  const handleButtonClick = (value: string) => {
+    handleSendMessage(undefined, value);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -30,6 +115,24 @@ export function Chatbot({ isCollapsed, onToggleCollapse, width, onWidthChange }:
       handleSendMessage();
     }
   };
+
+  // Start conversation on mount if no messages (only once)
+  useEffect(() => {
+    if (
+      !hasInitializedRef.current &&
+      messages.length === 0 &&
+      !isLoading &&
+      !isInitializing &&
+      studysetId &&
+      !conversationId
+    ) {
+      hasInitializedRef.current = true;
+      setIsInitializing(true);
+      // Send empty message to start conversation in background
+      handleSendMessage("", undefined, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studysetId]); // Only on studysetId change
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -116,22 +219,65 @@ export function Chatbot({ isCollapsed, onToggleCollapse, width, onWidthChange }:
           {/* Chat Messages Area */}
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
-              {/* Welcome Message */}
-              <div className="flex flex-col items-center justify-center text-center space-y-3 py-12">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <MessageCircle className="w-8 h-8 text-primary" />
+              {messages.length === 0 ? (
+                /* Welcome Message */
+                <div className="flex flex-col items-center justify-center text-center space-y-3 py-12">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MessageCircle className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="space-y-2 px-4">
+                    <p className="text-sm font-medium">
+                      Ask me anything about your flashcards!
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      I can help you study and create content.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-2 px-4">
-                  <p className="text-sm font-medium">
-                    Ask me anything about your flashcards!
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    I can help you study and create content.
-                  </p>
+              ) : (
+                /* Chat Messages */
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      {msg.quick_replies && msg.quick_replies.length > 0 && (
+                        <QuickReplyButtons
+                          buttons={msg.quick_replies}
+                          onButtonClick={handleButtonClick}
+                          disabled={isLoading}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              
+              {/* Loading indicator */}
+              {(isLoading || isInitializing) && messages.length === 0 && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-lg px-4 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
                 </div>
-              </div>
-
-              {/* TODO: Chat messages will appear here */}
+              )}
+              {isLoading && messages.length > 0 && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-lg px-4 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
 
@@ -144,13 +290,18 @@ export function Chatbot({ isCollapsed, onToggleCollapse, width, onWidthChange }:
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 className="flex-1"
+                disabled={isLoading}
               />
               <Button
                 size="icon"
-                onClick={handleSendMessage}
-                disabled={!message.trim()}
+                onClick={() => handleSendMessage()}
+                disabled={!message.trim() || isLoading}
               >
-                <Send className="w-4 h-4" />
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </div>

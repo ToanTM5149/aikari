@@ -296,6 +296,7 @@ class DifyService:
         inputs: dict[str, Any],
         user: str | None = None,
         response_mode: str = "blocking",
+        app_id: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """
@@ -305,6 +306,7 @@ class DifyService:
             inputs: Dictionary chứa các input variables cho workflow
             user: User ID (optional)
             response_mode: Chế độ response ("blocking" hoặc "streaming")
+            app_id: Workflow App ID (optional - nếu không có thì dùng app_id từ API key)
             **kwargs: Các tham số bổ sung cho Dify API
 
         Returns:
@@ -317,6 +319,12 @@ class DifyService:
 
         if user:
             data["user"] = user
+
+        # Nếu có app_id, thêm vào data
+        # Lưu ý: Nếu API key đã được tạo từ một app cụ thể, không cần app_id
+        # Nhưng nếu dùng API key chung, cần truyền app_id
+        if app_id:
+            data["app_id"] = app_id
 
         # Thêm các tham số bổ sung
         data.update(kwargs)

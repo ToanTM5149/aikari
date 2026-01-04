@@ -155,3 +155,64 @@ class StudentProgressList(SQLModel):
     data: list[StudentProgressDetail]
     count: int
 
+
+# Time-series Analytics Schemas
+
+class DailyStudyTime(SQLModel):
+    """Daily study time data point"""
+    date: str  # Format: "YYYY-MM-DD" or "Mon", "Tue", etc.
+    hours: float
+    sessions: int
+    total_seconds: int
+
+
+class WeeklyRetention(SQLModel):
+    """Weekly memory retention data point"""
+    week: str  # Format: "Week 1", "Week 2", etc. or "YYYY-WW"
+    remember: float  # Percentage
+    forget: float  # Percentage
+    total_activities: int
+
+
+class TestPerformancePoint(SQLModel):
+    """Test performance data point"""
+    test_id: uuid.UUID
+    test_name: str
+    score: float  # 0-100
+    average: float  # Class average 0-100
+    completed_at: datetime
+    attempt_number: int
+
+
+class ProgressOverTime(SQLModel):
+    """Progress over time data point"""
+    period: str  # "YYYY-MM" for monthly, "YYYY-WW" for weekly
+    mastered: int
+    learning: int
+    new: int
+    total: int
+
+
+class StudyCategoryDistribution(SQLModel):
+    """Study activity by category"""
+    name: str  # "Flashcards", "Practice Tests", "Review", "Notes"
+    value: int
+    color: str | None = None
+
+
+class ClassTimeSeriesAnalytics(SQLModel):
+    """Time-series analytics for charts"""
+    class_id: uuid.UUID
+    # Study time data (last 7 days or custom range)
+    daily_study_time: list[DailyStudyTime]
+    # Memory retention (last 4 weeks or custom range)
+    weekly_retention: list[WeeklyRetention]
+    # Test performance over time
+    test_performance: list[TestPerformancePoint]
+    # Progress over time (monthly)
+    progress_over_time: list[ProgressOverTime]
+    # Study categories distribution
+    study_categories: list[StudyCategoryDistribution]
+    # Pass/Fail distribution for tests
+    pass_fail_distribution: dict[str, int]  # {"passed": int, "failed": int}
+

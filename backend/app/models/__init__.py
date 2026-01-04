@@ -12,6 +12,8 @@ from app.models.enums import (
     QuestionType,
     ReattemptStatus,
     UserRole,
+    ConversationIntent,
+    ConversationState,
 )
 
 # Models
@@ -24,6 +26,7 @@ from app.models.term import Term
 from app.models.test import Test, TestQuestion, TestAttempt, TestAnswer, ReattemptRequest
 from app.models.token_blacklist import TokenBlacklist
 from app.models.refresh_token import RefreshToken
+from app.models.conversation import ChatConversation, ChatMessage
 
 __all__ = [
     # Base
@@ -37,6 +40,8 @@ __all__ = [
     "TestType",
     "QuestionType",
     "ReattemptStatus",
+    "ConversationIntent",
+    "ConversationState",
     # Models
     "User",
     "Class",
@@ -55,4 +60,6 @@ __all__ = [
     "ProgressSummary",
     "TokenBlacklist",
     "RefreshToken",
+    "ChatConversation",
+    "ChatMessage",
 ]

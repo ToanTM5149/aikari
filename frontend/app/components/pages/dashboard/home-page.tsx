@@ -60,15 +60,25 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
 
   // Helper to format date
   const formatLastStudied = (dateString?: string | null) => {
-    if (!dateString) return "Never"
-    const date = new Date(dateString)
+    if (!dateString) return "Not started"
+    // Parse datetime string as UTC if no timezone indicator
+    // Backend returns naive datetime (UTC) without timezone info
+    // Check if string has timezone indicator (Z, +HH:MM, or -HH:MM after position 10)
+    const hasTimezone = dateString.includes('Z') || 
+      (dateString.includes('+') && dateString.length > 19) ||
+      (dateString.lastIndexOf('-') > 10) // Timezone offset like -05:00
+    const date = hasTimezone
+      ? new Date(dateString)
+      : new Date(dateString + 'Z') // Append 'Z' to treat as UTC
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
     const diffDays = Math.floor(diffHours / 24)
     
-    if (diffHours < 1) return "Just now"
-    if (diffHours < 24) return `${diffHours} hours ago`
+    if (diffMinutes < 1) return "Just now"
+    if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
     if (diffDays === 1) return "1 day ago"
     return `${diffDays} days ago`
   }
@@ -145,9 +155,16 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
                           </div>
                         </div>
                       )}
-                      <Button className="w-full" size="sm">
+                      <Button 
+                        className="w-full" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/dashboard/studysets/${set.studyset_id}/study`)
+                        }}
+                      >
                         <Play className="w-4 h-4 mr-2" />
-                        Continue Studying
+                        {set.last_activity_at ? 'Continue Studying' : 'Start Learning'}
                       </Button>
                     </div>
                   </CardContent>
@@ -196,7 +213,15 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
                         </span>
                         <Badge variant="secondary">{set.content_type}</Badge>
                       </div>
-                      <Button className="w-full" variant="outline" size="sm">
+                      <Button 
+                        className="w-full" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/dashboard/studysets/${set.studyset_id}/study`)
+                        }}
+                      >
                         <Play className="w-4 h-4 mr-2" />
                         Start Studying
                       </Button>

@@ -44,6 +44,8 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
       title: "",
       description: "",
       content_type: "DEFAULT",
+      category: "",
+      subcategory: "",
     },
   })
 
@@ -142,6 +144,44 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
             <p className="text-xs text-muted-foreground">
               Choose how you want to create flashcards in this set
             </p>
+          </div>
+
+          {/* Category */}
+          <div className="space-y-2">
+            <Label htmlFor="category">Category (Optional)</Label>
+            <Input
+              id="category"
+              placeholder="e.g., Mathematics, History, Science..."
+              {...register("category", {
+                maxLength: {
+                  value: 100,
+                  message: "Category must be less than 100 characters",
+                },
+              })}
+              disabled={isLoading}
+            />
+            {errors.category && (
+              <p className="text-sm text-destructive">{errors.category.message}</p>
+            )}
+          </div>
+
+          {/* Subcategory */}
+          <div className="space-y-2">
+            <Label htmlFor="subcategory">Subcategory (Optional)</Label>
+            <Input
+              id="subcategory"
+              placeholder="e.g., Algebra, World War II, Chemistry..."
+              {...register("subcategory", {
+                maxLength: {
+                  value: 100,
+                  message: "Subcategory must be less than 100 characters",
+                },
+              })}
+              disabled={isLoading}
+            />
+            {errors.subcategory && (
+              <p className="text-sm text-destructive">{errors.subcategory.message}</p>
+            )}
           </div>
 
           <DialogFooter>

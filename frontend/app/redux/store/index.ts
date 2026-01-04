@@ -25,6 +25,7 @@ import '../features/user/api';
 import '../features/class/api';
 import '../features/learning/api';
 import '../features/test/api';
+import '../features/chatbot/api';
 
 /**
  * Root Reducer - Kết hợp tất cả reducers

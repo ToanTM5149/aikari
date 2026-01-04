@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     # Dify AI Integration
     DIFY_API_KEY: str | None = None
     DIFY_BASE_URL: str = "http://localhost/v1"
+    # Workflow App IDs (optional - nếu dùng workflow riêng)
+    DIFY_WORKFLOW_TEST_APP_ID: str | None = None
+    DIFY_WORKFLOW_PARAGRAPH_APP_ID: str | None = None
+    # Unified Workflow App ID (recommended - dùng workflow tổng hợp)
+    DIFY_WORKFLOW_UNIFIED_APP_ID: str | None = None
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":

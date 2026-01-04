@@ -258,6 +258,17 @@ class LearningService:
                 break
             session_terms.append(term)
         
+        # If no terms found (all are reviewed and not due), return all terms anyway
+        # This allows users to study again even if spaced repetition says they don't need to
+        if not session_terms:
+            # Return all terms, excluding recently reviewed ones
+            for term in all_terms:
+                activity = term_activity_map.get(term.term_id)
+                if not activity or activity.created_at <= recent_threshold:
+                    if len(session_terms) >= actual_limit:
+                        break
+                    session_terms.append(term)
+        
         return session_terms
     
     @staticmethod

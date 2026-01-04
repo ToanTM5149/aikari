@@ -98,6 +98,8 @@ export interface StudySet {
   description?: string;
   owner_id: string;
   content_type: ContentType;
+  category?: string;
+  subcategory?: string;
   created_at: string;
   updated_at: string;
   term_count?: number;  // Number of terms (cards) in this studyset
@@ -109,12 +111,16 @@ export interface StudySetCreate {
   title: string;
   description?: string;
   content_type?: ContentType;
+  category?: string;
+  subcategory?: string;
 }
 
 export interface StudySetUpdate {
   title?: string;
   description?: string;
   content_type?: ContentType;
+  category?: string;
+  subcategory?: string;
 }
 
 export interface StudySetsResponse {
@@ -130,8 +136,6 @@ export interface Term {
   term_text: string;
   definition: string;
   example?: string;
-  category?: string;
-  subcategory?: string;
   image_url?: string;
   attributes?: Record<string, any>;
   created_at: string;
@@ -142,8 +146,6 @@ export interface TermCreate {
   term_text: string;
   definition: string;
   example?: string;
-  category?: string;
-  subcategory?: string;
   image_url?: string;
   attributes?: Record<string, any>;
 }
@@ -245,4 +247,55 @@ export interface ClassLeaderboard {
 export interface StudentProgressList {
   data: StudentProgressDetail[];
   count: number;
+}
+
+// Time-series Analytics Types
+export interface DailyStudyTime {
+  date: string;  // "Mon", "Tue", etc. or "YYYY-MM-DD"
+  hours: number;
+  sessions: number;
+  total_seconds: number;
+}
+
+export interface WeeklyRetention {
+  week: string;  // "Week 1", "Week 2", etc.
+  remember: number;  // Percentage
+  forget: number;  // Percentage
+  total_activities: number;
+}
+
+export interface TestPerformancePoint {
+  test_id: string;
+  test_name: string;
+  score: number;  // 0-100
+  average: number;  // Class average 0-100
+  completed_at: string;
+  attempt_number: number;
+}
+
+export interface ProgressOverTime {
+  period: string;  // "Jan", "Feb", etc. or "YYYY-MM"
+  mastered: number;
+  learning: number;
+  new: number;
+  total: number;
+}
+
+export interface StudyCategoryDistribution {
+  name: string;
+  value: number;
+  color: string | null;
+}
+
+export interface ClassTimeSeriesAnalytics {
+  class_id: string;
+  daily_study_time: DailyStudyTime[];
+  weekly_retention: WeeklyRetention[];
+  test_performance: TestPerformancePoint[];
+  progress_over_time: ProgressOverTime[];
+  study_categories: StudyCategoryDistribution[];
+  pass_fail_distribution: {
+    passed: number;
+    failed: number;
+  };
 }

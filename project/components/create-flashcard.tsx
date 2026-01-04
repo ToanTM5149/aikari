@@ -24,12 +24,11 @@ interface FlashcardInput {
   id: string
   front: string
   back: string
-  category: string
 }
 
 export function CreateFlashcard() {
   const [flashcards, setFlashcards] = useState<FlashcardInput[]>([
-    { id: "1", front: "", back: "", category: "" }
+    { id: "1", front: "", back: "" }
   ])
   const [setTitle, setSetTitle] = useState("")
   const [setDescription, setSetDescription] = useState("")
@@ -40,8 +39,7 @@ export function CreateFlashcard() {
     const newCard: FlashcardInput = {
       id: Date.now().toString(),
       front: "",
-      back: "",
-      category: ""
+      back: ""
     }
     setFlashcards([...flashcards, newCard])
     
@@ -78,7 +76,7 @@ export function CreateFlashcard() {
   }
 
   const resetAll = () => {
-    setFlashcards([{ id: Date.now().toString(), front: "", back: "", category: "" }])
+    setFlashcards([{ id: Date.now().toString(), front: "", back: "" }])
     setSetTitle("")
     setSetDescription("")
     setPreviewMode(false)
@@ -204,11 +202,6 @@ export function CreateFlashcard() {
                       {/* Front */}
                       <Card className="absolute inset-0 backface-hidden">
                         <CardContent className="flex flex-col items-center justify-center h-full p-4 text-center">
-                          {card.category && (
-                            <Badge variant="secondary" className="mb-3">
-                              {card.category}
-                            </Badge>
-                          )}
                           <p className="line-clamp-4">{card.front || "Empty front"}</p>
                           <p className="text-xs text-muted-foreground mt-3">Click to flip</p>
                         </CardContent>
@@ -264,20 +257,6 @@ export function CreateFlashcard() {
 
                           {/* Card Content */}
                           <div className="flex-1 space-y-4">
-                            {/* Category */}
-                            <div>
-                              <Label htmlFor={`category-${card.id}`} className="text-sm mb-2 block">
-                                Category (optional)
-                              </Label>
-                              <Input
-                                id={`category-${card.id}`}
-                                placeholder="e.g., Mathematics, History, Science..."
-                                value={card.category}
-                                onChange={(e) => updateFlashcard(card.id, "category", e.target.value)}
-                                className="max-w-xs"
-                              />
-                            </div>
-
                             {/* Front and Back */}
                             <div className="grid grid-cols-2 gap-4">
                               <div>

@@ -26,6 +26,8 @@ import {
   BarChart3,
   FileText,
   ChevronDown,
+  Image as ImageIcon,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -72,7 +74,7 @@ interface TermInput {
   term_text: string;
   definition: string;
   example?: string;
-  category?: string;
+  image_url?: string;
   isNew?: boolean; // Flag để biết term này mới tạo hay đang edit
 }
 
@@ -117,6 +119,7 @@ export function StudySetDetail() {
     definition: string;
     example?: string;
     category?: string;
+    image_url?: string;
   } | null>(null);
 
   // Chatbot state
@@ -156,7 +159,7 @@ export function StudySetDetail() {
         term_text: term.term_text,
         definition: term.definition,
         example: term.example || "",
-        category: term.category || "",
+        image_url: term.image_url || "",
         isNew: false,
       }));
       setEditingTerms(terms);
@@ -168,7 +171,7 @@ export function StudySetDetail() {
           term_text: "",
           definition: "",
           example: "",
-          category: "",
+          image_url: "",
           isNew: true,
         },
       ]);
@@ -181,7 +184,7 @@ export function StudySetDetail() {
       term_text: "",
       definition: "",
       example: "",
-      category: "",
+      image_url: "",
       isNew: true,
     };
     setEditingTerms([...editingTerms, newTerm]);
@@ -239,7 +242,7 @@ export function StudySetDetail() {
             term_text: term.term_text,
             definition: term.definition,
             example: term.example || undefined,
-            category: term.category || undefined,
+            image_url: term.image_url || undefined,
           },
         }).unwrap();
         
@@ -261,7 +264,7 @@ export function StudySetDetail() {
             term_text: term.term_text,
             definition: term.definition,
             example: term.example || undefined,
-            category: term.category || undefined,
+            image_url: term.image_url || undefined,
           },
         }).unwrap();
         toast.success("Đã cập nhật flashcard!");
@@ -293,7 +296,7 @@ export function StudySetDetail() {
       term_text: term.term_text,
       definition: term.definition,
       example: term.example || "",
-      category: term.category || "",
+      image_url: term.image_url || "",
     });
     setEditDialogOpen(true);
   };
@@ -315,7 +318,7 @@ export function StudySetDetail() {
           term_text: editingTerm.term_text,
           definition: editingTerm.definition,
           example: editingTerm.example || undefined,
-          category: editingTerm.category || undefined,
+          image_url: editingTerm.image_url || undefined,
         },
       }).unwrap();
       toast.success("Đã cập nhật flashcard!");
@@ -337,6 +340,38 @@ export function StudySetDetail() {
         i === index ? { ...term, [field]: value } : term
       )
     );
+  };
+
+  const handleImageUpload = (index: number, file: File) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Vui lòng chọn file ảnh");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    if (file.size > maxSize) {
+      toast.error("Kích thước ảnh phải nhỏ hơn 2MB");
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      updateTermInput(index, "image_url", base64);
+      toast.success("Đã tải ảnh lên thành công");
+    };
+    reader.onerror = () => {
+      toast.error("Không thể tải ảnh lên");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = (index: number) => {
+    updateTermInput(index, "image_url", "");
+    toast.success("Đã xóa ảnh");
   };
 
   const handleFlipCard = (id: string) => {
@@ -384,7 +419,7 @@ export function StudySetDetail() {
               term_text: term.term_text,
               definition: term.definition,
               example: term.example || undefined,
-              category: term.category || undefined,
+              image_url: term.image_url || undefined,
             },
           }).unwrap();
         } else if (term.id) {
@@ -396,7 +431,7 @@ export function StudySetDetail() {
               term_text: term.term_text,
               definition: term.definition,
               example: term.example || undefined,
-              category: term.category || undefined,
+              image_url: term.image_url || undefined,
             },
           }).unwrap();
         }
@@ -497,7 +532,6 @@ export function StudySetDetail() {
               {!isEditing && (
                 <>
                   <Select
-                    value="study"
                     onValueChange={(value) => {
                       if (value === "study") {
                         navigate(`/dashboard/studysets/${studysetId}/study`);
@@ -507,7 +541,7 @@ export function StudySetDetail() {
                     }}
                   >
                     <SelectTrigger className="w-[140px] h-8" disabled={!termsData?.data || termsData.data.length === 0}>
-                      <SelectValue placeholder="Chọn chế độ" />
+                      <SelectValue placeholder="Mode" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="study">
@@ -552,7 +586,7 @@ export function StudySetDetail() {
                   {isOwner && (
                     <Button size="sm" onClick={initializeEditMode}>
                       <Edit2 className="w-4 h-4 mr-2" />
-                      Chỉnh sửa tất cả
+                      Add flashcard
                     </Button>
                   )}
                 </>
@@ -660,10 +694,17 @@ export function StudySetDetail() {
                         {/* Front */}
                         <Card className="absolute inset-0 backface-hidden">
                           <CardContent className="flex flex-col items-center justify-center h-full p-4 text-center">
-                            {term.category && (
-                              <Badge variant="secondary" className="mb-3">
-                                {term.category}
-                              </Badge>
+                            {term.image_url && (
+                              <div className="mb-2 w-full">
+                                <img
+                                  src={term.image_url}
+                                  alt={term.term_text}
+                                  className="w-full h-20 object-cover rounded-md shadow-sm"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
                             )}
                             <p className="line-clamp-4 text-lg font-medium">
                               {term.term_text}
@@ -683,6 +724,18 @@ export function StudySetDetail() {
                             <Badge variant="secondary" className="mb-3">
                               Định nghĩa
                             </Badge>
+                            {term.image_url && (
+                              <div className="mb-2 w-full">
+                                <img
+                                  src={term.image_url}
+                                  alt={term.definition}
+                                  className="w-full h-20 object-cover rounded-md shadow-sm"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
                             <p className="line-clamp-4 text-primary">
                               {term.definition}
                             </p>
@@ -741,25 +794,6 @@ export function StudySetDetail() {
 
                           {/* Card Content */}
                           <div className="flex-1 space-y-4">
-                            {/* Category */}
-                            <div>
-                              <Label
-                                htmlFor={`category-${index}`}
-                                className="text-sm mb-2 block"
-                              >
-                                Danh mục (tùy chọn)
-                              </Label>
-                              <Input
-                                id={`category-${index}`}
-                                placeholder="VD: Toán học, Lịch sử, Khoa học..."
-                                value={term.category || ""}
-                                onChange={(e) =>
-                                  updateTermInput(index, "category", e.target.value)
-                                }
-                                className="max-w-xs"
-                              />
-                            </div>
-
                             {/* Term and Definition */}
                             <div className="grid grid-cols-2 gap-4">
                               <div>
@@ -827,6 +861,57 @@ export function StudySetDetail() {
                                 className="min-h-[60px] resize-none"
                               />
                             </div>
+
+                            {/* Image Upload */}
+                            <div>
+                              <Label
+                                htmlFor={`image-${index}`}
+                                className="text-sm mb-2 flex items-center gap-2"
+                              >
+                                <ImageIcon className="w-4 h-4" />
+                                Image (optional)
+                              </Label>
+                              <div className="space-y-2">
+                                {term.image_url && (
+                                  <div className="relative inline-block">
+                                    <img
+                                      src={term.image_url}
+                                      alt="Preview"
+                                      className="w-full max-w-xs h-32 object-cover rounded-md border"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                      }}
+                                    />
+                                    <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="absolute -top-2 -right-2 h-6 w-6"
+                                      onClick={() => removeImage(index)}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                                <label className="cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleImageUpload(index, file);
+                                      // Reset input để có thể chọn lại file cùng tên
+                                      e.target.value = '';
+                                    }}
+                                  />
+                                  <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-md hover:bg-accent transition-colors">
+                                    <Upload className="w-4 h-4" />
+                                    <span className="text-sm">Upload từ máy tính</span>
+                                  </div>
+                                </label>
+                                <span className="text-xs text-muted-foreground">Max 2MB</span>
+                              </div>
+                            </div>
                           </div>
 
                           {/* Action Buttons */}
@@ -888,11 +973,6 @@ export function StudySetDetail() {
                               Định nghĩa
                             </span>
                           </div>
-                          {term.category && (
-                            <Badge variant="outline" className="text-xs">
-                              {term.category}
-                            </Badge>
-                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -948,11 +1028,6 @@ export function StudySetDetail() {
                                   <span className="text-xs font-medium text-muted-foreground">
                                     THUẬT NGỮ
                                   </span>
-                                  {term.category && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {term.category}
-                                    </Badge>
-                                  )}
                                 </div>
                                 <p className="text-sm">{term.term_text}</p>
                               </div>
@@ -1018,18 +1093,6 @@ export function StudySetDetail() {
           {editingTerm && (
             <div className="space-y-4 py-4">
               <div>
-                <Label htmlFor="edit-category">Danh mục (tùy chọn)</Label>
-                <Input
-                  id="edit-category"
-                  placeholder="VD: Toán học, Lịch sử..."
-                  value={editingTerm.category || ""}
-                  onChange={(e) =>
-                    setEditingTerm({ ...editingTerm, category: e.target.value })
-                  }
-                  className="mt-2"
-                />
-              </div>
-              <div>
                 <Label htmlFor="edit-term">
                   Thuật ngữ / Câu hỏi <span className="text-destructive">*</span>
                 </Label>
@@ -1068,6 +1131,75 @@ export function StudySetDetail() {
                   }
                   className="mt-2 min-h-[60px]"
                 />
+              </div>
+              <div>
+                <Label htmlFor="edit-image" className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  Image (optional)
+                </Label>
+                <div className="space-y-2 mt-2">
+                  {editingTerm.image_url && (
+                    <div className="relative inline-block">
+                      <img
+                        src={editingTerm.image_url}
+                        alt="Preview"
+                        className="w-full max-w-xs h-32 object-cover rounded-md border"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={() => setEditingTerm({ ...editingTerm, image_url: "" })}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Validate file type
+                          if (!file.type.startsWith('image/')) {
+                            toast.error("Vui lòng chọn file ảnh");
+                            return;
+                          }
+                          // Validate file size (max 2MB)
+                          const maxSize = 2 * 1024 * 1024;
+                          if (file.size > maxSize) {
+                            toast.error("Kích thước ảnh phải nhỏ hơn 2MB");
+                            return;
+                          }
+                          // Convert to base64
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const base64 = event.target?.result as string;
+                            setEditingTerm({ ...editingTerm, image_url: base64 });
+                            toast.success("Đã tải ảnh lên thành công");
+                          };
+                          reader.onerror = () => {
+                            toast.error("Không thể tải ảnh lên");
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                        // Reset input để có thể chọn lại file cùng tên
+                        e.target.value = '';
+                      }}
+                    />
+                    <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-md hover:bg-accent transition-colors">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm">Upload từ máy tính</span>
+                    </div>
+                  </label>
+                  <span className="text-xs text-muted-foreground">Max 2MB</span>
+                </div>
               </div>
             </div>
           )}
@@ -1121,6 +1253,7 @@ export function StudySetDetail() {
           onToggleCollapse={handleToggleChatbot}
           width={chatbotWidth}
           onWidthChange={handleChatbotWidthChange}
+          studysetId={studysetId!}
         />
       </div>
     </div>

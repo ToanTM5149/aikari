@@ -155,10 +155,17 @@ export function StudyMode() {
               {/* Front of card */}
               <Card className="absolute inset-0 backface-hidden shadow-lg">
                 <CardContent className="flex flex-col items-center justify-center h-full p-8 text-center">
-                  {currentTerm.category && (
-                    <Badge variant="secondary" className="mb-6 text-base px-4 py-1">
-                      {currentTerm.category}
-                    </Badge>
+                  {currentTerm.image_url && (
+                    <div className="mb-4 w-full max-w-sm">
+                      <img
+                        src={currentTerm.image_url}
+                        alt={currentTerm.term_text}
+                        className="w-full h-32 object-cover rounded-lg shadow-md"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
                   )}
                   <p className="text-2xl mb-6">{currentTerm.term_text}</p>
                   <p className="text-sm text-muted-foreground">
@@ -176,6 +183,18 @@ export function StudyMode() {
                   <Badge variant="secondary" className="mb-6 text-base px-4 py-1">
                     Answer
                   </Badge>
+                  {currentTerm.image_url && (
+                    <div className="mb-4 w-full max-w-sm">
+                      <img
+                        src={currentTerm.image_url}
+                        alt={currentTerm.definition}
+                        className="w-full h-32 object-cover rounded-lg shadow-md"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
                   <p className="text-2xl text-primary mb-4">
                     {currentTerm.definition}
                   </p>

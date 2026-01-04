@@ -51,6 +51,7 @@ export const learningApi = baseApi.injectEndpoints({
       invalidatesTags: (result, error, { studysetId }) => [
         { type: 'Learning', id: studysetId },
         { type: 'Progress', id: studysetId },
+        'Flashcard', // Invalidate studyset list to refresh last_activity_at and progress
       ],
     }),
 
@@ -67,7 +68,7 @@ export const learningApi = baseApi.injectEndpoints({
           session_start: sessionStart,
         },
       }),
-      invalidatesTags: ['Learning', 'Progress'],
+      invalidatesTags: ['Learning', 'Progress', 'Flashcard'], // Invalidate studyset list to refresh last_activity_at and progress
     }),
 
     // Get studyset progress

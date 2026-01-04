@@ -14,6 +14,8 @@ class StudySet(SQLModel, table=True):
     description: str | None = Field(default=None, max_length=256)
     owner_id: uuid.UUID = Field(foreign_key="User.user_id")
     content_type: ContentType = Field(default=ContentType.DEFAULT)
+    category: str | None = Field(default=None, max_length=100)
+    subcategory: str | None = Field(default=None, max_length=100)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     

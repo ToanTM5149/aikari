@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
+import { useNavigate } from "react-router"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
@@ -16,32 +17,43 @@ import {
   Sparkles,
   FolderPlus,
   Check,
-  X
+  X,
+  Image as ImageIcon,
+  Upload
 } from "lucide-react"
 import { toast } from "sonner"
+import { useCreateStudySetMutation, useCreateTermMutation } from "~/redux/features/studyset"
 
 interface FlashcardInput {
   id: string
   front: string
   back: string
   category: string
+  imageUrl: string
 }
 
 export function CreateFlashcard() {
+  const navigate = useNavigate()
+  const [createStudySet, { isLoading: isCreatingStudySet }] = useCreateStudySetMutation()
+  const [createTerm, { isLoading: isCreatingTerm }] = useCreateTermMutation()
+  
   const [flashcards, setFlashcards] = useState<FlashcardInput[]>([
-    { id: "1", front: "", back: "", category: "" }
+    { id: "1", front: "", back: "", category: "", imageUrl: "" }
   ])
   const [setTitle, setSetTitle] = useState("")
   const [setDescription, setSetDescription] = useState("")
   const [previewMode, setPreviewMode] = useState(false)
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set())
+  
+  const isLoading = isCreatingStudySet || isCreatingTerm
 
   const addFlashcard = () => {
     const newCard: FlashcardInput = {
       id: Date.now().toString(),
       front: "",
       back: "",
-      category: ""
+      category: "",
+      imageUrl: ""
     }
     setFlashcards([...flashcards, newCard])
     
@@ -67,6 +79,38 @@ export function CreateFlashcard() {
     ))
   }
 
+  const handleImageUpload = (id: string, file: File) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file")
+      return
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024 // 2MB in bytes
+    if (file.size > maxSize) {
+      toast.error("Image size must be less than 2MB")
+      return
+    }
+
+    // Convert to base64
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string
+      updateFlashcard(id, "imageUrl", base64)
+      toast.success("Image uploaded successfully")
+    }
+    reader.onerror = () => {
+      toast.error("Failed to upload image")
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const removeImage = (id: string) => {
+    updateFlashcard(id, "imageUrl", "")
+    toast.success("Image removed")
+  }
+
   const handleFlipCard = (id: string) => {
     const newFlipped = new Set(flippedCards)
     if (newFlipped.has(id)) {
@@ -78,7 +122,7 @@ export function CreateFlashcard() {
   }
 
   const resetAll = () => {
-    setFlashcards([{ id: Date.now().toString(), front: "", back: "", category: "" }])
+    setFlashcards([{ id: Date.now().toString(), front: "", back: "", category: "", imageUrl: "" }])
     setSetTitle("")
     setSetDescription("")
     setPreviewMode(false)
@@ -86,7 +130,7 @@ export function CreateFlashcard() {
     toast.success("Reset complete")
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate
     if (!setTitle.trim()) {
       toast.error("Please enter a title for your flashcard set")
@@ -105,9 +149,38 @@ export function CreateFlashcard() {
       return
     }
 
-    // Success
-    toast.success(`Saved "${setTitle}" with ${validCards.length} flashcards!`)
-    console.log("Saved flashcard set:", { setTitle, setDescription, flashcards: validCards })
+    try {
+      // Create studyset first
+      const studyset = await createStudySet({
+        title: setTitle.trim(),
+        description: setDescription.trim() || undefined,
+      }).unwrap()
+
+      toast.success(`Created "${setTitle}"! Adding flashcards...`)
+
+      // Create all terms
+      for (const card of validCards) {
+        const imageUrl = (card.imageUrl && card.imageUrl.trim()) || undefined
+        
+        await createTerm({
+          studysetId: studyset.studyset_id,
+          data: {
+            term_text: card.front.trim(),
+            definition: card.back.trim(),
+            image_url: imageUrl,
+          },
+        }).unwrap()
+      }
+
+      toast.success(`Successfully saved "${setTitle}" with ${validCards.length} flashcards!`)
+      
+      // Navigate to the studyset detail page
+      navigate(`/dashboard/flashcards/${studyset.studyset_id}`)
+    } catch (error: any) {
+      const errorMsg = error?.data?.detail || error?.message || "Failed to save flashcard set"
+      toast.error(errorMsg)
+      console.error("Error saving flashcard set:", error)
+    }
   }
 
   const getCardCount = () => {
@@ -166,9 +239,10 @@ export function CreateFlashcard() {
               <Button
                 size="sm"
                 onClick={handleSave}
+                disabled={isLoading}
               >
                 <Save className="w-4 h-4 mr-2" />
-                Save Set
+                {isLoading ? "Saving..." : "Save Set"}
               </Button>
             </div>
           </div>
@@ -208,6 +282,13 @@ export function CreateFlashcard() {
                             <Badge variant="secondary" className="mb-3">
                               {card.category}
                             </Badge>
+                          )}
+                          {card.imageUrl && (
+                            <img 
+                              src={card.imageUrl} 
+                              alt="Flashcard" 
+                              className="w-20 h-20 object-cover rounded-md mb-2"
+                            />
                           )}
                           <p className="line-clamp-4">{card.front || "Empty front"}</p>
                           <p className="text-xs text-muted-foreground mt-3">Click to flip</p>
@@ -276,6 +357,54 @@ export function CreateFlashcard() {
                                 onChange={(e) => updateFlashcard(card.id, "category", e.target.value)}
                                 className="max-w-xs"
                               />
+                            </div>
+
+                            {/* Image Upload */}
+                            <div>
+                              <Label className="text-sm mb-2 flex items-center gap-2">
+                                <ImageIcon className="w-4 h-4" />
+                                Image (optional)
+                              </Label>
+                              <div className="space-y-2">
+                                {card.imageUrl && (
+                                  <div className="relative inline-block">
+                                    <img 
+                                      src={card.imageUrl} 
+                                      alt="Preview" 
+                                      className="w-full max-w-xs h-32 object-cover rounded-md border"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                      }}
+                                    />
+                                    <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="absolute -top-2 -right-2 h-6 w-6"
+                                      onClick={() => removeImage(card.id)}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                                <label className="cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0]
+                                      if (file) handleImageUpload(card.id, file)
+                                      // Reset input để có thể chọn lại file cùng tên
+                                      e.target.value = ''
+                                    }}
+                                  />
+                                  <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-md hover:bg-accent transition-colors">
+                                    <Upload className="w-4 h-4" />
+                                    <span className="text-sm">Upload từ máy tính</span>
+                                  </div>
+                                </label>
+                                <span className="text-xs text-muted-foreground">Max 2MB</span>
+                              </div>
                             </div>
 
                             {/* Front and Back */}

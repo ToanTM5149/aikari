@@ -15,6 +15,9 @@ import {
   Save,
   Loader2,
   AlertCircle,
+  Image as ImageIcon,
+  Upload,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -54,7 +57,7 @@ export function TermDetail() {
     term_text: string;
     definition: string;
     example?: string;
-    category?: string;
+    image_url?: string;
   } | null>(null);
 
   // Flip card state
@@ -96,7 +99,7 @@ export function TermDetail() {
         term_text: termData.term_text,
         definition: termData.definition,
         example: termData.example || "",
-        category: termData.category || "",
+        image_url: termData.image_url || "",
       });
     }
   }, [termData]);
@@ -111,7 +114,7 @@ export function TermDetail() {
         term_text: termData.term_text,
         definition: termData.definition,
         example: termData.example || "",
-        category: termData.category || "",
+        image_url: termData.image_url || "",
       });
       setEditDialogOpen(true);
     }
@@ -133,7 +136,7 @@ export function TermDetail() {
           term_text: editingTerm.term_text,
           definition: editingTerm.definition,
           example: editingTerm.example || undefined,
-          category: editingTerm.category || undefined,
+          image_url: editingTerm.image_url || undefined,
         },
       }).unwrap();
       toast.success("Đã cập nhật flashcard!");
@@ -215,10 +218,17 @@ export function TermDetail() {
                 {/* Front - Term */}
                 <Card className="absolute inset-0 backface-hidden">
                   <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center">
-                    {term.category && (
-                      <Badge variant="secondary" className="mb-4">
-                        {term.category}
-                      </Badge>
+                    {term.image_url && (
+                      <div className="mb-4 w-full max-w-xs">
+                        <img
+                          src={term.image_url}
+                          alt={term.term_text}
+                          className="w-full h-40 object-cover rounded-lg shadow-md"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
                     )}
                     <p className="text-2xl font-medium line-clamp-6">
                       {term.term_text}
@@ -238,6 +248,18 @@ export function TermDetail() {
                     <Badge variant="secondary" className="mb-4">
                       Định nghĩa
                     </Badge>
+                    {term.image_url && (
+                      <div className="mb-4 w-full max-w-xs">
+                        <img
+                          src={term.image_url}
+                          alt={term.definition}
+                          className="w-full h-40 object-cover rounded-lg shadow-md"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                     <p className="text-2xl text-primary line-clamp-6">
                       {term.definition}
                     </p>
@@ -298,18 +320,6 @@ export function TermDetail() {
           {editingTerm && (
             <div className="space-y-4 py-4">
               <div>
-                <Label htmlFor="edit-category">Danh mục (tùy chọn)</Label>
-                <Input
-                  id="edit-category"
-                  placeholder="VD: Toán học, Lịch sử..."
-                  value={editingTerm.category || ""}
-                  onChange={(e) =>
-                    setEditingTerm({ ...editingTerm, category: e.target.value })
-                  }
-                  className="mt-2"
-                />
-              </div>
-              <div>
                 <Label htmlFor="edit-term">
                   Thuật ngữ / Câu hỏi <span className="text-destructive">*</span>
                 </Label>
@@ -348,6 +358,75 @@ export function TermDetail() {
                   }
                   className="mt-2 min-h-[60px]"
                 />
+              </div>
+              <div>
+                <Label htmlFor="edit-image" className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  Image (optional)
+                </Label>
+                <div className="space-y-2 mt-2">
+                  {editingTerm.image_url && (
+                    <div className="relative inline-block">
+                      <img
+                        src={editingTerm.image_url}
+                        alt="Preview"
+                        className="w-full max-w-xs h-32 object-cover rounded-md border"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={() => setEditingTerm({ ...editingTerm, image_url: "" })}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Validate file type
+                          if (!file.type.startsWith('image/')) {
+                            toast.error("Vui lòng chọn file ảnh");
+                            return;
+                          }
+                          // Validate file size (max 2MB)
+                          const maxSize = 2 * 1024 * 1024;
+                          if (file.size > maxSize) {
+                            toast.error("Kích thước ảnh phải nhỏ hơn 2MB");
+                            return;
+                          }
+                          // Convert to base64
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const base64 = event.target?.result as string;
+                            setEditingTerm({ ...editingTerm, image_url: base64 });
+                            toast.success("Đã tải ảnh lên thành công");
+                          };
+                          reader.onerror = () => {
+                            toast.error("Không thể tải ảnh lên");
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                        // Reset input để có thể chọn lại file cùng tên
+                        e.target.value = '';
+                      }}
+                    />
+                    <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-md hover:bg-accent transition-colors">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm">Upload từ máy tính</span>
+                    </div>
+                  </label>
+                  <span className="text-xs text-muted-foreground">Max 2MB</span>
+                </div>
               </div>
             </div>
           )}
@@ -401,6 +480,7 @@ export function TermDetail() {
           onToggleCollapse={handleToggleChatbot}
           width={chatbotWidth}
           onWidthChange={handleChatbotWidthChange}
+          studysetId={studysetId!}
         />
       </div>
     </div>
