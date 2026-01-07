@@ -11,17 +11,16 @@ from app.schemas import UserCreate
 
 logger = logging.getLogger(__name__)
 
-# Cấu hình connection pool với retry logic
 engine = create_engine(
     str(settings.SQLALCHEMY_DATABASE_URI),
     poolclass=QueuePool,
     pool_size=10,
     max_overflow=20,
-    pool_pre_ping=True,  # Kiểm tra connection trước khi dùng
-    pool_recycle=3600,   # Recycle connections sau 1 giờ
+    pool_pre_ping=True,
+    pool_recycle=3600, 
     connect_args={
         "connect_timeout": 10,
-        "sslmode": "prefer",  # Cho phép SSL nhưng không bắt buộc
+        "sslmode": "prefer", 
     },
     echo=False,
 )
@@ -40,19 +39,7 @@ def receive_checkin(dbapi_conn, connection_record):
     logger.debug("Connection returned to pool")
 
 
-# make sure all SQLModel models are imported (app.models) before initializing DB
-# otherwise, SQLModel might fail to initialize relationships properly
-# for more details: https://github.com/fastapi/full-stack-fastapi-template/issues/28
-
-
 def init_db(session: Session) -> None:
-  # Tables should be created with Alembic migrations
-  # But if you don't want to use migrations, create
-  # the tables un-commenting the next lines
-  # from sqlmodel import SQLModel
-
-  # This works because the models are already imported and registered from app.models
-  # SQLModel.metadata.create_all(engine)
 
   user = session.exec(
     select(User).where(User.email == settings.FIRST_SUPERUSER)

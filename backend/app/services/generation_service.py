@@ -238,7 +238,6 @@ class GenerationService:
                 user=str(user_id),
                 response_mode="blocking",
                 inputs=inputs,
-                app_id=settings.DIFY_CHAT_APP_UNIFIED_ID,
             )
             
             # Log toàn bộ response từ Dify
@@ -505,7 +504,6 @@ class GenerationService:
                 user=str(user_id),
                 response_mode="blocking",
                 inputs=inputs,
-                app_id=settings.DIFY_CHAT_APP_UNIFIED_ID,
             )
             
             # Log toàn bộ response từ Dify
@@ -798,10 +796,6 @@ class GenerationService:
             
             from app.core.config import settings
             
-            # Chỉ dùng Unified Chat App
-            if not settings.DIFY_CHAT_APP_UNIFIED_ID:
-                raise ValueError("DIFY_CHAT_APP_UNIFIED_ID is not configured")
-            
             # Query là câu hỏi thực tế của user
             query = question
             
@@ -812,37 +806,12 @@ class GenerationService:
                 "query": question,
             }
             
-            # Log đầy đủ data trước khi gửi đến Dify
-            logger.info("=" * 80)
-            logger.info("=== REQUEST DATA GỬI ĐẾN DIFY (ANSWER QUESTION) ===")
-            logger.info(f"Studyset ID: {studyset_id}")
-            logger.info(f"User ID: {user_id}")
-            logger.info(f"App ID: {settings.DIFY_CHAT_APP_UNIFIED_ID}")
-            logger.info(f"Query: '{query}'")
-            logger.info(f"Response Mode: blocking")
-            logger.info("Inputs:")
-            for key, value in inputs.items():
-                if key == "study_context":
-                    logger.info(f"  - {key}: (length={len(str(value))} characters)")
-                    logger.info(f"    Preview: {str(value)[:200]}...")
-                else:
-                    logger.info(f"  - {key}: {value}")
-            logger.info("=" * 80)
-            
-            logger.info(f"Calling Dify unified chat app to answer question for studyset {studyset_id}")
             result = await dify_service.chat_completion(
                 query=query,
                 user=str(user_id),
                 inputs=inputs,
                 response_mode="blocking",
-                app_id=settings.DIFY_CHAT_APP_UNIFIED_ID,
             )
-            
-            # Log toàn bộ response từ Dify
-            logger.info("=" * 80)
-            logger.info("=== RESPONSE TỪ DIFY (ANSWER QUESTION) ===")
-            logger.info(f"Full result object keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
-            logger.info("=" * 80)
             
             # Parse response từ Chat App (text answer)
             answer = result.get("answer", "")

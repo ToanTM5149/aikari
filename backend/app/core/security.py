@@ -20,7 +20,7 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
     Tạo Access Token với JTI (JWT ID) để có thể revoke
     """
     expire = datetime.now(timezone.utc) + expires_delta
-    jti = str(uuid.uuid4())  # Unique token ID
+    jti = str(uuid.uuid4()) 
     to_encode = {
         "exp": expire,
         "sub": str(subject),

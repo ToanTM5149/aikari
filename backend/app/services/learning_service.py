@@ -39,27 +39,16 @@ class SpacedRepetitionSM2:
     ) -> tuple[float, int, int, datetime]:
         """
         Calculate next review date based on SM-2 algorithm
-        
-        Args:
-            recall_score: Quality of recall (0-5)
-            current_ef: Current easiness factor
-            current_interval: Current interval in days
-            repetitions: Number of consecutive correct recalls
-        
         Returns:
             tuple: (new_ef, new_interval, new_repetitions, next_review_date)
         """
-        # Calculate new EF
         new_ef = current_ef + (0.1 - (5 - recall_score) * (0.08 + (5 - recall_score) * 0.02))
         new_ef = max(new_ef, SpacedRepetitionSM2.MIN_EF)
-        
-        # Calculate new interval and repetitions
+
         if recall_score < 3:
-            # Failed recall - restart
             new_interval = 1
             new_repetitions = 0
         else:
-            # Successful recall
             new_repetitions = repetitions + 1
             
             if new_repetitions == 1:
@@ -69,7 +58,6 @@ class SpacedRepetitionSM2:
             else:
                 new_interval = int(current_interval * new_ef)
         
-        # Calculate next review date
         next_review_date = datetime.utcnow() + timedelta(days=new_interval)
         
         return new_ef, new_interval, new_repetitions, next_review_date

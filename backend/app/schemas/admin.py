@@ -170,7 +170,7 @@ class PopularStudySetMetrics(BaseModel):
     title: str
     owner_username: str
     term_count: int
-    total_learners: int  # Unique users who studied
+    total_learners: int 
     total_activities: int
     average_completion_rate: float
     created_at: datetime

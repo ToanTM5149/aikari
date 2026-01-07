@@ -28,16 +28,12 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      // Nếu đã authenticated → không cần làm gì
       if (isAuthenticated && currentUser) {
         setIsInitialized(true);
         return;
       }
-
-      // Check localStorage có user info không
       const savedUserStr = localStorage.getItem('user');
       if (!savedUserStr) {
-        // Không có user info → chắc chắn chưa login
         setIsInitialized(true);
         return;
       }
@@ -45,12 +41,8 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
       try {
         const savedUser = JSON.parse(savedUserStr);
         
-        // Có user info nhưng không có access token → gọi refresh token
-        // Refresh token sẽ được gửi tự động qua HTTP-only cookie
-        // onQueryStarted trong refreshToken mutation sẽ tự động update token và restore user
         await refreshToken().unwrap();
       } catch (error) {
-        // Refresh token fail → clear localStorage và để user login lại
         console.log('Refresh token failed, user needs to login again');
         localStorage.removeItem('user');
       } finally {
@@ -59,9 +51,8 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
     };
 
     initializeAuth();
-  }, []); // Chỉ chạy một lần khi mount
+  }, []); 
 
-  // Hiển thị loading khi đang initialize
   if (!isInitialized || isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">

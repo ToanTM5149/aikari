@@ -18,13 +18,7 @@ class ChatbotService:
     
     def __init__(self, session: Session, use_mock: bool = False):
         self.session = session
-        # Dùng Mock để test UI trước khi có Dify
-        if use_mock:
-            from app.services.mock_generation_service import MockGenerationService
-            self.generation_service = MockGenerationService(session)
-        else:
-            # Dùng GenerationService (real) - gọi Dify API
-            self.generation_service = GenerationService(session)
+        self.generation_service = GenerationService(session)
     
     def get_or_create_conversation(
         self,

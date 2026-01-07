@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     )
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 phút - short-lived for security
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7     # 7 ngày - long-lived for convenience
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7     
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
     
@@ -100,19 +100,6 @@ class Settings(BaseSettings):
     # Dify AI Integration
     DIFY_API_KEY: str | None = None
     DIFY_BASE_URL: str = "http://localhost/v1"
-    
-    # Chat App IDs (nếu dùng Chat App)
-    DIFY_CHAT_APP_TEST_ID: str | None = None
-    DIFY_CHAT_APP_PARAGRAPH_ID: str | None = None
-    DIFY_CHAT_APP_QA_ID: str | None = None
-    # Unified Chat App ID (dùng một Chat App cho tất cả với action_type)
-    DIFY_CHAT_APP_UNIFIED_ID: str | None = None
-    
-    # Workflow App IDs (optional - nếu dùng workflow riêng, backward compatible)
-    DIFY_WORKFLOW_TEST_APP_ID: str | None = None
-    DIFY_WORKFLOW_PARAGRAPH_APP_ID: str | None = None
-    # Unified Workflow App ID (recommended - dùng workflow tổng hợp)
-    DIFY_WORKFLOW_UNIFIED_APP_ID: str | None = None
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":

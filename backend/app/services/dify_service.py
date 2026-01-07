@@ -41,7 +41,6 @@ class DifyService:
             Full URL
         """
         endpoint = endpoint.lstrip("/")
-        # Không có prefix, dùng trực tiếp
         return f"{self.base_url}/{endpoint}"
 
     async def _request(
@@ -89,50 +88,6 @@ class DifyService:
                 logger.error(f"Lỗi kết nối đến Dify API: {str(e)}")
                 raise
 
-    async def health_check(self) -> dict[str, Any]:
-        """
-        Kiểm tra kết nối và trạng thái của Dify API
-        Thử gọi workflow run với inputs rỗng để kiểm tra kết nối (cho workflow app)
-
-        Returns:
-            Thông tin về trạng thái API
-        """
-        # Thử gọi workflow run với inputs rỗng để test kết nối
-        # Đây là cách đơn giản nhất để test workflow app
-        try:
-            result = await self.run_workflow(inputs={}, user="health_check")
-            return {
-                "status": "connected",
-                "message": "Kết nối đến Dify Workflow API thành công",
-                "base_url": self.base_url,
-                "workflow_result": result,
-            }
-        except httpx.HTTPStatusError as e:
-            error_data = {}
-            try:
-                error_data = e.response.json()
-            except Exception:
-                error_data = {"message": e.response.text}
-            
-            # Nếu có lỗi nhưng server đã phản hồi, vẫn coi là kết nối thành công
-            if e.response.status_code in (400, 404):
-                return {
-                    "status": "connected",
-                    "message": "Kết nối đến Dify API thành công",
-                    "base_url": self.base_url,
-                    "note": "Workflow có thể cần inputs hoặc có lỗi cấu hình",
-                    "error_detail": error_data,
-                }
-            raise
-        except Exception as e:
-            # Nếu có lỗi khác, vẫn trả về thông tin kết nối
-            return {
-                "status": "connected",
-                "message": "Kết nối đến Dify API thành công",
-                "base_url": self.base_url,
-                "note": f"Có thể chạy workflow nhưng gặp lỗi: {str(e)}",
-            }
-
     async def chat_completion(
         self,
         query: str,
@@ -140,7 +95,6 @@ class DifyService:
         conversation_id: str | None = None,
         response_mode: str = "blocking",
         inputs: dict[str, Any] | None = None,
-        app_id: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """
@@ -152,8 +106,6 @@ class DifyService:
             conversation_id: ID của conversation (optional, để tiếp tục cuộc trò chuyện)
             response_mode: Chế độ response ("blocking" hoặc "streaming")
             inputs: Input variables cho Chat App (optional)
-            app_id: Chat App ID (optional - nếu không có thì dùng app_id từ API key)
-            **kwargs: Các tham số bổ sung cho Dify API
 
         Returns:
             Response từ Dify API chứa answer và metadata
@@ -170,15 +122,6 @@ class DifyService:
         if conversation_id:
             data["conversation_id"] = conversation_id
 
-        # Nếu có app_id, thêm vào data
-        # Lưu ý: Nếu API key đã được tạo từ một app cụ thể, không cần app_id
-        # Nhưng nếu dùng API key chung, cần truyền app_id
-        if app_id:
-            data["app_id"] = app_id
-
-        # Thêm các tham số bổ sung
-        data.update(kwargs)
-
         return await self._request("POST", "chat-messages", data=data)
 
     async def completion(
@@ -193,7 +136,6 @@ class DifyService:
         Args:
             prompt: Prompt text
             user: User ID (optional)
-            **kwargs: Các tham số bổ sung cho Dify API
 
         Returns:
             Response từ Dify API chứa answer và metadata
@@ -206,9 +148,6 @@ class DifyService:
 
         if user:
             data["user"] = user
-
-        # Thêm các tham số bổ sung
-        data.update(kwargs)
 
         return await self._request("POST", "completion-messages", data=data)
 
@@ -278,8 +217,6 @@ class DifyService:
         inputs: dict[str, Any],
         user: str | None = None,
         response_mode: str = "blocking",
-        app_id: str | None = None,
-        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         Chạy workflow app trong Dify
@@ -288,8 +225,6 @@ class DifyService:
             inputs: Dictionary chứa các input variables cho workflow
             user: User ID (optional)
             response_mode: Chế độ response ("blocking" hoặc "streaming")
-            app_id: Workflow App ID (optional - nếu không có thì dùng app_id từ API key)
-            **kwargs: Các tham số bổ sung cho Dify API
 
         Returns:
             Response từ Dify API chứa kết quả workflow và metadata
@@ -302,18 +237,7 @@ class DifyService:
         if user:
             data["user"] = user
 
-        # Nếu có app_id, thêm vào data
-        # Lưu ý: Nếu API key đã được tạo từ một app cụ thể, không cần app_id
-        # Nhưng nếu dùng API key chung, cần truyền app_id
-        if app_id:
-            data["app_id"] = app_id
-
-        # Thêm các tham số bổ sung
-        data.update(kwargs)
-
         return await self._request("POST", "workflows/run", data=data)
 
-
-# Singleton instance
 dify_service = DifyService()
 
