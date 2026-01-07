@@ -11,7 +11,7 @@ import {
   useSidebar,
 } from "~/components/ui/sidebar";
 import { Logo } from "~/components/ui/logo";
-import { Home, GraduationCap, History, LogOut, Plus, Layers, ChevronLeft, ChevronRight, BarChart3, Users, Key } from "lucide-react";
+import { Home, GraduationCap, History, LogOut, Plus, Layers, ChevronLeft, ChevronRight, Users, Key, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -45,9 +45,9 @@ const menuItems = [
     roles: ['STUDENT', 'TEACHER'] as UserRole[],
   },
   {
-    title: "Statistics",
-    icon: BarChart3,
-    id: "statistics",
+    title: "Admin Dashboard",
+    icon: Shield,
+    id: "admin",
     roles: ['ADMIN'] as UserRole[], // Chỉ Admin
   },
   {

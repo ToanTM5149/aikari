@@ -97,24 +97,38 @@ class ChatbotService:
         # Create welcome message
         welcome_text = "Xin chào! Tôi có thể giúp gì cho bạn?"
         
+        # Check if user is member only (không cho phép gen test)
+        is_member = self.is_member_only(
+            studyset_id=conversation.studyset_id,
+            user_id=conversation.user_id,
+            session=session
+        )
+        
         # Create quick reply buttons
-        quick_replies = [
+        quick_replies = []
+        
+        # Chỉ hiển thị "Tạo bài test" nếu không phải member only
+        if not is_member:
+            quick_replies.append(
+                QuickReplyButton(
+                    label="Tạo bài test",
+                    value="gen_test",
+                    icon="📝",
+                )
+            )
+        
+        quick_replies.extend([
             QuickReplyButton(
-                label="📝 Tạo bài test",
-                value="gen_test",
-                icon="📝",
-            ),
-            QuickReplyButton(
-                label="📄 Tạo paragraph",
+                label="Tạo paragraph",
                 value="gen_paragraph",
                 icon="📄",
             ),
             QuickReplyButton(
-                label="❓ Hỏi về nội dung",
+                label="Hỏi về nội dung",
                 value="ask_question",
                 icon="❓",
             ),
-        ]
+        ])
         
         # Save bot message
         bot_message = ChatMessage(
@@ -139,6 +153,7 @@ class ChatbotService:
         message: str,
         conversation: ChatConversation,
         session: Session,
+        term_id: uuid.UUID | None = None,  # Optional: term_id khi generate paragraph
     ) -> ChatResponse:
         """
         Main handler cho tất cả messages
@@ -161,7 +176,7 @@ class ChatbotService:
             return self.handle_initial_message(conversation, session)
         
         elif conversation.state == ConversationState.WAITING_INTENT:
-            return await self.handle_intent_selection(message, conversation, session)
+            return await self.handle_intent_selection(message, conversation, session, term_id=term_id)
         
         elif conversation.state == ConversationState.COLLECTING_TEST_PARAMS:
             return await self.handle_test_param_collection(message, conversation, session)
@@ -188,6 +203,7 @@ class ChatbotService:
         message: str,
         conversation: ChatConversation,
         session: Session,
+        term_id: uuid.UUID | None = None,  # Optional: term_id khi generate paragraph
     ) -> ChatResponse:
         """
         Xử lý khi user chọn intent (gen_test, gen_paragraph, ask_question)
@@ -196,6 +212,22 @@ class ChatbotService:
         intent_value = message.strip()
         
         if intent_value == "gen_test" or "test" in intent_value.lower():
+            # Kiểm tra quyền: member không được gen test
+            is_member = self.is_member_only(
+                studyset_id=conversation.studyset_id,
+                user_id=conversation.user_id,
+                session=session
+            )
+            
+            if is_member:
+                # Member không được phép gen test
+                return ChatResponse(
+                    conversation_id=conversation.conversation_id,
+                    message="❌ Bạn không có quyền tạo bài test. Chỉ có thể tạo paragraph hoặc đặt câu hỏi.",
+                    state=conversation.state,
+                    show_input=True,
+                )
+            
             # Start collecting test params
             conversation.intent = ConversationIntent.GEN_TEST
             conversation.state = ConversationState.COLLECTING_TEST_PARAMS
@@ -213,11 +245,12 @@ class ChatbotService:
             session.add(conversation)
             session.commit()
             
-            # Generate paragraph
+            # Generate paragraph - truyền term_id nếu có
             result = await self.generation_service.generate_paragraph(
                 studyset_id=conversation.studyset_id,
                 user_id=conversation.user_id,
                 session=session,
+                term_id=term_id,  # Truyền term_id nếu có
             )
             
             # Update state
@@ -669,7 +702,13 @@ class ChatbotService:
     ) -> bool:
         """
         Kiểm tra user có quyền truy cập studyset không
+        User có quyền truy cập nếu:
+        1. Họ là owner của studyset, HOẶC
+        2. Studyset thuộc về một class mà họ là member active
         """
+        from app.models import ClassStudySet, ClassMember
+        from app.models.enums import MembershipStatus
+        
         statement = select(StudySet).where(StudySet.studyset_id == studyset_id)
         studyset = session.exec(statement).first()
         
@@ -680,8 +719,55 @@ class ChatbotService:
         if studyset.owner_id == user_id:
             return True
         
-        # TODO: Check class membership nếu cần
-        # ...
+        # Check if studyset is in any class where user is an active member
+        class_studyset_statement = (
+            select(ClassStudySet)
+            .join(ClassMember, ClassMember.class_id == ClassStudySet.class_id)
+            .where(ClassStudySet.studyset_id == studyset_id)
+            .where(ClassMember.user_id == user_id)
+            .where(ClassMember.status == MembershipStatus.ACTIVE)
+        )
+        class_studyset = session.exec(class_studyset_statement).first()
         
-        return False
+        return class_studyset is not None
+    
+    def is_member_only(
+        self,
+        studyset_id: uuid.UUID,
+        user_id: uuid.UUID,
+        session: Session,
+    ) -> bool:
+        """
+        Kiểm tra user có phải là MEMBER (không phải owner/co-teacher) không
+        Trả về True nếu user chỉ là MEMBER, False nếu là owner hoặc co-teacher
+        """
+        from app.models import ClassStudySet, ClassMember
+        from app.models.enums import MembershipStatus, ClassRole
+        
+        statement = select(StudySet).where(StudySet.studyset_id == studyset_id)
+        studyset = session.exec(statement).first()
+        
+        if not studyset:
+            return False
+        
+        # Nếu user là owner của studyset → không phải member only
+        if studyset.owner_id == user_id:
+            return False
+        
+        # Kiểm tra role trong class
+        class_member_statement = (
+            select(ClassMember)
+            .join(ClassStudySet, ClassMember.class_id == ClassStudySet.class_id)
+            .where(ClassStudySet.studyset_id == studyset_id)
+            .where(ClassMember.user_id == user_id)
+            .where(ClassMember.status == MembershipStatus.ACTIVE)
+        )
+        class_member = session.exec(class_member_statement).first()
+        
+        # Nếu không tìm thấy membership → không phải member
+        if not class_member:
+            return False
+        
+        # Nếu role là MEMBER → là member only
+        return class_member.role == ClassRole.MEMBER
 

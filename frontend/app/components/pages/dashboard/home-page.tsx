@@ -158,6 +158,7 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
                       <Button 
                         className="w-full" 
                         size="sm"
+                        disabled={!set.term_count || set.term_count === 0}
                         onClick={(e) => {
                           e.stopPropagation()
                           navigate(`/dashboard/studysets/${set.studyset_id}/study`)
@@ -206,17 +207,25 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between text-sm flex-wrap gap-2">
                         <span className="flex items-center gap-1">
                           <BookOpen className="w-4 h-4" />
                           {set.term_count || 0} cards
                         </span>
-                        <Badge variant="secondary">{set.content_type}</Badge>
+                        <div className="flex items-center gap-2">
+                          {set.category && (
+                            <Badge variant="outline" className="text-xs">
+                              {set.category}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary">{set.content_type}</Badge>
+                        </div>
                       </div>
                       <Button 
                         className="w-full" 
                         variant="outline" 
                         size="sm"
+                        disabled={!set.term_count || set.term_count === 0}
                         onClick={(e) => {
                           e.stopPropagation()
                           navigate(`/dashboard/studysets/${set.studyset_id}/study`)

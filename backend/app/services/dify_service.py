@@ -16,26 +16,9 @@ class DifyService:
         self.api_key = settings.DIFY_API_KEY
         self.base_url = settings.DIFY_BASE_URL.rstrip("/")
         self.timeout = 30.0
-        # API prefix - có thể là "api" hoặc "api/v1" tùy vào cấu hình Dify
-        # Nếu base_url đã có /v1 thì endpoint chỉ cần "chat-messages"
-        # Nếu base_url không có /v1 thì endpoint cần "api/v1/chat-messages"
-        self.api_prefix = self._determine_api_prefix()
 
         if not self.api_key:
             logger.warning("DIFY_API_KEY chưa được cấu hình")
-
-    def _determine_api_prefix(self) -> str:
-        """
-        Xác định API prefix dựa vào base_url
-        Nếu base_url đã có /v1 thì không cần prefix
-        Nếu base_url không có /v1 thì dùng "api/v1"
-        """
-        if "/v1" in self.base_url:
-            # Base URL đã có /v1, endpoint chỉ cần tên endpoint
-            return ""
-        else:
-            # Base URL chưa có /v1, cần thêm "api/v1"
-            return "api/v1"
 
     @property
     def _headers(self) -> dict[str, str]:
@@ -58,15 +41,6 @@ class DifyService:
             Full URL
         """
         endpoint = endpoint.lstrip("/")
-        
-        # Nếu endpoint đã có "api/v1" hoặc "api", dùng trực tiếp
-        if endpoint.startswith("api/"):
-            return f"{self.base_url}/{endpoint}"
-        
-        # Nếu có api_prefix, thêm vào
-        if self.api_prefix:
-            return f"{self.base_url}/{self.api_prefix}/{endpoint}"
-        
         # Không có prefix, dùng trực tiếp
         return f"{self.base_url}/{endpoint}"
 
@@ -97,8 +71,6 @@ class DifyService:
             raise ValueError("DIFY_API_KEY chưa được cấu hình trong biến môi trường")
 
         url = self._get_full_url(endpoint)
-        logger.info(f"Gửi {method} request đến {url}")
-
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
                 response = await client.request(
@@ -167,23 +139,27 @@ class DifyService:
         user: str | None = None,
         conversation_id: str | None = None,
         response_mode: str = "blocking",
+        inputs: dict[str, Any] | None = None,
+        app_id: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """
-        Gửi chat message đến Dify API
+        Gửi chat message đến Dify Chat App API
 
         Args:
             query: Câu hỏi hoặc message từ user
             user: User ID (optional)
             conversation_id: ID của conversation (optional, để tiếp tục cuộc trò chuyện)
             response_mode: Chế độ response ("blocking" hoặc "streaming")
+            inputs: Input variables cho Chat App (optional)
+            app_id: Chat App ID (optional - nếu không có thì dùng app_id từ API key)
             **kwargs: Các tham số bổ sung cho Dify API
 
         Returns:
             Response từ Dify API chứa answer và metadata
         """
         data: dict[str, Any] = {
-            "inputs": {},
+            "inputs": inputs or {},
             "query": query,
             "response_mode": response_mode,
         }
@@ -193,6 +169,12 @@ class DifyService:
 
         if conversation_id:
             data["conversation_id"] = conversation_id
+
+        # Nếu có app_id, thêm vào data
+        # Lưu ý: Nếu API key đã được tạo từ một app cụ thể, không cần app_id
+        # Nhưng nếu dùng API key chung, cần truyền app_id
+        if app_id:
+            data["app_id"] = app_id
 
         # Thêm các tham số bổ sung
         data.update(kwargs)

@@ -45,7 +45,6 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
       description: "",
       content_type: "DEFAULT",
       category: "",
-      subcategory: "",
     },
   })
 
@@ -162,25 +161,6 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
             />
             {errors.category && (
               <p className="text-sm text-destructive">{errors.category.message}</p>
-            )}
-          </div>
-
-          {/* Subcategory */}
-          <div className="space-y-2">
-            <Label htmlFor="subcategory">Subcategory (Optional)</Label>
-            <Input
-              id="subcategory"
-              placeholder="e.g., Algebra, World War II, Chemistry..."
-              {...register("subcategory", {
-                maxLength: {
-                  value: 100,
-                  message: "Subcategory must be less than 100 characters",
-                },
-              })}
-              disabled={isLoading}
-            />
-            {errors.subcategory && (
-              <p className="text-sm text-destructive">{errors.subcategory.message}</p>
             )}
           </div>
 

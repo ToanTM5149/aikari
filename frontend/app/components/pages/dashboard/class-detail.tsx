@@ -982,9 +982,16 @@ export function ClassDetail() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <h4 className="font-medium truncate">{studySet.title}</h4>
-                                  <Badge variant="outline" className="mt-1 text-xs">
-                                    {studySet.content_type}
-                                  </Badge>
+                                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                    {studySet.category && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {studySet.category}
+                                      </Badge>
+                                    )}
+                                    <Badge variant="outline" className="text-xs">
+                                      {studySet.content_type}
+                                    </Badge>
+                                  </div>
                                 </div>
                               </div>
                               

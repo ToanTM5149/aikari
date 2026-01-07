@@ -12,7 +12,6 @@ class StudySetBase(SQLModel):
     description: str | None = None
     content_type: ContentType = ContentType.DEFAULT
     category: str | None = None
-    subcategory: str | None = None
 
 
 class StudySetCreate(StudySetBase):
@@ -24,7 +23,6 @@ class StudySetUpdate(SQLModel):
     description: str | None = None
     content_type: ContentType | None = None
     category: str | None = None
-    subcategory: str | None = None
 
 
 class StudySetPublic(StudySetBase):

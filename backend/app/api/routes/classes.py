@@ -77,11 +77,45 @@ def read_classes(
         total_count_statement = total_count_statement.where(search_filter)
     total_count = session.exec(total_count_statement).one() or 0
     
-    # Get paginated classes
-    statement = base_query.offset(skip).limit(limit)
+    # Get paginated classes - order by created_at DESC so newest classes appear first
+    statement = base_query.order_by(Class.created_at.desc()).offset(skip).limit(limit)
     classes = list(session.exec(statement).all())
     
-    return ClassesPublic(data=classes, count=total_count)
+    # Enrich classes with member_count and studyset_count
+    enriched_classes = []
+    for cls in classes:
+        # Count active members
+        member_count_statement = (
+            select(func.count(ClassMember.user_id))
+            .where(ClassMember.class_id == cls.class_id)
+            .where(ClassMember.status == MembershipStatus.ACTIVE)
+        )
+        member_count = session.exec(member_count_statement).one() or 0
+        
+        # Count studysets
+        studyset_count_statement = (
+            select(func.count(ClassStudySet.studyset_id))
+            .where(ClassStudySet.class_id == cls.class_id)
+        )
+        studyset_count = session.exec(studyset_count_statement).one() or 0
+        
+        # Create enriched class
+        enriched_class = ClassPublic(
+            class_id=cls.class_id,
+            class_name=cls.class_name,
+            description=cls.description,
+            is_public=cls.is_public,
+            class_code=cls.class_code,
+            created_by=cls.created_by,
+            owner_user_id=cls.owner_user_id,
+            created_at=cls.created_at,
+            updated_at=cls.updated_at,
+            member_count=member_count,
+            studyset_count=studyset_count,
+        )
+        enriched_classes.append(enriched_class)
+    
+    return ClassesPublic(data=enriched_classes, count=total_count)
 
 
 @router.get("/owned/", response_model=ClassesPublic)
@@ -108,7 +142,42 @@ def read_owned_classes(
     classes = crud.get_classes_by_owner(
         session=session, owner_id=current_user.user_id, skip=skip, limit=limit
     )
-    return ClassesPublic(data=classes, count=total_count)
+    
+    # Enrich classes with member_count and studyset_count
+    enriched_classes = []
+    for cls in classes:
+        # Count active members
+        member_count_statement = (
+            select(func.count(ClassMember.user_id))
+            .where(ClassMember.class_id == cls.class_id)
+            .where(ClassMember.status == MembershipStatus.ACTIVE)
+        )
+        member_count = session.exec(member_count_statement).one() or 0
+        
+        # Count studysets
+        studyset_count_statement = (
+            select(func.count(ClassStudySet.studyset_id))
+            .where(ClassStudySet.class_id == cls.class_id)
+        )
+        studyset_count = session.exec(studyset_count_statement).one() or 0
+        
+        # Create enriched class
+        enriched_class = ClassPublic(
+            class_id=cls.class_id,
+            class_name=cls.class_name,
+            description=cls.description,
+            is_public=cls.is_public,
+            class_code=cls.class_code,
+            created_by=cls.created_by,
+            owner_user_id=cls.owner_user_id,
+            created_at=cls.created_at,
+            updated_at=cls.updated_at,
+            member_count=member_count,
+            studyset_count=studyset_count,
+        )
+        enriched_classes.append(enriched_class)
+    
+    return ClassesPublic(data=enriched_classes, count=total_count)
 
 
 @router.get("/public/", response_model=ClassesPublic)
@@ -147,11 +216,45 @@ def read_public_classes(
         total_count_statement = total_count_statement.where(search_filter)
     total_count = session.exec(total_count_statement).one() or 0
     
-    # Get paginated classes
-    statement = base_query.offset(skip).limit(limit)
-    classes = session.exec(statement).all()
+    # Get paginated classes - order by created_at DESC so newest classes appear first
+    statement = base_query.order_by(Class.created_at.desc()).offset(skip).limit(limit)
+    classes = list(session.exec(statement).all())
     
-    return ClassesPublic(data=list(classes), count=total_count)
+    # Enrich classes with member_count and studyset_count
+    enriched_classes = []
+    for cls in classes:
+        # Count active members
+        member_count_statement = (
+            select(func.count(ClassMember.user_id))
+            .where(ClassMember.class_id == cls.class_id)
+            .where(ClassMember.status == MembershipStatus.ACTIVE)
+        )
+        member_count = session.exec(member_count_statement).one() or 0
+        
+        # Count studysets
+        studyset_count_statement = (
+            select(func.count(ClassStudySet.studyset_id))
+            .where(ClassStudySet.class_id == cls.class_id)
+        )
+        studyset_count = session.exec(studyset_count_statement).one() or 0
+        
+        # Create enriched class
+        enriched_class = ClassPublic(
+            class_id=cls.class_id,
+            class_name=cls.class_name,
+            description=cls.description,
+            is_public=cls.is_public,
+            class_code=cls.class_code,
+            created_by=cls.created_by,
+            owner_user_id=cls.owner_user_id,
+            created_at=cls.created_at,
+            updated_at=cls.updated_at,
+            member_count=member_count,
+            studyset_count=studyset_count,
+        )
+        enriched_classes.append(enriched_class)
+    
+    return ClassesPublic(data=enriched_classes, count=total_count)
 
 
 @router.get("/search/", response_model=ClassesPublic)
@@ -184,8 +287,43 @@ def search_classes(
         .limit(limit)
     )
     
-    classes = session.exec(statement).all()
-    return ClassesPublic(data=list(classes), count=len(classes))
+    classes = list(session.exec(statement).all())
+    
+    # Enrich classes with member_count and studyset_count
+    enriched_classes = []
+    for cls in classes:
+        # Count active members
+        member_count_statement = (
+            select(func.count(ClassMember.user_id))
+            .where(ClassMember.class_id == cls.class_id)
+            .where(ClassMember.status == MembershipStatus.ACTIVE)
+        )
+        member_count = session.exec(member_count_statement).one() or 0
+        
+        # Count studysets
+        studyset_count_statement = (
+            select(func.count(ClassStudySet.studyset_id))
+            .where(ClassStudySet.class_id == cls.class_id)
+        )
+        studyset_count = session.exec(studyset_count_statement).one() or 0
+        
+        # Create enriched class
+        enriched_class = ClassPublic(
+            class_id=cls.class_id,
+            class_name=cls.class_name,
+            description=cls.description,
+            is_public=cls.is_public,
+            class_code=cls.class_code,
+            created_by=cls.created_by,
+            owner_user_id=cls.owner_user_id,
+            created_at=cls.created_at,
+            updated_at=cls.updated_at,
+            member_count=member_count,
+            studyset_count=studyset_count,
+        )
+        enriched_classes.append(enriched_class)
+    
+    return ClassesPublic(data=enriched_classes, count=len(enriched_classes))
 
 
 @router.get("/{class_id}/", response_model=ClassPublic)
@@ -208,7 +346,39 @@ def read_class(
     if not membership and not class_obj.is_public:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    return class_obj
+    # Enrich class with member_count and studyset_count
+    from app.models.enums import MembershipStatus
+    # Count active members
+    member_count_statement = (
+        select(func.count(ClassMember.user_id))
+        .where(ClassMember.class_id == class_obj.class_id)
+        .where(ClassMember.status == MembershipStatus.ACTIVE)
+    )
+    member_count = session.exec(member_count_statement).one() or 0
+    
+    # Count studysets
+    studyset_count_statement = (
+        select(func.count(ClassStudySet.studyset_id))
+        .where(ClassStudySet.class_id == class_obj.class_id)
+    )
+    studyset_count = session.exec(studyset_count_statement).one() or 0
+    
+    # Create enriched class
+    enriched_class = ClassPublic(
+        class_id=class_obj.class_id,
+        class_name=class_obj.class_name,
+        description=class_obj.description,
+        is_public=class_obj.is_public,
+        class_code=class_obj.class_code,
+        created_by=class_obj.created_by,
+        owner_user_id=class_obj.owner_user_id,
+        created_at=class_obj.created_at,
+        updated_at=class_obj.updated_at,
+        member_count=member_count,
+        studyset_count=studyset_count,
+    )
+    
+    return enriched_class
 
 
 @router.post("/", response_model=ClassPublic)

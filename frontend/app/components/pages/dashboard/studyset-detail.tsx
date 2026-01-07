@@ -514,7 +514,14 @@ export function StudySetDetail() {
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
                 <div>
-                  <CardTitle className="text-2xl">{studyset.title}</CardTitle>
+                  <div className="flex items-center gap-2 mb-1">
+                    <CardTitle className="text-2xl">{studyset.title}</CardTitle>
+                    {studyset.category && (
+                      <Badge variant="outline" className="text-xs">
+                        {studyset.category}
+                      </Badge>
+                    )}
+                  </div>
                   {studyset.description && (
                     <p className="text-sm text-muted-foreground mt-1">
                       {studyset.description}

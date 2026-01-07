@@ -36,6 +36,8 @@ export interface Class {
   class_code?: string;
   created_at: string;
   updated_at: string;
+  member_count?: number;  // Number of active members
+  studyset_count?: number;  // Number of studysets in class
 }
 
 export type MembershipStatus = 'ACTIVE' | 'PENDING' | 'INVITED' | 'REJECTED' | 'LEFT';
@@ -99,7 +101,6 @@ export interface StudySet {
   owner_id: string;
   content_type: ContentType;
   category?: string;
-  subcategory?: string;
   created_at: string;
   updated_at: string;
   term_count?: number;  // Number of terms (cards) in this studyset
@@ -112,7 +113,6 @@ export interface StudySetCreate {
   description?: string;
   content_type?: ContentType;
   category?: string;
-  subcategory?: string;
 }
 
 export interface StudySetUpdate {
@@ -120,7 +120,6 @@ export interface StudySetUpdate {
   description?: string;
   content_type?: ContentType;
   category?: string;
-  subcategory?: string;
 }
 
 export interface StudySetsResponse {
@@ -138,6 +137,15 @@ export interface Term {
   example?: string;
   image_url?: string;
   attributes?: Record<string, any>;
+  paragraphs?: Array<{
+    paragraph: string;
+    metadata: {
+      key_concepts?: string[];
+      word_count?: number;
+      style?: string;
+      generated_at?: string;
+    };
+  }>;
   created_at: string;
   updated_at: string;
 }
@@ -154,8 +162,6 @@ export interface TermUpdate {
   term_text?: string;
   definition?: string;
   example?: string;
-  category?: string;
-  subcategory?: string;
   image_url?: string;
   attributes?: Record<string, any>;
 }

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Column, Text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -16,6 +17,11 @@ class Term(SQLModel, table=True):
     example: str | None = Field(default=None, sa_column=Column(Text))
     image_url: str | None = Field(default=None, sa_column=Column(Text))
     attributes: dict | None = Field(default=None, sa_column=Column(JSONB))
+    paragraphs: list[dict[str, Any]] | None = Field(
+        default_factory=list,  # Default to empty list thay vì None
+        sa_column=Column(JSONB),
+        description="Array of generated paragraphs, each with 'paragraph' text and 'metadata'"
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     

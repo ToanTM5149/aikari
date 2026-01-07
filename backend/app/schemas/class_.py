@@ -49,6 +49,8 @@ class ClassPublic(ClassBase):
     owner_user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    member_count: int | None = None  # Number of active members
+    studyset_count: int | None = None  # Number of studysets in class
     
     model_config = {"from_attributes": True}
 

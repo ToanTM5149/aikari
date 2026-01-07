@@ -8,6 +8,26 @@ from app.schemas.common import (
     UpdatePassword,
 )
 
+# Admin Schemas
+from app.schemas.admin import (
+    AdminDashboardStats,
+    AIGenerationStats,
+    AIUsageTrendStats,
+    ClassOverviewStats,
+    ClassStatistics,
+    ContentStatistics,
+    DailyActivityPoint,
+    DailyAIUsagePoint,
+    LearningOverviewStats,
+    LearningTrendStats,
+    PopularStudySetMetrics,
+    SystemOverviewStats,
+    TopClassMetrics,
+    UserActivityMetrics,
+    UserRoleDistribution,
+    UserStatistics,
+)
+
 # User Schemas
 from app.schemas.user import (
     TokenResponse,

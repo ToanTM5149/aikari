@@ -21,6 +21,7 @@ from app.models import (
     ClassStudySet,
     Attribute,
     AIGeneratedContents,
+    ChatConversation,
 )
 from app.schemas import (
     UserCreate,
@@ -192,6 +193,7 @@ def get_classes_by_owner(
     .where(ClassMember.user_id == owner_id)
     .where(ClassMember.role == "OWNER")
     .where(ClassMember.status == MembershipStatus.ACTIVE)  # Redundant but explicit
+    .order_by(Class.created_at.desc())  # Newest classes first
     .offset(skip)
     .limit(limit)
   )
@@ -336,21 +338,28 @@ def delete_studyset(*, session: Session, studyset_id: uuid.UUID) -> None:
   
   # Delete related records in correct order to avoid foreign key violations
   
-  # 1. Delete ProgressSummary entries (has NOT NULL FK to StudySet)
+  # 1. Delete ChatConversation entries first (has NOT NULL FK to StudySet, cascade deletes ChatMessage)
+  conversations = session.exec(
+    select(ChatConversation).where(ChatConversation.studyset_id == studyset_id)
+  ).all()
+  for conversation in conversations:
+    session.delete(conversation)
+  
+  # 2. Delete ProgressSummary entries (has NOT NULL FK to StudySet)
   progress_summaries = session.exec(
     select(ProgressSummary).where(ProgressSummary.studyset_id == studyset_id)
   ).all()
   for progress in progress_summaries:
     session.delete(progress)
   
-  # 2. Delete StudyActivity entries (has FK to StudySet)
+  # 3. Delete StudyActivity entries (has FK to StudySet)
   activities = session.exec(
     select(StudyActivity).where(StudyActivity.studyset_id == studyset_id)
   ).all()
   for activity in activities:
     session.delete(activity)
   
-  # 3. Delete TestAttempt entries (has FK to Test, which has FK to StudySet)
+  # 4. Delete TestAttempt entries (has FK to Test, which has FK to StudySet)
   # First get all tests for this studyset
   tests = session.exec(
     select(Test).where(Test.studyset_id == studyset_id)
@@ -386,35 +395,35 @@ def delete_studyset(*, session: Session, studyset_id: uuid.UUID) -> None:
     # Delete the test
     session.delete(test)
   
-  # 4. Delete ClassStudySet entries (junction table)
+  # 5. Delete ClassStudySet entries (junction table)
   class_studysets = session.exec(
     select(ClassStudySet).where(ClassStudySet.studyset_id == studyset_id)
   ).all()
   for css in class_studysets:
     session.delete(css)
   
-  # 5. Delete Term entries (has FK to StudySet)
+  # 6. Delete Term entries (has FK to StudySet)
   terms = session.exec(
     select(Term).where(Term.studyset_id == studyset_id)
   ).all()
   for term in terms:
     session.delete(term)
   
-  # 6. Delete Attribute entries (has FK to StudySet)
+  # 7. Delete Attribute entries (has FK to StudySet)
   attributes = session.exec(
     select(Attribute).where(Attribute.studyset_id == studyset_id)
   ).all()
   for attr in attributes:
     session.delete(attr)
   
-  # 7. Delete AIGeneratedContents entries (has FK to StudySet)
+  # 8. Delete AIGeneratedContents entries (has FK to StudySet)
   ai_contents = session.exec(
     select(AIGeneratedContents).where(AIGeneratedContents.studyset_id == studyset_id)
   ).all()
   for content in ai_contents:
     session.delete(content)
   
-  # 8. Finally, delete the studyset
+  # 9. Finally, delete the studyset
   session.delete(db_studyset)
   session.commit()
 

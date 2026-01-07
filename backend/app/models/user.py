@@ -33,7 +33,10 @@ class User(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"foreign_keys": "[ClassMember.user_id]"}
     )
-    created_tests: list["Test"] = Relationship(back_populates="creator")
+    created_tests: list["Test"] = Relationship(
+        back_populates="creator",
+        sa_relationship_kwargs={"foreign_keys": "[Test.created_by]"}
+    )
     test_attempts: list["TestAttempt"] = Relationship(back_populates="user")
     reattempt_requests: list["ReattemptRequest"] = Relationship(
         back_populates="user",

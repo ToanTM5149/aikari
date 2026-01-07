@@ -20,6 +20,7 @@ export default [
   // Authenticated routes 
   layout("routes/_layouts/authenticated-layout.tsx", [
     route("dashboard", "routes/dashboard/home.tsx"),
+    route("dashboard/admin", "routes/dashboard/admin.tsx"),
     route("dashboard/studysets", "routes/dashboard/studysets.tsx"),
     route("dashboard/studysets/:studysetId", "routes/dashboard/studyset-detail.tsx"),
     route("dashboard/studysets/:studysetId/terms/:termId", "routes/dashboard/term-detail.tsx"),
@@ -34,7 +35,6 @@ export default [
     route("create", "routes/dashboard/create.tsx"),
     route("history", "routes/history.tsx"),
     route("dashboard/attempts/:attemptId/result", "routes/dashboard/attempt-result.tsx"),
-    route("statistics", "routes/statistics.tsx"),
     route("user-management", "routes/user-management.tsx"),
     route("token-management", "routes/token-management.tsx"),
     route("profile", "routes/dashboard/profile.tsx"),

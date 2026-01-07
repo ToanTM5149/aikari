@@ -1,11 +1,43 @@
+import logging
 from sqlmodel import Session, create_engine, select
+from sqlalchemy.pool import QueuePool
+from sqlalchemy import event
+from sqlalchemy.exc import DisconnectionError
 
 from app.crud.crud import create_user
 from app.core.config import settings
 from app.models import User, UserRole
 from app.schemas import UserCreate
 
-engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+logger = logging.getLogger(__name__)
+
+# Cấu hình connection pool với retry logic
+engine = create_engine(
+    str(settings.SQLALCHEMY_DATABASE_URI),
+    poolclass=QueuePool,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,  # Kiểm tra connection trước khi dùng
+    pool_recycle=3600,   # Recycle connections sau 1 giờ
+    connect_args={
+        "connect_timeout": 10,
+        "sslmode": "prefer",  # Cho phép SSL nhưng không bắt buộc
+    },
+    echo=False,
+)
+
+# Event listener để log connection errors
+@event.listens_for(engine, "connect")
+def receive_connect(dbapi_conn, connection_record):
+    logger.debug("Database connection established")
+
+@event.listens_for(engine, "checkout")
+def receive_checkout(dbapi_conn, connection_record, connection_proxy):
+    logger.debug("Connection checked out from pool")
+
+@event.listens_for(engine, "checkin")
+def receive_checkin(dbapi_conn, connection_record):
+    logger.debug("Connection returned to pool")
 
 
 # make sure all SQLModel models are imported (app.models) before initializing DB

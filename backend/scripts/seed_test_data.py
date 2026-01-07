@@ -15,7 +15,8 @@ from app.models import (
     User, StudySet, Term, Class, ClassMember, ClassStudySet, 
     UserRole, ClassRole, MembershipStatus,
     TestAttempt, ReattemptRequest, Test,
-    ProgressSummary, StudyActivity
+    ProgressSummary, StudyActivity, AIGeneratedContents, Attribute,
+    ChatConversation
 )
 from app.core.security import get_password_hash
 import uuid
@@ -28,6 +29,7 @@ STUDYSET_DATA = [
     {
         "title": "Spanish Basics",
         "description": "Essential Spanish vocabulary for beginners with real-world examples",
+        "category": "Language",
         "terms": [
             ("Hola", "Hello", "¡Hola! ¿Cómo estás? (Hello! How are you?)", "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400&h=400&fit=crop"),
             ("Gracias", "Thank you", "Gracias por tu ayuda. (Thank you for your help.)", "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=400&fit=crop"),
@@ -44,6 +46,7 @@ STUDYSET_DATA = [
     {
         "title": "Python Programming",
         "description": "Core Python concepts with practical examples",
+        "category": "Programming",
         "terms": [
             ("Variable", "A named storage location for data", "x = 10  # x stores the value 10", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
             ("Function", "Reusable block of code that performs a task", "def greet(name): return f'Hello, {name}!'", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
@@ -60,6 +63,7 @@ STUDYSET_DATA = [
     {
         "title": "Biology Terms",
         "description": "Essential biology vocabulary with real-world examples",
+        "category": "Science",
         "terms": [
             ("Cell", "Basic unit of life", "All living things are made of cells. For example, your body contains trillions of cells.", "https://images.unsplash.com/photo-1532619675605-1ede6c7edfe0?w=400&h=400&fit=crop"),
             ("DNA", "Genetic material that carries hereditary information", "DNA contains the instructions for life. Your DNA determines your eye color and height.", "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop"),
@@ -76,6 +80,7 @@ STUDYSET_DATA = [
     {
         "title": "Chemistry Basics",
         "description": "Fundamental chemistry terms with practical examples",
+        "category": "Science",
         "terms": [
             ("Atom", "Smallest unit of an element", "Atoms make up everything. For example, a gold ring is made of gold atoms.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
             ("Molecule", "Two or more atoms bonded together", "H2O is a water molecule made of 2 hydrogen atoms and 1 oxygen atom.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
@@ -92,6 +97,7 @@ STUDYSET_DATA = [
     {
         "title": "Physics Concepts",
         "description": "Basic physics terms with real-world applications",
+        "category": "Science",
         "terms": [
             ("Force", "Push or pull that causes motion", "F = ma (Newton's law). For example, pushing a shopping cart requires force to move it.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
             ("Energy", "Ability to do work or cause change", "Energy cannot be created or destroyed, only transformed. Food gives your body energy to move.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
@@ -108,6 +114,7 @@ STUDYSET_DATA = [
     {
         "title": "History - World War II",
         "description": "Key WW2 terms and events with historical context",
+        "category": "History",
         "terms": [
             ("D-Day", "Allied invasion of Normandy, France", "On June 6, 1944, Allied forces launched the largest seaborne invasion in history, beginning the liberation of Western Europe from Nazi control.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
             ("Pearl Harbor", "Japanese surprise attack on US naval base", "On December 7, 1941, Japan attacked Pearl Harbor in Hawaii, bringing the United States into World War II.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
@@ -124,6 +131,7 @@ STUDYSET_DATA = [
     {
         "title": "World Geography",
         "description": "Major countries, capitals, and geographic facts",
+        "category": "Geography",
         "terms": [
             ("France", "Capital: Paris. Located in Western Europe", "France is famous for the Eiffel Tower in Paris, wine, and the French Riviera. It's the largest country in Western Europe.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
             ("Japan", "Capital: Tokyo. Island nation in East Asia", "Japan consists of four main islands. Tokyo is one of the world's largest cities. Japan is known for technology, sushi, and cherry blossoms.", "https://images.unsplash.com/photo-1492571350019-22de08371fd3?w=400&h=400&fit=crop"),
@@ -140,6 +148,7 @@ STUDYSET_DATA = [
     {
         "title": "Mathematics - Algebra",
         "description": "Basic algebra terms with practical examples",
+        "category": "Mathematics",
         "terms": [
             ("Variable", "Symbol representing an unknown value", "In the equation x + 5 = 10, x is a variable. Common variables are x, y, and z.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
             ("Equation", "Mathematical statement showing equality", "2x + 3 = 7 is an equation. To solve it, subtract 3 from both sides: 2x = 4, so x = 2.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
@@ -156,6 +165,7 @@ STUDYSET_DATA = [
     {
         "title": "English Grammar",
         "description": "Parts of speech with sentence examples",
+        "category": "Language",
         "terms": [
             ("Noun", "Word that names a person, place, thing, or idea", "Examples: 'dog' (thing), 'city' (place), 'happiness' (idea). In 'The dog barked', 'dog' is a noun.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
             ("Verb", "Word that shows action or state of being", "Examples: 'run' (action), 'think' (action), 'is' (state). In 'She runs fast', 'runs' is a verb.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
@@ -172,6 +182,7 @@ STUDYSET_DATA = [
     {
         "title": "Business Terms",
         "description": "Essential business vocabulary with real-world examples",
+        "category": "Business",
         "terms": [
             ("Revenue", "Total income from business operations", "Revenue is money from sales. For example, if a store sells $10,000 worth of products, that's its revenue.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
             ("Expense", "Costs incurred in running a business", "Expenses are money spent on operations. Examples include rent, salaries, and utilities. Revenue minus expenses equals profit.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
@@ -310,11 +321,38 @@ def cleanup_old_seed_data(session: Session, teacher: User):
     deleted_progress = 0
     deleted_activities = 0
     deleted_tests = 0
+    deleted_ai_contents = 0
+    deleted_attributes = 0
+    deleted_conversations = 0
     
     for studyset in teacher_studysets:
         studyset_id = studyset.studyset_id
         
-        # 1. Delete ProgressSummary entries first (has NOT NULL FK to StudySet)
+        # 1. Delete ChatConversation entries first (has NOT NULL FK to StudySet, cascade deletes ChatMessage)
+        conversations = session.exec(
+            select(ChatConversation).where(ChatConversation.studyset_id == studyset_id)
+        ).all()
+        for conversation in conversations:
+            session.delete(conversation)
+            deleted_conversations += 1
+        
+        # 2. Delete AIGeneratedContents entries (has NOT NULL FK to StudySet)
+        ai_contents = session.exec(
+            select(AIGeneratedContents).where(AIGeneratedContents.studyset_id == studyset_id)
+        ).all()
+        for ai_content in ai_contents:
+            session.delete(ai_content)
+            deleted_ai_contents += 1
+        
+        # 3. Delete Attribute entries (has NOT NULL FK to StudySet)
+        attributes = session.exec(
+            select(Attribute).where(Attribute.studyset_id == studyset_id)
+        ).all()
+        for attribute in attributes:
+            session.delete(attribute)
+            deleted_attributes += 1
+        
+        # 4. Delete ProgressSummary entries (has NOT NULL FK to StudySet)
         progress_summaries = session.exec(
             select(ProgressSummary).where(ProgressSummary.studyset_id == studyset_id)
         ).all()
@@ -322,7 +360,7 @@ def cleanup_old_seed_data(session: Session, teacher: User):
             session.delete(progress)
             deleted_progress += 1
         
-        # 2. Delete StudyActivity entries (has NOT NULL FK to StudySet)
+        # 5. Delete StudyActivity entries (has NOT NULL FK to StudySet)
         activities = session.exec(
             select(StudyActivity).where(StudyActivity.studyset_id == studyset_id)
         ).all()
@@ -330,7 +368,7 @@ def cleanup_old_seed_data(session: Session, teacher: User):
             session.delete(activity)
             deleted_activities += 1
         
-        # 3. Delete Test entries (has FK to StudySet, and TestAttempt/TestQuestion cascade)
+        # 6. Delete Test entries (has FK to StudySet, and TestAttempt/TestQuestion cascade)
         tests = session.exec(
             select(Test).where(Test.studyset_id == studyset_id)
         ).all()
@@ -338,7 +376,7 @@ def cleanup_old_seed_data(session: Session, teacher: User):
             session.delete(test)
             deleted_tests += 1
         
-        # 4. Delete ClassStudySet entries for this studyset
+        # 7. Delete ClassStudySet entries for this studyset
         class_studyset_entries = session.exec(
             select(ClassStudySet).where(ClassStudySet.studyset_id == studyset_id)
         ).all()
@@ -346,7 +384,7 @@ def cleanup_old_seed_data(session: Session, teacher: User):
             session.delete(entry)
             deleted_class_studysets += 1
         
-        # 5. Delete all terms in this studyset (has FK to StudySet)
+        # 8. Delete all terms in this studyset (has FK to StudySet)
         terms = session.exec(
             select(Term).where(Term.studyset_id == studyset_id)
         ).all()
@@ -354,11 +392,17 @@ def cleanup_old_seed_data(session: Session, teacher: User):
             session.delete(term)
             deleted_terms += 1
         
-        # 6. Delete the studyset
+        # 9. Delete the studyset
         session.delete(studyset)
     
     session.commit()
     print(f"  ✓ Deleted {len(teacher_studysets)} studysets, {deleted_terms} terms, {deleted_class_studysets} class-studyset links")
+    if deleted_conversations > 0:
+        print(f"  ✓ Deleted {deleted_conversations} chat conversations")
+    if deleted_ai_contents > 0:
+        print(f"  ✓ Deleted {deleted_ai_contents} AI generated contents")
+    if deleted_attributes > 0:
+        print(f"  ✓ Deleted {deleted_attributes} attributes")
     if deleted_progress > 0:
         print(f"  ✓ Deleted {deleted_progress} progress summaries")
     if deleted_activities > 0:
@@ -380,6 +424,7 @@ def seed_studysets(session: Session, teacher: User) -> list[StudySet]:
             studyset_id=uuid.uuid4(),
             title=data["title"],
             description=data["description"],
+            category=data.get("category"),
             owner_id=teacher.user_id,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()

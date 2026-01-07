@@ -43,6 +43,7 @@ export function TermDetail() {
     data: termData,
     isLoading: loadingTerm,
     error: termError,
+    refetch: refetchTerm,
   } = useGetTermByIdQuery(
     { studysetId: studysetId!, termId: termId! },
     { skip: !studysetId || !termId }
@@ -299,9 +300,125 @@ export function TermDetail() {
                 )}
               </TabsContent>
               <TabsContent value="ai-example" className="mt-4">
-                <div className="p-8 text-center text-muted-foreground">
-                  <p>Tính năng AI Example đang được phát triển</p>
-                </div>
+                {(() => {
+                  // Debug: log term data
+                  console.log('Term data for AI Example:', {
+                    term_id: term.term_id,
+                    paragraphs: term.paragraphs,
+                    attributes: term.attributes,
+                    paragraphs_type: typeof term.paragraphs,
+                    paragraphs_is_array: Array.isArray(term.paragraphs)
+                  });
+                  
+                  // Lấy paragraphs từ field paragraphs (mới) hoặc fallback về attributes.paragraphs (backward compatibility)
+                  let paragraphs: Array<{paragraph: string; metadata: any}> = [];
+                  
+                  if (term.paragraphs && Array.isArray(term.paragraphs)) {
+                    // Sử dụng field paragraphs mới
+                    paragraphs = term.paragraphs;
+                    console.log('Using term.paragraphs:', paragraphs);
+                  } else if (term.attributes?.paragraphs) {
+                    // Fallback: sử dụng attributes.paragraphs (backward compatibility)
+                    if (Array.isArray(term.attributes.paragraphs)) {
+                      paragraphs = term.attributes.paragraphs;
+                      console.log('Using term.attributes.paragraphs:', paragraphs);
+                    }
+                  } else if (term.attributes?.paragraph) {
+                    // Fallback: nếu chỉ có single paragraph trong attributes
+                    paragraphs = [{
+                      paragraph: term.attributes.paragraph,
+                      metadata: term.attributes.paragraph_metadata || {}
+                    }];
+                    console.log('Using term.attributes.paragraph (single):', paragraphs);
+                  } else {
+                    console.log('No paragraphs found in term data');
+                  }
+                  
+                  console.log('Final paragraphs array:', paragraphs);
+                  
+                  if (paragraphs.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <p>Chưa có AI Example</p>
+                        <p className="text-xs mt-2">
+                          Sử dụng chatbot bên phải để tạo paragraph cho term này
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="space-y-6">
+                      {paragraphs.map((item, index) => {
+                        // Đảm bảo item có structure đúng
+                        const paragraphText = item.paragraph || '';
+                        const metadata = item.metadata || {};
+                        
+                        if (!paragraphText) {
+                          return null;
+                        }
+                        
+                        return (
+                          <div key={index} className="space-y-3">
+                            <div className="p-4 rounded-lg bg-muted/50 border">
+                              <p className="text-sm whitespace-pre-wrap">{paragraphText}</p>
+                            </div>
+                            {metadata && Object.keys(metadata).length > 0 && (
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                {metadata.word_count && (
+                                  <Badge variant="outline">
+                                    {metadata.word_count} từ
+                                  </Badge>
+                                )}
+                                {metadata.generated_at && (
+                                  <span className="text-xs">
+                                    {(() => {
+                                      try {
+                                        // Parse ISO string (UTC với Z) và convert về local timezone
+                                        const dateStr = metadata.generated_at;
+                                        // Đảm bảo có Z nếu không có timezone indicator
+                                        const date = dateStr.endsWith('Z') || dateStr.includes('+') || dateStr.includes('-', 10)
+                                          ? new Date(dateStr)
+                                          : new Date(dateStr + 'Z');
+                                        
+                                        // Format: DD/MM/YYYY HH:mm (local time, 24h format)
+                                        return date.toLocaleString('vi-VN', {
+                                          year: 'numeric',
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                          hour12: false
+                                        });
+                                      } catch (e) {
+                                        console.error('Error parsing date:', metadata.generated_at, e);
+                                        return metadata.generated_at;
+                                      }
+                                    })()}
+                                  </span>
+                                )}
+                                {metadata.key_concepts && 
+                                 Array.isArray(metadata.key_concepts) &&
+                                 metadata.key_concepts.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {metadata.key_concepts.map((concept: string, idx: number) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs">
+                                        {concept}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {index < paragraphs.length - 1 && (
+                              <div className="border-t my-4"></div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -481,6 +598,8 @@ export function TermDetail() {
           width={chatbotWidth}
           onWidthChange={handleChatbotWidthChange}
           studysetId={studysetId!}
+          termId={termId}  // Truyền termId để chatbot có thể generate paragraph cho term này
+          onParagraphGenerated={refetchTerm}  // Refetch term data khi paragraph được generate
         />
       </div>
     </div>

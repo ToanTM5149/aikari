@@ -53,7 +53,7 @@ grep "use_mock" backend/app/api/routes/chatbot.py
    ```json
    {
      "action_type": "generate_test",
-     "study_context": "StudySet: Biology\n\nTerms:\n- Photosynthesis: Quá trình thực vật chuyển đổi ánh sáng thành năng lượng\n- Chlorophyll: Sắc tố xanh lá cây trong thực vật",
+     "study_context": "StudySet: Biology\n\nTerms:\n- Photosynthesis: Quá trình thực vật chuyển đổi ánh sáng thành năng lượng\n- Chlorophyll: Sắc tố xanh lá cây trong thực vật\n- Mitochondria: Bào quan sản xuất năng lượng trong tế bào\n- DNA: Phân tử mang thông tin di truyền",
      "total_questions": 2,
      "question_types": ["MULTIPLE_CHOICE"],
      "time_limit": 15
@@ -64,34 +64,127 @@ grep "use_mock" backend/app/api/routes/chatbot.py
    - Phải có `result.action_type = "generate_test"`
    - Phải có `result.data.test_data.questions` (array)
    - Mỗi question phải có: `term_text`, `question_text`, `question_type`, `correct_answer`, `options`
+   - `term_text` phải khớp chính xác với term trong study_context
+
+**Ví dụ output mong đợi:**
+```json
+{
+  "outputs": {
+    "result": {
+      "action_type": "generate_test",
+      "data": {
+        "test_data": {
+          "questions": [
+            {
+              "term_text": "Photosynthesis",
+              "question_text": "Quá trình nào sau đây mô tả chính xác nhất về quang hợp?",
+              "question_type": "MULTIPLE_CHOICE",
+              "correct_answer": "Quá trình thực vật chuyển đổi ánh sáng thành năng lượng",
+              "options": [
+                "A. Quá trình hô hấp của thực vật",
+                "B. Quá trình thực vật chuyển đổi ánh sáng thành năng lượng",
+                "C. Quá trình hấp thụ nước",
+                "D. Quá trình vận chuyển chất dinh dưỡng"
+              ],
+              "explanation": "Quang hợp là quá trình thực vật sử dụng ánh sáng mặt trời để tạo năng lượng."
+            },
+            {
+              "term_text": "Chlorophyll",
+              "question_text": "Chlorophyll đóng vai trò gì trong quá trình quang hợp?",
+              "question_type": "MULTIPLE_CHOICE",
+              "correct_answer": "Sắc tố xanh lá cây trong thực vật",
+              "options": [
+                "A. Chất dinh dưỡng chính",
+                "B. Sắc tố xanh lá cây trong thực vật",
+                "C. Hormone tăng trưởng",
+                "D. Chất bảo vệ cây"
+              ],
+              "explanation": "Chlorophyll là sắc tố màu xanh lá cây giúp hấp thụ ánh sáng mặt trời."
+            }
+          ],
+          "total_questions": 2,
+          "time_limit": 15
+        }
+      }
+    }
+  }
+}
+```
 
 ### Test Case 2: Generate Paragraph
 
+1. **Vào Dify Dashboard** → Workflow của bạn
+2. **Click "Run"** hoặc **"Test"** button
+3. **Nhập test inputs:**
+   ```json
+   {
+     "action_type": "generate_paragraph",
+     "study_context": "StudySet: Biology\n\nTerms:\n- Photosynthesis: Quá trình thực vật chuyển đổi ánh sáng thành năng lượng\n- Chlorophyll: Sắc tố xanh lá cây trong thực vật\n- Mitochondria: Bào quan sản xuất năng lượng trong tế bào\n- DNA: Phân tử mang thông tin di truyền",
+     "style": "academic"
+   }
+   ```
+4. **Click "Run"** và xem kết quả
+5. **Kiểm tra output:**
+   - Phải có `result.action_type = "generate_paragraph"`
+   - Phải có `result.data.paragraph_data.paragraph` (string, 200-300 từ)
+   - Phải có `result.data.paragraph_data.key_concepts` (array)
+   - Phải có `result.data.paragraph_data.word_count` (number)
+
+**Ví dụ output mong đợi:**
 ```json
 {
-  "action_type": "generate_paragraph",
-  "study_context": "StudySet: Biology\n\nTerms:\n- Photosynthesis: Quá trình thực vật chuyển đổi ánh sáng thành năng lượng",
-  "style": "academic"
+  "outputs": {
+    "result": {
+      "action_type": "generate_paragraph",
+      "data": {
+        "paragraph_data": {
+          "paragraph": "Quá trình quang hợp là một trong những quá trình sinh học quan trọng nhất trên Trái Đất. Thực vật sử dụng chlorophyll, một sắc tố màu xanh lá cây, để hấp thụ ánh sáng mặt trời và chuyển đổi nó thành năng lượng hóa học. Quá trình này diễn ra trong chloroplast, nơi ánh sáng được sử dụng để tạo ra glucose từ carbon dioxide và nước. Năng lượng được tạo ra từ quang hợp sau đó được sử dụng bởi mitochondria, bào quan sản xuất năng lượng trong tế bào, để tạo ra ATP - nguồn năng lượng chính cho các hoạt động sống. Thông tin di truyền về các quá trình này được lưu trữ trong DNA, phân tử mang mã di truyền quyết định đặc điểm và chức năng của mọi sinh vật.",
+          "key_concepts": [
+            "Photosynthesis",
+            "Chlorophyll",
+            "Mitochondria",
+            "DNA"
+          ],
+          "word_count": 250
+        }
+      }
+    }
+  }
 }
 ```
-
-**Kiểm tra output:**
-- Phải có `result.action_type = "generate_paragraph"`
-- Phải có `result.data.paragraph_data.paragraph` (string, 200-300 từ)
 
 ### Test Case 3: Answer Question
 
+1. **Vào Dify Dashboard** → Workflow của bạn
+2. **Click "Run"** hoặc **"Test"** button
+3. **Nhập test inputs:**
+   ```json
+   {
+     "action_type": "answer_question",
+     "study_context": "StudySet: Biology\n\nTerms:\n- Photosynthesis: Quá trình thực vật chuyển đổi ánh sáng thành năng lượng\n- Chlorophyll: Sắc tố xanh lá cây trong thực vật\n- Mitochondria: Bào quan sản xuất năng lượng trong tế bào\n- DNA: Phân tử mang thông tin di truyền",
+     "query": "Quá trình quang hợp là gì?"
+   }
+   ```
+4. **Click "Run"** và xem kết quả
+5. **Kiểm tra output:**
+   - Phải có `result.action_type = "answer_question"`
+   - Phải có `result.data.answer` (string)
+   - Answer phải liên quan đến study_context
+   - Answer phải rõ ràng, dễ hiểu
+
+**Ví dụ output mong đợi:**
 ```json
 {
-  "action_type": "answer_question",
-  "study_context": "StudySet: Biology\n\nTerms:\n- Photosynthesis: Quá trình thực vật chuyển đổi ánh sáng thành năng lượng",
-  "query": "Quá trình quang hợp là gì?"
+  "outputs": {
+    "result": {
+      "action_type": "answer_question",
+      "data": {
+        "answer": "Quá trình quang hợp là quá trình thực vật chuyển đổi ánh sáng thành năng lượng. Quá trình này diễn ra trong chloroplast, nơi có chứa chlorophyll - sắc tố xanh lá cây giúp hấp thụ ánh sáng mặt trời. Thực vật sử dụng ánh sáng, nước và carbon dioxide để tạo ra glucose và oxy. Năng lượng từ quang hợp sau đó được sử dụng bởi mitochondria để tạo ra ATP, nguồn năng lượng chính cho các hoạt động sống của tế bào."
+      }
+    }
+  }
 }
 ```
-
-**Kiểm tra output:**
-- Phải có `result.action_type = "answer_question"`
-- Phải có `result.data.answer` (string)
 
 ---
 

@@ -9,14 +9,15 @@ from app.models.enums import ConversationState
 class QuickReplyButton(BaseModel):
     label: str
     value: str
-    type: str = "text"  # "text" | "number" | "option"
+    type: str = "text"  
     icon: str | None = None
 
 
 class ChatRequest(BaseModel):
-    message: str = ""  # Allow empty string for initial message
+    message: str = "" 
     conversation_id: uuid.UUID | None = None
     button_clicked: str | None = None
+    term_id: uuid.UUID | None = None 
 
 
 class ChatResponse(BaseModel):

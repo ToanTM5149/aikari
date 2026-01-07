@@ -270,7 +270,14 @@ export function StudySetList() {
                           {/* Header */}
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-lg truncate mb-2">{studySet.title}</h3>
+                              <div className="flex items-center gap-2 flex-wrap mb-2">
+                                <h3 className="font-semibold text-lg truncate">{studySet.title}</h3>
+                                {studySet.category && (
+                                  <Badge variant="outline" className="shrink-0 text-xs">
+                                    {studySet.category}
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground line-clamp-2">
                                 {studySet.description || "No description"}
                               </p>
@@ -312,9 +319,6 @@ export function StudySetList() {
 
                           {/* Metadata */}
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <Badge variant="secondary" className="rounded-full">
-                              {studySet.content_type}
-                            </Badge>
                             <span className="flex items-center gap-1">
                               <BookOpen className="w-4 h-4" />
                               {studySet.term_count || 0} cards
@@ -370,6 +374,7 @@ export function StudySetList() {
                           {/* Continue/Start Button */}
                           <Button 
                             className="w-full bg-foreground hover:bg-foreground/90 text-background"
+                            disabled={!studySet.term_count || studySet.term_count === 0}
                             onClick={(e) => {
                               e.stopPropagation()
                               navigate(`/dashboard/studysets/${studySet.studyset_id}/study`)
@@ -407,8 +412,13 @@ export function StudySetList() {
                             <Layers className="w-5 h-5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-semibold truncate">{studySet.title}</h3>
+                              {studySet.category && (
+                                <Badge variant="outline" className="shrink-0">
+                                  {studySet.category}
+                                </Badge>
+                              )}
                               <Badge variant="outline" className="shrink-0">
                                 {studySet.content_type}
                               </Badge>

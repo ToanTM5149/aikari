@@ -38,9 +38,9 @@ async def chat_with_studyset_mock(
             message="👋 Xin chào! Tôi có thể giúp bạn:\n\n• Tạo bài test từ flashcards\n• Tạo đoạn văn giải thích\n• Trả lời câu hỏi về nội dung học tập",
             state=ConversationState.WAITING_INTENT,
             quick_replies=[
-                QuickReplyButton(label="📝 Tạo bài test", value="gen_test", type="text"),
-                QuickReplyButton(label="📄 Tạo paragraph", value="gen_paragraph", type="text"),
-                QuickReplyButton(label="❓ Đặt câu hỏi", value="ask_question", type="text"),
+                QuickReplyButton(label="Tạo bài test", value="gen_test", type="text"),
+                QuickReplyButton(label="Tạo paragraph", value="gen_paragraph", type="text"),
+                QuickReplyButton(label="Đặt câu hỏi", value="ask_question", type="text"),
             ],
             show_input=True,
         )
@@ -197,7 +197,8 @@ async def chat_with_studyset(
     response = await chatbot_service.handle_message(
         message=message_to_send,
         conversation=conversation,
-        session=session
+        session=session,
+        term_id=request.term_id,  # Truyền term_id nếu có
     )
     
     return response

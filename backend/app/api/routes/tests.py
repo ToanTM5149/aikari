@@ -606,16 +606,22 @@ def get_my_test_history(
     
     if test_creator_id is not None:
         # Check if it's a special value for AI-generated tests
-        # For now, AI-generated tests don't exist, so return empty
-        # In the future, you can check if test_creator_id is a special AI user ID
         if str(test_creator_id).upper() == "AI":
-            # AI-generated tests not implemented yet, return empty
-            return AttemptsPublic(data=[], count=0)
+            # Filter for AI-generated tests
+            base_query = base_query.where(Test.is_ai_generated == True)
         else:
+            # Filter for user-created tests (not AI-generated)
             # Try to parse as UUID for test creator filter
             try:
                 creator_uuid = uuid.UUID(test_creator_id)
-                base_query = base_query.where(Test.created_by == creator_uuid)
+                # Filter by creator AND ensure it's not AI-generated
+                base_query = base_query.where(
+                    Test.created_by == creator_uuid,
+                    or_(
+                        Test.is_ai_generated == False,
+                        Test.is_ai_generated.is_(None)
+                    )
+                )
             except ValueError:
                 # Invalid UUID, return empty
                 return AttemptsPublic(data=[], count=0)

@@ -100,7 +100,15 @@ class Settings(BaseSettings):
     # Dify AI Integration
     DIFY_API_KEY: str | None = None
     DIFY_BASE_URL: str = "http://localhost/v1"
-    # Workflow App IDs (optional - nếu dùng workflow riêng)
+    
+    # Chat App IDs (nếu dùng Chat App)
+    DIFY_CHAT_APP_TEST_ID: str | None = None
+    DIFY_CHAT_APP_PARAGRAPH_ID: str | None = None
+    DIFY_CHAT_APP_QA_ID: str | None = None
+    # Unified Chat App ID (dùng một Chat App cho tất cả với action_type)
+    DIFY_CHAT_APP_UNIFIED_ID: str | None = None
+    
+    # Workflow App IDs (optional - nếu dùng workflow riêng, backward compatible)
     DIFY_WORKFLOW_TEST_APP_ID: str | None = None
     DIFY_WORKFLOW_PARAGRAPH_APP_ID: str | None = None
     # Unified Workflow App ID (recommended - dùng workflow tổng hợp)

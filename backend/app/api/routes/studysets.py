@@ -93,8 +93,8 @@ def read_studysets(
     
     total_count = session.exec(total_count_statement).one() or 0
     
-    # Get paginated sets
-    statement = base_query.offset(skip).limit(limit)
+    # Get paginated sets - order by created_at DESC so newest studysets appear first
+    statement = base_query.order_by(StudySet.created_at.desc()).offset(skip).limit(limit)
     sets = list(session.exec(statement).all())
     
     # Enrich each studyset with term_count, last_activity_at, and progress
@@ -131,6 +131,7 @@ def read_studysets(
             title=studyset.title,
             description=studyset.description,
             content_type=studyset.content_type,
+            category=studyset.category,
             owner_id=studyset.owner_id,
             created_at=studyset.created_at,
             updated_at=studyset.updated_at,
@@ -270,6 +271,28 @@ def read_term(
     term = crud.get_term(session=session, term_id=term_id)
     if not term or term.studyset_id != studyset_id:
         raise HTTPException(status_code=404, detail="Term not found")
+    
+    # Migrate dữ liệu cũ từ attributes.paragraph sang paragraphs nếu cần
+    if (term.paragraphs is None or len(term.paragraphs) == 0) and term.attributes and term.attributes.get("paragraph"):
+        # Có dữ liệu cũ trong attributes.paragraph, migrate sang paragraphs
+        old_paragraph = {
+            "paragraph": term.attributes["paragraph"],
+            "metadata": term.attributes.get("paragraph_metadata", {})
+        }
+        term.paragraphs = [old_paragraph]
+        
+        # Xóa dữ liệu cũ trong attributes
+        if "paragraph" in term.attributes:
+            del term.attributes["paragraph"]
+        if "paragraph_metadata" in term.attributes:
+            del term.attributes["paragraph_metadata"]
+        if not term.attributes:
+            term.attributes = None
+        
+        # Lưu migration
+        session.add(term)
+        session.commit()
+        session.refresh(term)
     
     return term
 

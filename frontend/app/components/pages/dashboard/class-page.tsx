@@ -269,11 +269,11 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
           <div className="flex items-center gap-4 text-sm">
             <span className="flex items-center gap-1 text-muted-foreground">
               <Users className="w-4 h-4" />
-              32 members
+              {cls.member_count ?? 0} {cls.member_count === 1 ? 'member' : 'members'}
             </span>
             <span className="flex items-center gap-1 text-muted-foreground">
               <BookOpen className="w-4 h-4" />
-              12 sets
+              {cls.studyset_count ?? 0} {cls.studyset_count === 1 ? 'set' : 'sets'}
             </span>
             {cls.is_public ? (
               <Badge variant="secondary" className="text-xs">
@@ -286,22 +286,6 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
                 Private
               </Badge>
             )}
-          </div>
-
-          {/* Class Progress */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Class Progress</span>
-              <span className="font-medium">75%</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-              <motion.div 
-                className="bg-foreground rounded-full h-2"
-                initial={{ width: 0 }}
-                animate={{ width: "75%" }}
-                transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
-              />
-            </div>
           </div>
 
           {/* Footer */}

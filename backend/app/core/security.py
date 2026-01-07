@@ -76,12 +76,34 @@ def verify_token(token: str, token_type: str = "access") -> tuple[str | None, st
 def is_token_blacklisted(session: Session, jti: str) -> bool:
     """
     Kiểm tra xem token có trong blacklist không
+    Xử lý connection errors gracefully - nếu không thể kết nối DB, 
+    coi như token không bị blacklist (fail open cho availability)
     """
+    import logging
+    from sqlalchemy.exc import OperationalError, DisconnectionError
+    
+    logger = logging.getLogger(__name__)
     from app.models.token_blacklist import TokenBlacklist
     
-    statement = select(TokenBlacklist).where(TokenBlacklist.jti == jti)
-    result = session.exec(statement).first()
-    return result is not None
+    try:
+        statement = select(TokenBlacklist).where(TokenBlacklist.jti == jti)
+        result = session.exec(statement).first()
+        return result is not None
+    except (OperationalError, DisconnectionError) as e:
+        # Nếu có lỗi connection, log và coi như token không bị blacklist
+        # (fail open để không block user khi DB có vấn đề)
+        logger.warning(
+            f"Database connection error while checking token blacklist for jti={jti}: {str(e)}. "
+            "Treating token as not blacklisted (fail open)."
+        )
+        return False
+    except Exception as e:
+        # Các lỗi khác cũng log và fail open
+        logger.error(
+            f"Unexpected error while checking token blacklist for jti={jti}: {str(e)}. "
+            "Treating token as not blacklisted (fail open)."
+        )
+        return False
 
 
 def add_token_to_blacklist(

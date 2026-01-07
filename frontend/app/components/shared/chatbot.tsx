@@ -15,6 +15,8 @@ interface ChatbotProps {
   width: number;
   onWidthChange: (width: number) => void;
   studysetId: string;
+  termId?: string;  // Optional: term_id khi đang xem một term cụ thể
+  onParagraphGenerated?: () => void;  // Callback khi paragraph được generate thành công
 }
 
 export function Chatbot({ 
@@ -22,7 +24,9 @@ export function Chatbot({
   onToggleCollapse, 
   width, 
   onWidthChange,
-  studysetId 
+  studysetId,
+  termId,
+  onParagraphGenerated 
 }: ChatbotProps) {
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
@@ -64,6 +68,7 @@ export function Chatbot({
         message: isInitial ? "" : (buttonValue || messageToSend),
         conversation_id: conversationId || undefined,
         button_clicked: buttonValue || undefined,
+        term_id: termId || undefined,  // Truyền term_id nếu có
       }).unwrap();
 
       // Update conversation ID
@@ -88,6 +93,14 @@ export function Chatbot({
         setTimeout(() => {
           navigate(`/dashboard/studysets/${studysetId}/test/${response.metadata.test_id}`);
         }, 2000);
+      }
+      
+      // Nếu có term_id và có paragraph trong metadata, gọi callback để refetch term data
+      if (termId && response.metadata?.paragraph && onParagraphGenerated) {
+        // Delay một chút để đảm bảo backend đã lưu xong
+        setTimeout(() => {
+          onParagraphGenerated();
+        }, 500);
       }
     } catch (error: any) {
       // Add error message

@@ -11,6 +11,7 @@ class TermBase(SQLModel):
     example: str | None = None
     image_url: str | None = None
     attributes: dict[str, Any] | None = None
+    paragraphs: list[dict[str, Any]] | None = None
 
 
 class TermCreate(SQLModel):

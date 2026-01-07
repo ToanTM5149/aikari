@@ -15,6 +15,7 @@ export interface ChatRequest {
   message: string;
   conversation_id?: string | null;
   button_clicked?: string | null;
+  term_id?: string | null;  // Optional: term_id khi generate paragraph cho một term cụ thể
 }
 
 export type ConversationState = 

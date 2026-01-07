@@ -20,12 +20,17 @@ class Test(SQLModel, table=True):
     question_types: list[str] = Field(default_factory=list, sa_column=Column(JSON))  # List of question types to include
     time_limit: int | None = Field(default=None)  # Time limit in seconds (None = no limit)
     created_by: uuid.UUID = Field(foreign_key="User.user_id")
+    is_ai_generated: bool = Field(default=False)  # Đánh dấu test được tạo bởi AI
+    ai_generated_by: uuid.UUID | None = Field(default=None, foreign_key="User.user_id")  # User yêu cầu AI tạo
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
     study_set: "StudySet" = Relationship(back_populates="tests")
-    creator: "User" = Relationship(back_populates="created_tests")
+    creator: "User" = Relationship(
+        back_populates="created_tests",
+        sa_relationship_kwargs={"foreign_keys": "[Test.created_by]"}
+    )
     questions: list["TestQuestion"] = Relationship(back_populates="test", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     attempts: list["TestAttempt"] = Relationship(back_populates="test", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 

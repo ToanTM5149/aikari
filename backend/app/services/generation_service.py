@@ -4,6 +4,7 @@ Generation Service - Xử lý AI generation (test, paragraph) với Dify
 import logging
 import re
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlmodel import Session, select
@@ -68,6 +69,51 @@ class GenerationService:
             if term.definition:
                 term_line += f": {term.definition}"
             context_parts.append(term_line)
+        
+        return "\n".join(context_parts)
+    
+    def prepare_term_context(
+        self,
+        term_id: uuid.UUID,
+        session: Session,
+    ) -> str:
+        """
+        Chuẩn bị context từ một term cụ thể
+        Format: "StudySet: {title}\n\nTerm: {term_text}\nDefinition: {definition}"
+        
+        Args:
+            term_id: ID của term
+            session: Database session
+            
+        Returns:
+            Formatted context string cho term đó
+            
+        Raises:
+            ValueError: Nếu term không tồn tại
+        """
+        term = session.exec(select(Term).where(Term.term_id == term_id)).first()
+        
+        if not term:
+            raise ValueError(f"Term {term_id} not found")
+        
+        # Load studyset để lấy title
+        studyset = session.exec(
+            select(StudySet).where(StudySet.studyset_id == term.studyset_id)
+        ).first()
+        
+        # Format context chỉ cho term này
+        context_parts = []
+        if studyset:
+            context_parts.append(f"StudySet: {studyset.title}")
+            if studyset.description:
+                context_parts.append(f"Description: {studyset.description}")
+            context_parts.append("")
+        
+        context_parts.append(f"Term: {term.term_text}")
+        if term.definition:
+            context_parts.append(f"Definition: {term.definition}")
+        if term.example:
+            context_parts.append(f"Example: {term.example}")
         
         return "\n".join(context_parts)
     
@@ -145,50 +191,132 @@ class GenerationService:
             # Prepare context
             study_context = self.prepare_study_context(studyset_id, session)
             
-            # Prepare Dify workflow inputs
-            # Nếu dùng workflow tổng hợp, thêm action_type
             from app.core.config import settings
             
-            if settings.DIFY_WORKFLOW_UNIFIED_APP_ID:
-                # Dùng workflow tổng hợp
-                workflow_inputs = {
-                    "action_type": "generate_test",
-                    "study_context": study_context,
-                    "total_questions": params.get("total_questions", 10),
-                    "question_types": params.get("question_types", ["MULTIPLE_CHOICE"]),
-                    "time_limit": params.get("time_limit"),  # minutes
-                }
-            else:
-                # Dùng workflow riêng (backward compatible)
-                workflow_inputs = {
-                    "study_context": study_context,
-                    "total_questions": params.get("total_questions", 10),
-                    "question_types": params.get("question_types", ["MULTIPLE_CHOICE"]),
-                    "time_limit": params.get("time_limit"),  # minutes
-                }
+            # Chỉ dùng Unified Chat App
+            if not settings.DIFY_CHAT_APP_UNIFIED_ID:
+                raise ValueError("DIFY_CHAT_APP_UNIFIED_ID is not configured")
             
-            # Call Dify workflow
-            logger.info(f"Calling Dify workflow to generate test for studyset {studyset_id}")
-            # Nếu có unified app_id, dùng nó; nếu không, dùng API key's app_id
-            app_id = settings.DIFY_WORKFLOW_UNIFIED_APP_ID or settings.DIFY_WORKFLOW_TEST_APP_ID
-            result = await dify_service.run_workflow(
-                inputs=workflow_inputs,
+            total_questions = params.get("total_questions", 10)
+            question_types_list = params.get("question_types", ["MULTIPLE_CHOICE"])
+            time_limit = params.get("time_limit")
+            
+            # Convert question_types array to string (Chat App input form expects string)
+            question_types_str = ",".join(question_types_list) if isinstance(question_types_list, list) else str(question_types_list)
+            
+            # Query chỉ gửi 1 chữ cái
+            query = "a"
+            
+            # Chuẩn bị inputs
+            inputs = {
+                "action_type": "generate_test",
+                "study_context": study_context,
+                "total_questions": str(total_questions),
+                "question_types": question_types_str,
+                "time_limit": str(time_limit) if time_limit else "",
+            }
+            
+            # Log đầy đủ data trước khi gửi đến Dify
+            logger.info("=" * 80)
+            logger.info("=== REQUEST DATA GỬI ĐẾN DIFY ===")
+            logger.info(f"Studyset ID: {studyset_id}")
+            logger.info(f"User ID: {user_id}")
+            logger.info(f"App ID: {settings.DIFY_CHAT_APP_UNIFIED_ID}")
+            logger.info(f"Query: '{query}'")
+            logger.info(f"Response Mode: blocking")
+            logger.info("Inputs:")
+            for key, value in inputs.items():
+                if key == "study_context":
+                    logger.info(f"  - {key}: (length={len(str(value))} characters)")
+                    logger.info(f"    Preview: {str(value)[:200]}...")
+                else:
+                    logger.info(f"  - {key}: {value}")
+            logger.info("=" * 80)
+            
+            result = await dify_service.chat_completion(
+                query=query,
                 user=str(user_id),
                 response_mode="blocking",
-                app_id=app_id,
+                inputs=inputs,
+                app_id=settings.DIFY_CHAT_APP_UNIFIED_ID,
             )
             
-            # Parse response
-            outputs = result.get("outputs") or result.get("data", {}).get("outputs", {})
-            # Nếu dùng workflow tổng hợp, data có thể nằm trong data.test_data
-            if settings.DIFY_WORKFLOW_UNIFIED_APP_ID:
-                result_data = outputs.get("data", {})
-                test_data = result_data.get("test_data") or outputs.get("test_data") or outputs.get("output")
-            else:
-                test_data = outputs.get("test_data") or outputs.get("output")
+            # Log toàn bộ response từ Dify
+            logger.info("=" * 80)
+            logger.info("=== RESPONSE TỪ DIFY ===")
+            logger.info(f"Full result object keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
+            logger.info(f"Full result: {result}")
+            logger.info("=" * 80)
             
-            if not test_data:
-                raise ValueError("Dify workflow returned no test data")
+            # Parse response từ Chat App (text answer)
+            answer = result.get("answer", "")
+            if not answer:
+                logger.error(f"Dify Chat App returned no answer. Full result: {result}")
+                raise ValueError("Dify Chat App returned no answer")
+            
+            # Log answer trước khi parse
+            logger.info("=" * 80)
+            logger.info("=== ANSWER TỪ DIFY (trước khi parse) ===")
+            logger.info(f"Answer type: {type(answer)}")
+            logger.info(f"Answer length: {len(str(answer))} characters")
+            logger.info(f"Full answer:\n{answer}")
+            logger.info("=" * 80)
+            
+            # Parse JSON từ text answer
+            import json
+            
+            # Strategy 1: Tìm JSON trong markdown code block (có thể có text trước đó)
+            text = answer.strip()
+            json_text = None
+            
+            # Tìm markdown code block chứa JSON (có thể có text trước đó)
+            markdown_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+            if markdown_match:
+                json_text = markdown_match.group(1)
+                logger.info("Extracted JSON from markdown code block (có text trước đó)")
+            else:
+                # Strategy 2: Tìm JSON object trực tiếp trong text (bắt đầu từ {)
+                # Tìm vị trí của { đầu tiên
+                first_brace = text.find('{')
+                if first_brace != -1:
+                    # Tìm { cuối cùng để lấy toàn bộ JSON object
+                    # Dùng stack để tìm matching braces
+                    brace_count = 0
+                    start_pos = first_brace
+                    end_pos = -1
+                    
+                    for i in range(first_brace, len(text)):
+                        if text[i] == '{':
+                            brace_count += 1
+                        elif text[i] == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end_pos = i + 1
+                                break
+                    
+                    if end_pos != -1:
+                        json_text = text[start_pos:end_pos]
+                        logger.info("Extracted JSON object directly from text (tìm { đầu tiên)")
+            
+            # Strategy 3: Nếu vẫn không tìm thấy, thử parse toàn bộ text
+            if not json_text:
+                json_text = text
+                logger.info("Using full text as JSON (fallback)")
+            
+            logger.info(f"JSON text to parse (first 500 chars): {json_text[:500]}...")
+            
+            try:
+                test_data = json.loads(json_text)
+                logger.info(f"Successfully parsed JSON. Keys: {list(test_data.keys()) if isinstance(test_data, dict) else 'N/A'}")
+            except json.JSONDecodeError as e:
+                logger.error("=" * 80)
+                logger.error("=== LỖI PARSE JSON ===")
+                logger.error(f"JSONDecodeError: {str(e)}")
+                logger.error(f"Answer (first 500 chars): {answer[:500]}")
+                logger.error(f"Answer (last 500 chars): {answer[-500:]}")
+                logger.error(f"Full answer length: {len(answer)}")
+                logger.error("=" * 80)
+                raise ValueError(f"Chat App returned invalid JSON: {str(e)}")
             
             # Validate và parse questions
             questions = test_data.get("questions", [])
@@ -196,6 +324,7 @@ class GenerationService:
                 raise ValueError("No questions in test data")
             
             # Create Test in database
+            # Lưu created_by là user_id (người yêu cầu), nhưng đánh dấu là AI-generated
             test = Test(
                 studyset_id=studyset_id,
                 title=f"AI Generated Test - {len(questions)} questions",
@@ -203,7 +332,9 @@ class GenerationService:
                 total_questions=len(questions),
                 question_types=params.get("question_types", []),
                 time_limit=params.get("time_limit") * 60 if params.get("time_limit") else None,  # Convert minutes to seconds
-                created_by=user_id,
+                created_by=user_id,  # User yêu cầu AI tạo
+                is_ai_generated=True,  # Đánh dấu là AI-generated
+                ai_generated_by=user_id,  # User yêu cầu AI tạo
             )
             session.add(test)
             session.commit()
@@ -271,11 +402,17 @@ class GenerationService:
             session.commit()
             
             # Save to AIGeneratedContents
+            from app.core.config import settings
+            # Determine source model based on which app was used
+            # Chỉ dùng Unified Chat App
+            source_model = "Dify Chat App Unified"
+            prompt_data = params
+            
             ai_content = AIGeneratedContents(
                 studyset_id=studyset_id,
-                source_model="Dify Workflow",
+                source_model=source_model,
                 generate_type=GenerateType.TEST,
-                prompt=str(workflow_inputs),
+                prompt=str(prompt_data),
                 output=test_data,
             )
             session.add(ai_content)
@@ -301,89 +438,331 @@ class GenerationService:
         studyset_id: uuid.UUID,
         user_id: uuid.UUID,
         session: Session,
+        term_id: uuid.UUID | None = None,  # Optional: nếu có thì chỉ generate cho term này
     ) -> dict[str, Any]:
         """
-        Generate paragraph từ studyset
+        Generate paragraph từ studyset hoặc một term cụ thể
         
         Args:
             studyset_id: ID của studyset
             user_id: ID của user
             session: Database session
+            term_id: Optional - nếu có thì chỉ generate cho term này, không thì generate cho toàn bộ studyset
             
         Returns:
-            Dict với message và metadata (paragraph, key_concepts, word_count, ai_content_id)
+            Dict với message và metadata (paragraph, key_concepts, word_count)
             
         Raises:
             ValueError: Nếu có lỗi trong quá trình generate
         """
         try:
-            # Prepare context
-            study_context = self.prepare_study_context(studyset_id, session)
+            # Nếu có term_id, chỉ lấy context từ term đó
+            if term_id:
+                study_context = self.prepare_term_context(term_id, session)
+            else:
+                # Fallback: lấy context từ toàn bộ studyset (giữ backward compatibility)
+                study_context = self.prepare_study_context(studyset_id, session)
             
-            # Prepare Dify workflow inputs
             from app.core.config import settings
             
-            if settings.DIFY_WORKFLOW_UNIFIED_APP_ID:
-                # Dùng workflow tổng hợp
-                workflow_inputs = {
-                    "action_type": "generate_paragraph",
-                    "study_context": study_context,
-                    "style": "academic",
-                }
-            else:
-                # Dùng workflow riêng (backward compatible)
-                workflow_inputs = {
-                    "study_context": study_context,
-                    "style": "academic",
-                }
+            # Chỉ dùng Unified Chat App
+            if not settings.DIFY_CHAT_APP_UNIFIED_ID:
+                raise ValueError("DIFY_CHAT_APP_UNIFIED_ID is not configured")
             
-            # Call Dify workflow
-            logger.info(f"Calling Dify workflow to generate paragraph for studyset {studyset_id}")
-            # Nếu có unified app_id, dùng nó; nếu không, dùng paragraph app_id
-            app_id = settings.DIFY_WORKFLOW_UNIFIED_APP_ID or settings.DIFY_WORKFLOW_PARAGRAPH_APP_ID
-            result = await dify_service.run_workflow(
-                inputs=workflow_inputs,
+            style = "academic"
+                
+            # Query chỉ gửi 1 chữ cái
+            query = "a"
+            
+            # Chuẩn bị inputs
+            inputs = {
+                "action_type": "generate_paragraph",
+                "study_context": study_context,
+                "style": style,
+            }
+            
+            # Log đầy đủ data trước khi gửi đến Dify
+            logger.info("=" * 80)
+            logger.info("=== REQUEST DATA GỬI ĐẾN DIFY (PARAGRAPH) ===")
+            logger.info(f"Studyset ID: {studyset_id}")
+            if term_id:
+                logger.info(f"Term ID: {term_id}")
+            logger.info(f"User ID: {user_id}")
+            logger.info(f"App ID: {settings.DIFY_CHAT_APP_UNIFIED_ID}")
+            logger.info(f"Query: '{query}'")
+            logger.info(f"Response Mode: blocking")
+            logger.info("Inputs:")
+            for key, value in inputs.items():
+                if key == "study_context":
+                    logger.info(f"  - {key}: (length={len(str(value))} characters)")
+                    logger.info(f"    Preview: {str(value)[:200]}...")
+                else:
+                    logger.info(f"  - {key}: {value}")
+            logger.info("=" * 80)
+            
+            result = await dify_service.chat_completion(
+                query=query,
                 user=str(user_id),
                 response_mode="blocking",
-                app_id=app_id,
+                inputs=inputs,
+                app_id=settings.DIFY_CHAT_APP_UNIFIED_ID,
             )
             
-            # Parse response
-            outputs = result.get("outputs") or result.get("data", {}).get("outputs", {})
-            # Nếu dùng workflow tổng hợp, data có thể nằm trong data.paragraph_data
-            if settings.DIFY_WORKFLOW_UNIFIED_APP_ID:
-                result_data = outputs.get("data", {})
-                paragraph_data = result_data.get("paragraph_data") or outputs.get("paragraph_data") or outputs.get("output")
-            else:
-                paragraph_data = outputs.get("paragraph_data") or outputs.get("output")
+            # Log toàn bộ response từ Dify
+            logger.info("=" * 80)
+            logger.info("=== RESPONSE TỪ DIFY (PARAGRAPH) ===")
+            logger.info(f"Full result object keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
+            logger.info("=" * 80)
             
-            if not paragraph_data:
-                raise ValueError("Dify workflow returned no paragraph data")
+            # Parse response từ Chat App (text answer)
+            answer = result.get("answer", "")
+            if not answer:
+                logger.error(f"Dify Chat App returned no answer. Full result: {result}")
+                raise ValueError("Dify Chat App returned no answer")
+            
+            # Log answer trước khi parse
+            logger.info("=" * 80)
+            logger.info("=== ANSWER TỪ DIFY (trước khi parse) ===")
+            logger.info(f"Answer type: {type(answer)}")
+            logger.info(f"Answer length: {len(str(answer))} characters")
+            logger.info(f"Full answer:\n{answer}")
+            logger.info("=" * 80)
+            
+            # Parse JSON từ text answer
+            import json
+            
+            # Strategy 1: Tìm JSON trong markdown code block (có thể có text trước đó)
+            text = answer.strip()
+            json_text = None
+            
+            # Tìm markdown code block chứa JSON (có thể có text trước đó)
+            markdown_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+            if markdown_match:
+                json_text = markdown_match.group(1)
+                logger.info("Extracted JSON from markdown code block (có text trước đó)")
+            else:
+                # Strategy 2: Tìm JSON object trực tiếp trong text (bắt đầu từ {)
+                first_brace = text.find('{')
+                if first_brace != -1:
+                    # Tìm { cuối cùng để lấy toàn bộ JSON object
+                    brace_count = 0
+                    start_pos = first_brace
+                    end_pos = -1
+                    
+                    for i in range(first_brace, len(text)):
+                        if text[i] == '{':
+                            brace_count += 1
+                        elif text[i] == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end_pos = i + 1
+                                break
+                    
+                    if end_pos != -1:
+                        json_text = text[start_pos:end_pos]
+                        logger.info("Extracted JSON object directly from text (tìm { đầu tiên)")
+            
+            # Strategy 3: Nếu vẫn không tìm thấy, thử parse toàn bộ text
+            if not json_text:
+                json_text = text
+                logger.info("Using full text as JSON (fallback)")
+            
+            logger.info(f"JSON text to parse (first 500 chars): {json_text[:500]}...")
+            
+            try:
+                paragraph_data = json.loads(json_text)
+                logger.info(f"Successfully parsed JSON. Keys: {list(paragraph_data.keys()) if isinstance(paragraph_data, dict) else 'N/A'}")
+            except json.JSONDecodeError as e:
+                logger.error("=" * 80)
+                logger.error("=== LỖI PARSE JSON ===")
+                logger.error(f"JSONDecodeError: {str(e)}")
+                logger.error(f"Answer (first 500 chars): {answer[:500]}")
+                logger.error(f"Answer (last 500 chars): {answer[-500:]}")
+                logger.error(f"Full answer length: {len(answer)}")
+                logger.error("=" * 80)
+                raise ValueError(f"Chat App returned invalid JSON: {str(e)}")
             
             paragraph_text = paragraph_data.get("paragraph", "")
             if not paragraph_text:
                 raise ValueError("No paragraph text in output")
             
-            # Save to AIGeneratedContents
-            ai_content = AIGeneratedContents(
-                studyset_id=studyset_id,
-                source_model="Dify Workflow",
-                generate_type=GenerateType.PARAGRAPH,
-                prompt=str(workflow_inputs),
-                output=paragraph_data,
-            )
-            session.add(ai_content)
+            # Nếu có term_id, chỉ lưu vào term đó
+            if term_id:
+                term = session.exec(select(Term).where(Term.term_id == term_id)).first()
+                if not term:
+                    raise ValueError(f"Term {term_id} not found")
+                
+                logger.info(f"Found term {term_id} ({term.term_text}). Current paragraphs: {term.paragraphs}")
+                logger.info(f"Current paragraphs type: {type(term.paragraphs)}")
+                logger.info(f"Current attributes: {term.attributes}")
+                
+                # Lấy paragraphs hiện tại hoặc tạo mới
+                # Nếu None hoặc không phải list, tạo list rỗng
+                if term.paragraphs is None:
+                    current_paragraphs = []
+                    logger.info("paragraphs is None, initializing to empty list")
+                    
+                    # Migrate dữ liệu cũ từ attributes.paragraph sang paragraphs nếu có
+                    if term.attributes and term.attributes.get("paragraph"):
+                        logger.info("Found old paragraph in attributes, migrating to paragraphs field")
+                        old_paragraph = {
+                            "paragraph": term.attributes["paragraph"],
+                            "metadata": term.attributes.get("paragraph_metadata", {})
+                        }
+                        current_paragraphs = [old_paragraph]
+                        logger.info(f"Migrated old paragraph: {old_paragraph}")
+                elif not isinstance(term.paragraphs, list):
+                    # Nếu paragraphs không phải list, reset về list rỗng
+                    logger.warning(f"paragraphs is not a list, resetting. Current value: {term.paragraphs}, type: {type(term.paragraphs)}")
+                    current_paragraphs = []
+                else:
+                    current_paragraphs = term.paragraphs
+                    logger.info(f"Using existing paragraphs list with {len(current_paragraphs)} items")
+                
+                # Tạo paragraph entry mới
+                new_paragraph = {
+                    "paragraph": paragraph_text,
+                    "metadata": {
+                        "key_concepts": paragraph_data.get("key_concepts", []),
+                        "word_count": paragraph_data.get("word_count", 0),
+                        "style": style,
+                        "generated_at": datetime.utcnow().isoformat() + "Z",  # Thêm Z để đánh dấu UTC
+                    }
+                }
+                
+                logger.info(f"New paragraph to add: {new_paragraph}")
+                
+                # Tạo list mới với paragraph mới ở đầu (mới nhất ở đầu)
+                # Tạo list mới để SQLModel detect thay đổi
+                updated_paragraphs = [new_paragraph] + current_paragraphs
+                
+                logger.info(f"Updated paragraphs (total: {len(updated_paragraphs)}): {updated_paragraphs}")
+                
+                # Gán list mới vào term.paragraphs (tạo object mới để SQLModel detect change)
+                term.paragraphs = updated_paragraphs
+                term.updated_at = datetime.utcnow()
+                
+                # Xóa dữ liệu cũ trong attributes.paragraph sau khi đã migrate sang paragraphs
+                if term.attributes and ("paragraph" in term.attributes or "paragraph_metadata" in term.attributes):
+                    logger.info("Removing old paragraph data from attributes after migration")
+                    if "paragraph" in term.attributes:
+                        del term.attributes["paragraph"]
+                    if "paragraph_metadata" in term.attributes:
+                        del term.attributes["paragraph_metadata"]
+                    # Nếu attributes rỗng sau khi xóa, set về None
+                    if not term.attributes:
+                        term.attributes = None
+                
+                logger.info(f"Set term.paragraphs to: {term.paragraphs}")
+                logger.info(f"Term attributes after cleanup: {term.attributes}")
+                
+                session.add(term)
+                
+                try:
+                    # Log trước khi flush
+                    logger.info(f"About to flush. term.paragraphs before flush: {term.paragraphs}")
+                    logger.info(f"term.paragraphs type: {type(term.paragraphs)}")
+                    logger.info(f"term.paragraphs length: {len(term.paragraphs) if term.paragraphs else 0}")
+                    
+                    # Flush trước để đảm bảo dữ liệu được gửi đến DB
+                    session.flush()
+                    logger.info(f"Flushed paragraph data to database for term {term_id}")
+                    
+                    # Log sau flush, trước commit
+                    logger.info(f"After flush, before commit. term.paragraphs: {term.paragraphs}")
+                    
+                    # Commit transaction
+                    session.commit()
+                    logger.info(f"Committed paragraph to database for term {term_id}")
+                    
+                    # Expunge term khỏi session để force reload
+                    session.expunge(term)
+                    
+                    # Query lại term từ database để verify
+                    term_after_commit = session.exec(
+                        select(Term).where(Term.term_id == term_id)
+                    ).first()
+                    
+                    if term_after_commit:
+                        logger.info(f"Queried term after commit. Paragraphs: {term_after_commit.paragraphs}")
+                        logger.info(f"Paragraphs type: {type(term_after_commit.paragraphs)}")
+                        logger.info(f"Paragraphs length: {len(term_after_commit.paragraphs) if term_after_commit.paragraphs else 0}")
+                        # Update term object với dữ liệu mới
+                        term = term_after_commit
+                    else:
+                        logger.error(f"Could not query term {term_id} after commit")
+                        raise ValueError(f"Could not query term {term_id} after commit")
+                    
+                    # Verify: Kiểm tra lại xem paragraph có được lưu không
+                    if term.paragraphs is None:
+                        logger.error(f"WARNING: Paragraphs is None after commit! Term: {term}")
+                        raise ValueError("Paragraph was not saved to database: paragraphs is None")
+                    
+                    if len(term.paragraphs) == 0:
+                        logger.error(f"WARNING: Paragraphs is empty after commit! Term: {term}")
+                        raise ValueError("Paragraph was not saved to database: paragraphs is empty")
+                    
+                    logger.info(f"✅ Verification passed! Paragraphs saved successfully. Total: {len(term.paragraphs)}")
+                    
+                except Exception as commit_error:
+                    logger.error(f"Error committing paragraph to database: {str(commit_error)}", exc_info=True)
+                    session.rollback()
+                    raise ValueError(f"Lỗi khi lưu paragraph vào database: {str(commit_error)}")
+                
+                logger.info(f"Successfully generated paragraph for term {term_id} ({term.term_text}). Total paragraphs: {len(term.paragraphs)}")
+                
+                return {
+                    "message": f"✅ Đoạn văn đã được tạo cho term '{term.term_text}':\n\n{paragraph_text}",
+                    "metadata": {
+                        "paragraph": paragraph_text,
+                        "key_concepts": paragraph_data.get("key_concepts", []),
+                        "word_count": paragraph_data.get("word_count", 0),
+                        "term_id": str(term_id),
+                        "term_text": term.term_text,
+                        "total_paragraphs": len(term.paragraphs),
+                    },
+                }
+            else:
+                # Fallback: lưu vào tất cả terms (giữ backward compatibility)
+                terms = session.exec(
+                    select(Term).where(Term.studyset_id == studyset_id)
+                ).all()
+                
+                if not terms:
+                    raise ValueError(f"StudySet {studyset_id} has no terms")
+                
+                # Lưu paragraph vào attributes của mỗi term
+                updated_count = 0
+                for term in terms:
+                    # Lấy attributes hiện tại hoặc tạo mới
+                    current_attributes = term.attributes or {}
+                    
+                    # Thêm paragraph vào attributes
+                    current_attributes["paragraph"] = paragraph_text
+                    current_attributes["paragraph_metadata"] = {
+                        "key_concepts": paragraph_data.get("key_concepts", []),
+                        "word_count": paragraph_data.get("word_count", 0),
+                        "style": style,
+                        "generated_at": datetime.utcnow().isoformat() + "Z",  # Thêm Z để đánh dấu UTC
+                    }
+                    
+                    # Cập nhật term
+                    term.attributes = current_attributes
+                    term.updated_at = datetime.utcnow()
+                    session.add(term)
+                    updated_count += 1
+                
             session.commit()
             
-            logger.info(f"Successfully generated paragraph for studyset {studyset_id}")
+            logger.info(f"Successfully generated paragraph for studyset {studyset_id} and saved to {updated_count} terms")
             
             return {
-                "message": f"📄 Đoạn văn đã được tạo:\n\n{paragraph_text}",
+                "message": f"Đoạn văn đã được tạo và lưu vào {updated_count} terms:\n\n{paragraph_text}",
                 "metadata": {
                     "paragraph": paragraph_text,
                     "key_concepts": paragraph_data.get("key_concepts", []),
                     "word_count": paragraph_data.get("word_count", 0),
-                    "ai_content_id": str(ai_content.ai_content_id),
+                    "terms_updated": updated_count,
                 },
             }
             
@@ -419,37 +798,54 @@ class GenerationService:
             
             from app.core.config import settings
             
-            # Nếu dùng workflow tổng hợp, dùng workflow thay vì chat completion
-            if settings.DIFY_WORKFLOW_UNIFIED_APP_ID:
-                # Dùng workflow tổng hợp
-                workflow_inputs = {
-                    "action_type": "answer_question",
-                    "study_context": study_context,
-                    "query": question,
-                }
-                
-                logger.info(f"Calling Dify unified workflow to answer question for studyset {studyset_id}")
-                result = await dify_service.run_workflow(
-                    inputs=workflow_inputs,
-                    user=str(user_id),
-                    response_mode="blocking",
-                    app_id=settings.DIFY_WORKFLOW_UNIFIED_APP_ID,
-                )
-                
-                # Parse response từ workflow
-                outputs = result.get("outputs") or result.get("data", {}).get("outputs", {})
-                result_data = outputs.get("data", {})
-                answer = result_data.get("answer") or outputs.get("answer") or outputs.get("output", "")
-            else:
-                # Dùng chat completion (backward compatible)
-                logger.info(f"Calling Dify chat completion to answer question for studyset {studyset_id}")
-                result = await dify_service.chat_completion(
-                    query=question,
-                    user=str(user_id),
-                    inputs={"study_context": study_context},
-                    response_mode="blocking",
-                )
-                answer = result.get("answer", "")
+            # Chỉ dùng Unified Chat App
+            if not settings.DIFY_CHAT_APP_UNIFIED_ID:
+                raise ValueError("DIFY_CHAT_APP_UNIFIED_ID is not configured")
+            
+            # Query là câu hỏi thực tế của user
+            query = question
+            
+            # Chuẩn bị inputs với action_type
+            inputs = {
+                "action_type": "answer_question",
+                "study_context": study_context,
+                "query": question,
+            }
+            
+            # Log đầy đủ data trước khi gửi đến Dify
+            logger.info("=" * 80)
+            logger.info("=== REQUEST DATA GỬI ĐẾN DIFY (ANSWER QUESTION) ===")
+            logger.info(f"Studyset ID: {studyset_id}")
+            logger.info(f"User ID: {user_id}")
+            logger.info(f"App ID: {settings.DIFY_CHAT_APP_UNIFIED_ID}")
+            logger.info(f"Query: '{query}'")
+            logger.info(f"Response Mode: blocking")
+            logger.info("Inputs:")
+            for key, value in inputs.items():
+                if key == "study_context":
+                    logger.info(f"  - {key}: (length={len(str(value))} characters)")
+                    logger.info(f"    Preview: {str(value)[:200]}...")
+                else:
+                    logger.info(f"  - {key}: {value}")
+            logger.info("=" * 80)
+            
+            logger.info(f"Calling Dify unified chat app to answer question for studyset {studyset_id}")
+            result = await dify_service.chat_completion(
+                query=query,
+                user=str(user_id),
+                inputs=inputs,
+                response_mode="blocking",
+                app_id=settings.DIFY_CHAT_APP_UNIFIED_ID,
+            )
+            
+            # Log toàn bộ response từ Dify
+            logger.info("=" * 80)
+            logger.info("=== RESPONSE TỪ DIFY (ANSWER QUESTION) ===")
+            logger.info(f"Full result object keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
+            logger.info("=" * 80)
+            
+            # Parse response từ Chat App (text answer)
+            answer = result.get("answer", "")
             
             # Basic validation: check if answer is off-topic
             if not answer or len(answer) < 10:

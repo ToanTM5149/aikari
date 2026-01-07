@@ -31,12 +31,12 @@ export default function AuthenticatedLayout() {
     const currentPath = location.pathname;
     
     // Define role-based access rules
-    const adminOnlyRoutes = ['/statistics', '/user-management', '/token-management'];
+    const adminOnlyRoutes = ['/user-management', '/token-management', '/dashboard/admin'];
     const studentTeacherOnlyRoutes = ['/dashboard', '/dashboard/studysets', '/dashboard/class', '/create', '/history'];
     
     // Admin trying to access student/teacher routes
     if (userRole === 'ADMIN' && studentTeacherOnlyRoutes.some(route => currentPath.startsWith(route))) {
-      navigate('/statistics', { replace: true });
+      navigate('/dashboard/admin', { replace: true });
       return;
     }
     
@@ -53,9 +53,9 @@ export default function AuthenticatedLayout() {
     if (path === "/dashboard") return "home";
     if (path.startsWith("/dashboard/studysets")) return "studysets";
     if (path.startsWith("/dashboard/class")) return "class";
+    if (path.startsWith("/dashboard/admin")) return "admin";
     if (path.startsWith("/create")) return "create";
     if (path.startsWith("/history")) return "history";
-    if (path.startsWith("/statistics")) return "statistics";
     if (path.startsWith("/user-management")) return "user-management";
     if (path.startsWith("/token-management")) return "token-management";
     return "home";
@@ -72,14 +72,14 @@ export default function AuthenticatedLayout() {
       case "class":
         navigate("/dashboard/class");
         break;
+      case "admin":
+        navigate("/dashboard/admin");
+        break;
       case "create":
         navigate("/create");
         break;
       case "history":
         navigate("/history");
-        break;
-      case "statistics":
-        navigate("/statistics");
         break;
       case "user-management":
         navigate("/user-management");

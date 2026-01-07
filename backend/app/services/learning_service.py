@@ -240,21 +240,25 @@ class LearningService:
         # Collect terms for session
         session_terms = []
         
-        # Add due terms first
+        # If limit is greater than or equal to total terms, include all terms
+        # This allows users to study all terms from the beginning in a new session
+        include_all = actual_limit >= len(all_terms)
+        
+        # Add due terms first (highest priority for spaced repetition)
         for term, _ in due_terms:
-            if len(session_terms) >= actual_limit:
+            if not include_all and len(session_terms) >= actual_limit:
                 break
             session_terms.append(term)
         
-        # Add new terms
+        # Add new terms (second priority)
         for term in new_terms:
-            if len(session_terms) >= actual_limit:
+            if not include_all and len(session_terms) >= actual_limit:
                 break
             session_terms.append(term)
         
-        # Add reviewed terms if still need more
+        # Add reviewed terms if still need more (lowest priority, but still included)
         for term, _ in reviewed_terms:
-            if len(session_terms) >= actual_limit:
+            if not include_all and len(session_terms) >= actual_limit:
                 break
             session_terms.append(term)
         
@@ -265,7 +269,7 @@ class LearningService:
             for term in all_terms:
                 activity = term_activity_map.get(term.term_id)
                 if not activity or activity.created_at <= recent_threshold:
-                    if len(session_terms) >= actual_limit:
+                    if not include_all and len(session_terms) >= actual_limit:
                         break
                     session_terms.append(term)
         
