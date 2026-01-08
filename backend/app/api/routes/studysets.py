@@ -22,30 +22,6 @@ router = APIRouter()
 
 
 # StudySet endpoints
-@router.get("/categories/")
-def get_categories(
-    current_user: CurrentUser,
-    session: SessionDep,
-) -> Any:
-    """
-    Get all unique categories from user's studysets.
-    """
-    # Get distinct categories from studysets
-    category_statement = (
-        select(StudySet.category)
-        .where(
-            StudySet.owner_id == current_user.user_id,
-            StudySet.category.isnot(None),
-            StudySet.category != ""
-        )
-        .distinct()
-        .order_by(StudySet.category)
-    )
-    categories = list(session.exec(category_statement).all())
-    
-    return {"data": categories, "count": len(categories)}
-
-
 @router.get("/")
 def read_studysets(
     current_user: CurrentUser,
@@ -53,29 +29,29 @@ def read_studysets(
     skip: int = 0,
     limit: int = 100,
     q: str | None = None,
-    category: str | None = None,
+    category_id: uuid.UUID | None = None,
 ) -> Any:
     """
     Retrieve study sets owned by current user with additional metadata.
     Supports search by title and description.
-    Supports filter by category.
+    Supports filter by category_id.
     """
     from sqlmodel import or_
-    
+
     # Build base query with search filter
     base_query = select(StudySet).where(StudySet.owner_id == current_user.user_id)
-    
+
     if q:
         search_filter = or_(
             StudySet.title.ilike(f"%{q}%"),
             StudySet.description.ilike(f"%{q}%")
         )
         base_query = base_query.where(search_filter)
-    
-    # Filter by category if provided
-    if category:
-        base_query = base_query.where(StudySet.category == category)
-    
+
+    # Filter by category_id if provided
+    if category_id:
+        base_query = base_query.where(StudySet.category_id == category_id)
+
     # Count total studysets matching search before pagination
     total_count_statement = select(func.count(StudySet.studyset_id)).where(
         StudySet.owner_id == current_user.user_id
@@ -86,11 +62,11 @@ def read_studysets(
             StudySet.description.ilike(f"%{q}%")
         )
         total_count_statement = total_count_statement.where(search_filter)
-    
-    if category:
+
+    if category_id:
         # Apply same category filter to count
-        total_count_statement = total_count_statement.where(StudySet.category == category)
-    
+        total_count_statement = total_count_statement.where(StudySet.category_id == category_id)
+
     total_count = session.exec(total_count_statement).one() or 0
     
     # Get paginated sets - order by created_at DESC so newest studysets appear first
@@ -131,7 +107,8 @@ def read_studysets(
             title=studyset.title,
             description=studyset.description,
             content_type=studyset.content_type,
-            category=studyset.category,
+            category_id=studyset.category_id,
+            category=studyset.category,  # Relationship will be loaded
             owner_id=studyset.owner_id,
             created_at=studyset.created_at,
             updated_at=studyset.updated_at,

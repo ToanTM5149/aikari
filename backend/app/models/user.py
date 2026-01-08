@@ -29,6 +29,7 @@ class User(SQLModel, table=True):
     
     # Relationships
     study_sets: list["StudySet"] = Relationship(back_populates="owner")
+    categories: list["Category"] = Relationship(back_populates="owner")
     class_memberships: list["ClassMember"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"foreign_keys": "[ClassMember.user_id]"}

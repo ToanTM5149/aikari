@@ -1,10 +1,10 @@
 /**
  * CategoryFilter Component
- * 
+ *
  * Filter dropdown để lọc studysets theo category
  */
 
-import { useGetCategoriesQuery } from "~/redux/features/studyset/api";
+import { useGetCategoriesQuery } from "~/redux/features/category/api";
 import {
   Select,
   SelectContent,
@@ -13,10 +13,11 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Tag } from "lucide-react";
+import type { Category } from "~/redux/features/shared/types";
 
 interface CategoryFilterProps {
   value?: string;
-  onChange: (category: string | undefined) => void;
+  onChange: (categoryId: string | undefined) => void;
   placeholder?: string;
   className?: string;
 }
@@ -62,8 +63,8 @@ export function CategoryFilter({
         <SelectContent>
           <SelectItem value="all">All Categories</SelectItem>
           {categories.map((category) => (
-            <SelectItem key={category} value={category}>
-              {category}
+            <SelectItem key={category.category_id} value={category.category_id}>
+              {category.name}
             </SelectItem>
           ))}
         </SelectContent>
@@ -80,7 +81,7 @@ export function CategoryFilter({
 import { Badge } from "~/components/ui/badge";
 
 interface CategoryBadgeProps {
-  category: string;
+  category: Category;
   variant?: "default" | "secondary" | "outline";
   className?: string;
 }
@@ -93,7 +94,7 @@ export function CategoryBadge({
   return (
     <Badge variant={variant} className={`gap-1 ${className}`}>
       <Tag className="h-3 w-3" />
-      {category}
+      {category.name}
     </Badge>
   );
 }

@@ -62,7 +62,7 @@ export function StudySetList() {
     skip: (currentPage - 1) * itemsPerPage,
     limit: itemsPerPage,
     q: debouncedSearchQuery || undefined,  // Send debounced search query to backend
-    category: selectedCategory,
+    category_id: selectedCategory,
   })
   const [deleteStudySet] = useDeleteStudySetMutation()
 
@@ -274,7 +274,7 @@ export function StudySetList() {
                                 <h3 className="font-semibold text-lg truncate">{studySet.title}</h3>
                                 {studySet.category && (
                                   <Badge variant="outline" className="shrink-0 text-xs">
-                                    {studySet.category}
+                                    {studySet.category.name}
                                   </Badge>
                                 )}
                               </div>
@@ -416,7 +416,7 @@ export function StudySetList() {
                               <h3 className="font-semibold truncate">{studySet.title}</h3>
                               {studySet.category && (
                                 <Badge variant="outline" className="shrink-0">
-                                  {studySet.category}
+                                  {studySet.category.name}
                                 </Badge>
                               )}
                               <Badge variant="outline" className="shrink-0">

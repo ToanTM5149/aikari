@@ -92,6 +92,44 @@ export interface ClassMembersResponse {
   count: number;
 }
 
+// ==================== CATEGORY TYPES ====================
+
+export interface Category {
+  category_id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryWithCount extends Category {
+  studyset_count: number;
+}
+
+export interface CategoryCreate {
+  name: string;
+  description?: string;
+  color?: string;
+}
+
+export interface CategoryUpdate {
+  name?: string;
+  description?: string;
+  color?: string;
+}
+
+export interface CategoriesResponse {
+  data: Category[];
+  count: number;
+}
+
+export interface CategoriesWithCountResponse {
+  data: CategoryWithCount[];
+  count: number;
+}
+
 // ==================== STUDYSET TYPES ====================
 
 export interface StudySet {
@@ -100,7 +138,8 @@ export interface StudySet {
   description?: string;
   owner_id: string;
   content_type: ContentType;
-  category?: string;
+  category_id?: string;
+  category?: Category;  // Full category object
   created_at: string;
   updated_at: string;
   term_count?: number;  // Number of terms (cards) in this studyset
@@ -112,14 +151,14 @@ export interface StudySetCreate {
   title: string;
   description?: string;
   content_type?: ContentType;
-  category?: string;
+  category_id?: string;
 }
 
 export interface StudySetUpdate {
   title?: string;
   description?: string;
   content_type?: ContentType;
-  category?: string;
+  category_id?: string;
 }
 
 export interface StudySetsResponse {

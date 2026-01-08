@@ -25,19 +25,10 @@ import type {
 export const studySetApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     /**
-     * Get Categories - Lấy danh sách categories của user
-     * GET /studysets/categories/
-     */
-    getCategories: builder.query<{ data: string[]; count: number }, void>({
-      query: () => '/studysets/categories/',
-      providesTags: ['Flashcard'],
-    }),
-    
-    /**
      * Get StudySets - Lấy danh sách studysets của user
      * GET /studysets/
      */
-    getStudySets: builder.query<StudySetsResponse, PaginationParams & { category?: string } | void>({
+    getStudySets: builder.query<StudySetsResponse, PaginationParams & { category_id?: string } | void>({
       query: (params = {}) => ({
         url: '/studysets/',
         params,

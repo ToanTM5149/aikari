@@ -193,10 +193,6 @@ class GenerationService:
             
             from app.core.config import settings
             
-            # Chỉ dùng Unified Chat App
-            if not settings.DIFY_CHAT_APP_UNIFIED_ID:
-                raise ValueError("DIFY_CHAT_APP_UNIFIED_ID is not configured")
-            
             total_questions = params.get("total_questions", 10)
             question_types_list = params.get("question_types", ["MULTIPLE_CHOICE"])
             time_limit = params.get("time_limit")
@@ -221,7 +217,6 @@ class GenerationService:
             logger.info("=== REQUEST DATA GỬI ĐẾN DIFY ===")
             logger.info(f"Studyset ID: {studyset_id}")
             logger.info(f"User ID: {user_id}")
-            logger.info(f"App ID: {settings.DIFY_CHAT_APP_UNIFIED_ID}")
             logger.info(f"Query: '{query}'")
             logger.info(f"Response Mode: blocking")
             logger.info("Inputs:")
@@ -464,10 +459,6 @@ class GenerationService:
             
             from app.core.config import settings
             
-            # Chỉ dùng Unified Chat App
-            if not settings.DIFY_CHAT_APP_UNIFIED_ID:
-                raise ValueError("DIFY_CHAT_APP_UNIFIED_ID is not configured")
-            
             style = "academic"
                 
             # Query chỉ gửi 1 chữ cái
@@ -487,7 +478,6 @@ class GenerationService:
             if term_id:
                 logger.info(f"Term ID: {term_id}")
             logger.info(f"User ID: {user_id}")
-            logger.info(f"App ID: {settings.DIFY_CHAT_APP_UNIFIED_ID}")
             logger.info(f"Query: '{query}'")
             logger.info(f"Response Mode: blocking")
             logger.info("Inputs:")

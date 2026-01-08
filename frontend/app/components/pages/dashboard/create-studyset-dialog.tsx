@@ -21,8 +21,9 @@ import {
 } from "~/components/ui/select"
 import { toast } from "sonner"
 import { useCreateStudySetMutation } from "~/redux/features/studyset"
+import { useGetCategoriesQuery, useCreateCategoryMutation } from "~/redux/features/category/api"
 import type { StudySetCreate, ContentType } from "~/redux/features/studyset/types"
-import { Loader2 } from "lucide-react"
+import { Loader2, Plus } from "lucide-react"
 
 interface CreateStudySetDialogProps {
   open: boolean
@@ -31,7 +32,12 @@ interface CreateStudySetDialogProps {
 
 export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialogProps) {
   const [createStudySet, { isLoading }] = useCreateStudySetMutation()
-  
+  const { data: categoriesData } = useGetCategoriesQuery()
+  const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation()
+
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState("")
+
   const {
     register,
     handleSubmit,
@@ -44,11 +50,12 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
       title: "",
       description: "",
       content_type: "DEFAULT",
-      category: "",
+      category_id: undefined,
     },
   })
 
   const contentType = watch("content_type")
+  const categoryId = watch("category_id")
 
   const onSubmit = async (data: StudySetCreate) => {
     try {
@@ -64,7 +71,27 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
 
   const handleClose = () => {
     reset()
+    setShowNewCategoryInput(false)
+    setNewCategoryName("")
     onOpenChange(false)
+  }
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error("Category name is required")
+      return
+    }
+
+    try {
+      const newCategory = await createCategory({ name: newCategoryName.trim() }).unwrap()
+      toast.success("Category created successfully!")
+      setValue("category_id", newCategory.category_id)
+      setShowNewCategoryInput(false)
+      setNewCategoryName("")
+    } catch (error: any) {
+      const errorMessage = error?.data?.detail || "Failed to create category"
+      toast.error(errorMessage)
+    }
   }
 
   return (
@@ -147,20 +174,90 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
 
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="category">Category (Optional)</Label>
-            <Input
-              id="category"
-              placeholder="e.g., Mathematics, History, Science..."
-              {...register("category", {
-                maxLength: {
-                  value: 100,
-                  message: "Category must be less than 100 characters",
-                },
-              })}
-              disabled={isLoading}
-            />
-            {errors.category && (
-              <p className="text-sm text-destructive">{errors.category.message}</p>
+            <Label htmlFor="category_id">Category (Optional)</Label>
+
+            {!showNewCategoryInput ? (
+              <div className="flex gap-2">
+                <Select
+                  value={categoryId || "__no_category__"}
+                  onValueChange={(value) => {
+                    if (value === "__create_new__") {
+                      setShowNewCategoryInput(true)
+                    } else if (value === "__no_category__") {
+                      setValue("category_id", undefined)
+                    } else {
+                      setValue("category_id", value)
+                    }
+                  }}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id="category_id" className="flex-1">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__no_category__">No category</SelectItem>
+                    {categoriesData?.data.map((category) => (
+                      <SelectItem key={category.category_id} value={category.category_id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__create_new__" className="text-primary">
+                      <div className="flex items-center">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create new category
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter category name..."
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        handleCreateCategory()
+                      } else if (e.key === "Escape") {
+                        setShowNewCategoryInput(false)
+                        setNewCategoryName("")
+                      }
+                    }}
+                    disabled={isCreatingCategory}
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCreateCategory}
+                    disabled={isCreatingCategory || !newCategoryName.trim()}
+                  >
+                    {isCreatingCategory ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Create"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowNewCategoryInput(false)
+                      setNewCategoryName("")
+                    }}
+                    disabled={isCreatingCategory}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Press Enter to create, Escape to cancel
+                </p>
+              </div>
             )}
           </div>
 

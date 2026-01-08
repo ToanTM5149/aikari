@@ -11,7 +11,7 @@ import {
   useSidebar,
 } from "~/components/ui/sidebar";
 import { Logo } from "~/components/ui/logo";
-import { Home, GraduationCap, History, LogOut, Plus, Layers, ChevronLeft, ChevronRight, Users, Key, Shield } from "lucide-react";
+import { Home, GraduationCap, History, LogOut, Plus, Layers, ChevronLeft, ChevronRight, Users, Key, Shield, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -30,6 +30,12 @@ const menuItems = [
     title: "Study Sets",
     icon: Layers,
     id: "studysets",
+    roles: ['STUDENT', 'TEACHER'] as UserRole[],
+  },
+  {
+    title: "Categories",
+    icon: Tag,
+    id: "categories",
     roles: ['STUDENT', 'TEACHER'] as UserRole[],
   },
   {

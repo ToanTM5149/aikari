@@ -18,6 +18,7 @@ from app.models.enums import (
 
 # Models
 from app.models.activity import StudyActivity
+from app.models.category import Category
 from app.models.class_ import Class, ClassMember, ClassStudySet
 from app.models.progress import ProgressSummary
 from app.models.content import AIGeneratedContents, Attribute
@@ -44,6 +45,7 @@ __all__ = [
     "ConversationState",
     # Models
     "User",
+    "Category",
     "Class",
     "ClassMember",
     "ClassStudySet",

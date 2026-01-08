@@ -121,15 +121,16 @@ export const baseApi = createApi({
    * Khi một mutation thành công, có thể invalidate tags để trigger refetch
    */
   tagTypes: [
-    'User', 
-    'Class', 
-    'Flashcard', 
-    'Study', 
-    'StudySet', 
-    'Learning', 
-    'Progress', 
-    'Test', 
-    'Attempt', 
+    'User',
+    'Class',
+    'Category',
+    'Flashcard',
+    'Study',
+    'StudySet',
+    'Learning',
+    'Progress',
+    'Test',
+    'Attempt',
     'ReattemptRequest',
     // Admin tags
     'AdminDashboard',

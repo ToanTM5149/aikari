@@ -12,22 +12,6 @@ interface ReduxProviderProps {
   children: React.ReactNode;
 }
 
-/**
- * Redux Provider
- * 
- * Usage:
- * ```tsx
- * import { ReduxProvider } from '~/store/Provider';
- * 
- * function App() {
- *   return (
- *     <ReduxProvider>
- *       <YourApp />
- *     </ReduxProvider>
- *   );
- * }
- * ```
- */
 export function ReduxProvider({ children }: ReduxProviderProps) {
   return <Provider store={store}>{children}</Provider>;
 }

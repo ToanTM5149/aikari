@@ -518,7 +518,7 @@ export function StudySetDetail() {
                     <CardTitle className="text-2xl">{studyset.title}</CardTitle>
                     {studyset.category && (
                       <Badge variant="outline" className="text-xs">
-                        {studyset.category}
+                        {studyset.category.name}
                       </Badge>
                     )}
                   </div>

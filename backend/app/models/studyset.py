@@ -8,18 +8,19 @@ from app.models.enums import ContentType
 
 class StudySet(SQLModel, table=True):
     __tablename__ = "StudySet"
-    
+
     studyset_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     title: str = Field(max_length=255)
     description: str | None = Field(default=None, max_length=256)
     owner_id: uuid.UUID = Field(foreign_key="User.user_id")
     content_type: ContentType = Field(default=ContentType.DEFAULT)
-    category: str | None = Field(default=None, max_length=100)
+    category_id: uuid.UUID | None = Field(default=None, foreign_key="Category.category_id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     # Relationships
     owner: "User" = Relationship(back_populates="study_sets")
+    category: "Category" = Relationship(back_populates="study_sets")
     terms: list["Term"] = Relationship(back_populates="study_set")
     tests: list["Test"] = Relationship(back_populates="study_set")
     attributes: list["Attribute"] = Relationship(back_populates="study_set")
