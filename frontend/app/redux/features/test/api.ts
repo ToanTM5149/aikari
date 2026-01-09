@@ -105,6 +105,18 @@ export const testApi = baseApi.injectEndpoints({
         result ? [{ type: "Attempt", id: result.attempt_id }] : [],
     }),
 
+    deleteAttempt: builder.mutation<{ message: string }, string>({
+      query: (attemptId) => ({
+        url: `/tests/attempts/${attemptId}/`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, attemptId) => [
+        { type: "Attempt", id: attemptId },
+        { type: "Attempt", id: "LIST" },
+        { type: "Attempt", id: "HISTORY" },
+      ],
+    }),
+
     getMyAttempts: builder.query<
       AttemptsResponse,
       { testId: string; classId?: string }
@@ -250,6 +262,7 @@ export const {
   useStartTestAttemptMutation,
   useSubmitTestAttemptMutation,
   useGetAttemptResultQuery,
+  useDeleteAttemptMutation,
   useGetMyAttemptsQuery,
   useGetMyTestHistoryQuery,
   useCreateReattemptRequestMutation,

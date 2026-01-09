@@ -49,6 +49,7 @@ class QuestionBase(SQLModel):
     question_text: str
     correct_answer: str
     options: list[str] | None = None
+    explanation: str | None = None
     order: int = 0
 
 
@@ -59,6 +60,7 @@ class QuestionCreate(QuestionBase):
 class QuestionPublic(QuestionBase):
     question_id: uuid.UUID
     test_id: uuid.UUID
+    explanation: str | None = None
 
 
 class QuestionWithoutAnswer(SQLModel):
@@ -70,6 +72,7 @@ class QuestionWithoutAnswer(SQLModel):
     question_text: str
     options: list[str] | None = None
     order: int
+    # Note: No explanation here - only shown after test completion
 
 
 # Answer Schemas

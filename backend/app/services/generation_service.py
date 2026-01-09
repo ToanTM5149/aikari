@@ -381,7 +381,7 @@ class GenerationService:
                 elif question_type == QuestionType.ESSAY:
                     options = None
                 
-                # Create question
+                # Create question with explanation
                 question = TestQuestion(
                     test_id=test.test_id,
                     term_id=term_id,
@@ -389,6 +389,7 @@ class GenerationService:
                     question_text=q_data.get("question_text", ""),
                     correct_answer=q_data.get("correct_answer", ""),
                     options=options,
+                    explanation=q_data.get("explanation"),  # Save explanation from AI
                     order=idx,
                 )
                 session.add(question)

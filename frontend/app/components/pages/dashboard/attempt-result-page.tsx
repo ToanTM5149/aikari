@@ -63,6 +63,19 @@ export function AttemptResultPage() {
     return answer;
   };
 
+  // Strip "A. ", "B. ", "C. ", "D. " prefix from option if exists
+  const stripOptionPrefix = (option: string) => {
+    return option.replace(/^[A-D]\.\.?\s*/, "");
+  };
+
+  // Get the letter (A, B, C, D) for the correct answer
+  const getCorrectAnswerLabel = (correctAnswer: string, options: string[] | undefined) => {
+    if (!options) return "";
+    const index = options.findIndex((opt) => opt === correctAnswer);
+    if (index === -1) return "";
+    return String.fromCharCode(65 + index) + ". ";
+  };
+
   if (loadingResult) {
     return (
       <div className="container mx-auto p-6 space-y-6">
@@ -196,8 +209,26 @@ export function AttemptResultPage() {
                           <div>
                             <span className="text-muted-foreground">Đáp án đúng: </span>
                             <span className="font-medium text-green-600">
-                              {formatAnswer(q.correct_answer, q.question_type)}
+                              {q.question_type === QuestionType.MULTIPLE_CHOICE
+                                ? `${getCorrectAnswerLabel(q.correct_answer, q.options)}${stripOptionPrefix(q.correct_answer)}`
+                                : formatAnswer(q.correct_answer, q.question_type)}
                             </span>
+                          </div>
+                        )}
+                        
+                        {/* Explanation - Show for all questions after completion */}
+                        {q.explanation ? (
+                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">
+                              💡 Giải thích:
+                            </p>
+                            <p className="text-sm text-blue-900 dark:text-blue-300">
+                              {q.explanation}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="mt-2 text-xs text-muted-foreground italic">
+                            (Câu hỏi này chưa có giải thích)
                           </div>
                         )}
                         
@@ -216,7 +247,7 @@ export function AttemptResultPage() {
                                       : "bg-muted"
                                   }`}
                                 >
-                                  {String.fromCharCode(65 + optIdx)}. {option}
+                                  {String.fromCharCode(65 + optIdx)}. {stripOptionPrefix(option)}
                                 </div>
                               ))}
                             </div>

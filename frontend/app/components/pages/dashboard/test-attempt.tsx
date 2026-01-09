@@ -134,11 +134,7 @@ export function TestAttempt() {
 
       setIsSubmitted(true);
       toast.warning("Hết thời gian! Bài test đã được tự động nộp.");
-      
-      // Navigate back to test list after a short delay
-      setTimeout(() => {
-        navigate(`/dashboard/studysets/${studysetId}/test`);
-      }, 1500);
+      // Keep the result modal open - removed automatic navigation
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
       toast.error(errorMsg || "Không thể tự động nộp bài");
@@ -224,11 +220,7 @@ export function TestAttempt() {
 
       setIsSubmitted(true);
       toast.success("Đã nộp bài thành công!");
-      
-      // Navigate back to test list after a short delay to show success
-      setTimeout(() => {
-        navigate(`/dashboard/studysets/${studysetId}/test`);
-      }, 1500);
+      // Keep the result modal open - removed automatic navigation
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
       toast.error(errorMsg || "Không thể nộp bài");

@@ -38,6 +38,7 @@ export interface Question {
   question_text: string;
   correct_answer: string;
   options?: string[];
+  explanation?: string;  // Explanation for the correct answer
   order: number;
 }
 

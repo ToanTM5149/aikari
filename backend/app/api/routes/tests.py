@@ -772,6 +772,40 @@ def get_attempt_result(
     )
 
 
+@router.delete("/attempts/{attempt_id}/", response_model=Message)
+def delete_attempt(
+    attempt_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    """
+    Delete a test attempt. Only the user who made the attempt can delete it.
+    """
+    attempt = session.get(TestAttempt, attempt_id)
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+    
+    # Only the user who made the attempt can delete it
+    if attempt.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the attempt owner can delete it"
+        )
+    
+    # Delete associated reattempt request if any
+    reattempt_req = session.exec(
+        select(ReattemptRequest).where(ReattemptRequest.attempt_id == attempt_id)
+    ).first()
+    if reattempt_req:
+        session.delete(reattempt_req)
+    
+    # Delete the attempt (answers will be cascade deleted)
+    session.delete(attempt)
+    session.commit()
+    
+    return Message(message="Attempt deleted successfully")
+
+
 @router.get("/tests/{test_id}/my-attempts/", response_model=AttemptsPublic)
 def get_my_attempts(
     test_id: uuid.UUID,

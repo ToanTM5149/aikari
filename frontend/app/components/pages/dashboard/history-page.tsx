@@ -15,6 +15,16 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
+import {
   FileText,
   Clock,
   CheckCircle2,
@@ -25,10 +35,12 @@ import {
   Users,
   User,
   Bot,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useGetMyTestHistoryQuery,
+  useDeleteAttemptMutation,
   type TestAttempt,
 } from "~/redux/features/test";
 import { useGetClassesQuery } from "~/redux/features/class";
@@ -38,6 +50,10 @@ import { selectCurrentUser } from "~/redux/features/auth/slice";
 export function HistoryPage() {
   const navigate = useNavigate();
   const user = useAppSelector(selectCurrentUser);
+  
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [attemptToDelete, setAttemptToDelete] = useState<string | null>(null);
   
   // Filters state
   const [selectedClassId, setSelectedClassId] = useState<string | undefined>(undefined);
@@ -56,6 +72,9 @@ export function HistoryPage() {
   // Fetch all user's classes for filter dropdown
   const { data: classesData } = useGetClassesQuery({ limit: 1000 });
   const allClasses = classesData?.data || [];
+  
+  // Delete mutation
+  const [deleteAttempt, { isLoading: isDeleting }] = useDeleteAttemptMutation();
 
   // Prepare query params
   const queryParams = {
@@ -80,6 +99,24 @@ export function HistoryPage() {
 
   const handleViewResult = (attemptId: string) => {
     navigate(`/dashboard/attempts/${attemptId}/result`);
+  };
+
+  const handleDeleteClick = (attemptId: string) => {
+    setAttemptToDelete(attemptId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!attemptToDelete) return;
+
+    try {
+      await deleteAttempt(attemptToDelete).unwrap();
+      toast.success("Đã xóa lịch sử làm bài thành công");
+      setDeleteDialogOpen(false);
+      setAttemptToDelete(null);
+    } catch (error: any) {
+      toast.error(error?.data?.detail || "Không thể xóa lịch sử làm bài");
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -281,6 +318,15 @@ export function HistoryPage() {
                         <Eye className="w-4 h-4 mr-2" />
                         Xem kết quả
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteClick(attempt.attempt_id)}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Xóa
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -290,6 +336,28 @@ export function HistoryPage() {
         </div>
       )}
 
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa lịch sử làm bài này không? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAttemptToDelete(null)}>
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

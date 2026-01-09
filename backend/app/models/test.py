@@ -45,6 +45,7 @@ class TestQuestion(SQLModel, table=True):
     question_text: str = Field(max_length=500)
     correct_answer: str = Field(max_length=500)
     options: list[str] | None = Field(default=None, sa_column=Column(JSON))  # For multiple choice
+    explanation: str | None = Field(default=None, max_length=1000)  # Explanation for the correct answer
     order: int = Field(default=0)
     
     # Relationships
