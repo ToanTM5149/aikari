@@ -13,6 +13,9 @@ import type {
   SessionSummary,
   ProgressSummaryPublic,
   StudyStats,
+  DueCardsResponse,
+  QuickReviewSessionRequest,
+  QuickReviewSessionResponse,
 } from './types';
 
 export const learningApi = baseApi.injectEndpoints({
@@ -86,6 +89,28 @@ export const learningApi = baseApi.injectEndpoints({
         { type: 'Progress', id: studysetId },
       ],
     }),
+
+    // Get all due cards
+    getAllDueCards: builder.query<DueCardsResponse, { includeFuture?: boolean }>({
+      query: ({ includeFuture = false }) => ({
+        url: '/learning/due-cards/',
+        params: { include_future: includeFuture },
+      }),
+      providesTags: ['Learning', 'Progress'],
+    }),
+
+    // Start quick review session
+    startQuickReview: builder.mutation<
+      QuickReviewSessionResponse,
+      QuickReviewSessionRequest
+    >({
+      query: (data) => ({
+        url: '/learning/quick-review/start/',
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: ['Learning'],
+    }),
   }),
 });
 
@@ -97,4 +122,7 @@ export const {
   useEndLearningSessionMutation,
   useGetStudysetProgressQuery,
   useGetStudysetStatsQuery,
+  useGetAllDueCardsQuery,
+  useLazyGetAllDueCardsQuery,
+  useStartQuickReviewMutation,
 } = learningApi;

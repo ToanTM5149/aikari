@@ -846,8 +846,59 @@ def get_class_studysets(
         .options(selectinload(ClassStudySet.studyset))
     )
     class_studysets = session.exec(statement).all()
-    studysets = [cs.studyset for cs in class_studysets]
-    return {"data": studysets, "count": len(studysets)}
+    
+    # Enrich each studyset with term_count, last_activity_at, and progress (same as studysets endpoint)
+    from app.models import Term, StudyActivity, ProgressSummary
+    from app.schemas import StudySetPublic
+    
+    enriched_sets = []
+    for cs in class_studysets:
+        studyset = cs.studyset
+        
+        # Count terms
+        term_count_statement = select(func.count(Term.term_id)).where(
+            Term.studyset_id == studyset.studyset_id
+        )
+        term_count = session.exec(term_count_statement).one() or 0
+        
+        # Get last activity time
+        last_activity_statement = (
+            select(StudyActivity.created_at)
+            .where(StudyActivity.studyset_id == studyset.studyset_id)
+            .where(StudyActivity.user_id == current_user.user_id)
+            .order_by(StudyActivity.created_at.desc())
+            .limit(1)
+        )
+        last_activity = session.exec(last_activity_statement).first()
+        
+        # Get progress (completion_rate)
+        progress_statement = (
+            select(ProgressSummary)
+            .where(ProgressSummary.studyset_id == studyset.studyset_id)
+            .where(ProgressSummary.user_id == current_user.user_id)
+        )
+        progress_summary = session.exec(progress_statement).first()
+        progress = progress_summary.completion_rate if progress_summary else 0.0
+        
+        # Create enriched studyset
+        enriched_set = StudySetPublic(
+            studyset_id=studyset.studyset_id,
+            title=studyset.title,
+            description=studyset.description,
+            content_type=studyset.content_type,
+            category_id=studyset.category_id,
+            category=studyset.category,
+            owner_id=studyset.owner_id,
+            created_at=studyset.created_at,
+            updated_at=studyset.updated_at,
+            attributes=studyset.attributes,
+            term_count=term_count,
+            last_activity_at=last_activity,
+            progress=progress
+        )
+        enriched_sets.append(enriched_set)
+    
+    return {"data": enriched_sets, "count": len(enriched_sets)}
 
 
 @router.post("/{class_id}/studysets/{studyset_id}/")

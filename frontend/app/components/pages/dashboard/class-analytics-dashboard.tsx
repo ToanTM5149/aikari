@@ -131,7 +131,7 @@ function OverviewTab({ classId }: { classId: string }) {
   return (
     <div className="space-y-6">
       {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Total Members"
           value={overview.total_members}
@@ -145,16 +145,10 @@ function OverviewTab({ classId }: { classId: string }) {
           description={`${overview.total_terms} total terms`}
         />
         <StatCard
-          title="Avg Completion"
+          title="Avg Reviewed"
           value={formatPercentage(overview.average_completion_rate)}
           icon={<Target className="h-4 w-4" />}
-          description="Class average mastery"
-        />
-        <StatCard
-          title="Avg Accuracy"
-          value={formatPercentage(overview.average_accuracy)}
-          icon={<TrendingUp className="h-4 w-4" />}
-          description="Across all students"
+          description="Class card reviewed average"
         />
       </div>
 
@@ -207,7 +201,7 @@ function OverviewTab({ classId }: { classId: string }) {
                     </p>
                   </div>
                   <Badge variant="default">
-                    {formatPercentage(overview.most_active_student.average_accuracy)}
+                    {formatStudyTime(overview.most_active_student.total_study_time)}
                   </Badge>
                 </div>
               </div>
@@ -224,7 +218,7 @@ function OverviewTab({ classId }: { classId: string }) {
                     </p>
                   </div>
                   <Badge variant="outline">
-                    {formatPercentage(overview.least_active_student.average_accuracy)}
+                    {formatStudyTime(overview.least_active_student.total_study_time)}
                   </Badge>
                 </div>
               </div>
@@ -241,7 +235,7 @@ function OverviewTab({ classId }: { classId: string }) {
  */
 function StudentsTab({ classId }: { classId: string }) {
   const { data: progressData, isLoading, error } = useGetClassStudentProgressQuery(classId);
-  const [sortBy, setSortBy] = useState<'mastery' | 'accuracy' | 'time'>('mastery');
+  const [sortBy, setSortBy] = useState<'mastery' | 'time'>('mastery');
 
   if (isLoading) {
     return <div className="text-center py-8">Loading student progress...</div>;
@@ -259,8 +253,6 @@ function StudentsTab({ classId }: { classId: string }) {
   // Sort students based on selected criteria
   const sortedStudents = [...progressData.data].sort((a, b) => {
     switch (sortBy) {
-      case 'accuracy':
-        return b.average_accuracy - a.average_accuracy;
       case 'time':
         return b.total_study_time - a.total_study_time;
       case 'mastery':
@@ -285,7 +277,6 @@ function StudentsTab({ classId }: { classId: string }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="mastery">By Mastery</SelectItem>
-            <SelectItem value="accuracy">By Accuracy</SelectItem>
             <SelectItem value="time">By Study Time</SelectItem>
           </SelectContent>
         </Select>
@@ -311,17 +302,11 @@ function StudentsTab({ classId }: { classId: string }) {
                 </div>
 
                 {/* Stats */}
-                <div className="md:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="md:col-span-4 grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Mastery</p>
                     <p className="text-lg font-bold">
                       {formatPercentage(student.mastery_percentage)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Accuracy</p>
-                    <p className="text-lg font-bold">
-                      {formatPercentage(student.average_accuracy)}
                     </p>
                   </div>
                   <div>
@@ -367,7 +352,7 @@ function StudentsTab({ classId }: { classId: string }) {
  * Leaderboard Tab
  */
 function LeaderboardTab({ classId }: { classId: string }) {
-  const [sortBy, setSortBy] = useState<'mastery' | 'accuracy' | 'streak' | 'time'>('mastery');
+  const [sortBy, setSortBy] = useState<'mastery' | 'cards' | 'streak' | 'time'>('mastery');
   const { data: leaderboard, isLoading, error } = useGetClassLeaderboardQuery({
     classId,
     sortBy,
@@ -402,7 +387,7 @@ function LeaderboardTab({ classId }: { classId: string }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="mastery">By Terms Mastered</SelectItem>
-            <SelectItem value="accuracy">By Accuracy</SelectItem>
+            <SelectItem value="cards">By Cards Reviewed</SelectItem>
             <SelectItem value="streak">By Streak</SelectItem>
             <SelectItem value="time">By Study Time</SelectItem>
           </SelectContent>
@@ -447,8 +432,8 @@ function LeaderboardTab({ classId }: { classId: string }) {
                     <p className="font-bold">{entry.total_terms_mastered}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Accuracy</p>
-                    <p className="font-bold">{formatPercentage(entry.accuracy)}</p>
+                    <p className="text-xs text-muted-foreground">Total Review</p>
+                    <p className="font-bold">{entry.total_cards_reviewed}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Streak</p>
@@ -522,25 +507,6 @@ function ChartsTab({ classId }: { classId: string }) {
         },
       ].filter(item => item.value > 0) : [];
 
-  // Performance distribution
-  const performanceData = progressData?.data ? [
-    { 
-      name: 'Excellent (>80%)', 
-      value: progressData.data.filter(s => s.average_accuracy > 80).length,
-      color: '#10b981' 
-    },
-    { 
-      name: 'Good (60-80%)', 
-      value: progressData.data.filter(s => s.average_accuracy > 60 && s.average_accuracy <= 80).length,
-      color: '#3b82f6' 
-    },
-    { 
-      name: 'Needs Help (<60%)', 
-      value: progressData.data.filter(s => s.average_accuracy <= 60).length,
-      color: '#f59e0b' 
-    },
-  ].filter(item => item.value > 0) : [];
-
   // Test performance data from time-series
   const testPerformanceData = timeSeriesData?.test_performance.map(item => ({
     test: item.test_name.length > 15 ? item.test_name.substring(0, 15) + '...' : item.test_name,
@@ -552,7 +518,7 @@ function ChartsTab({ classId }: { classId: string }) {
   const topStudentsData = leaderboard?.entries?.slice(0, 8).map(student => ({
     name: student.username.length > 10 ? student.username.substring(0, 10) + '...' : student.username,
     mastery: student.total_terms_mastered, // Using terms mastered as proxy for mastery
-    accuracy: student.accuracy,
+    reviewed: student.total_cards_reviewed,
   })) || [];
 
   // Progress over time from time-series data
@@ -775,7 +741,7 @@ function ChartsTab({ classId }: { classId: string }) {
               <Trophy className="h-5 w-5" />
               Top Students Performance
             </CardTitle>
-            <CardDescription>Terms mastered vs Accuracy comparison</CardDescription>
+            <CardDescription>Terms mastered vs Cards reviewed comparison</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
@@ -802,12 +768,12 @@ function ChartsTab({ classId }: { classId: string }) {
                 />
                 <Line
                   type="monotone"
-                  dataKey="accuracy"
+                  dataKey="reviewed"
                   stroke="#8b5cf6"
                   strokeWidth={2}
                   strokeDasharray="5 5"
                   dot={{ fill: '#8b5cf6', r: 4 }}
-                  name="Accuracy %"
+                  name="Cards Reviewed"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -816,7 +782,7 @@ function ChartsTab({ classId }: { classId: string }) {
       )}
 
       {/* Distribution Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {activityDistribution.length > 0 && (
           <Card>
             <CardHeader>
@@ -844,40 +810,6 @@ function ChartsTab({ classId }: { classId: string }) {
                     ))}
                   </Pie>
                   <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
-        {performanceData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Performance
-              </CardTitle>
-              <CardDescription>Accuracy distribution</CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={performanceData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {performanceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -923,7 +855,7 @@ function ChartsTab({ classId }: { classId: string }) {
               <BookOpen className="h-5 w-5" />
               Overall Progress
             </CardTitle>
-            <CardDescription>Class completion rate</CardDescription>
+            <CardDescription>Class reviewed rate</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-center">
             <ResponsiveContainer width="100%" height={250}>

@@ -242,9 +242,10 @@ class AdminService:
         ).one() or 0
         
         # Average accuracy
+        # recall_score >= 3 means correct answer in SM2 algorithm
         total_correct = session.exec(
             select(func.count(StudyActivity.activity_id))
-            .where(StudyActivity.is_correct == True)
+            .where(StudyActivity.recall_score >= 3)
         ).one() or 0
         
         accuracy_pct = (total_correct / total_activities * 100) if total_activities > 0 else 0

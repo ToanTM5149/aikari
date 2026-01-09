@@ -37,6 +37,7 @@ class NextTermResponse(BaseModel):
     is_new: bool  # True if never studied before
     previous_recall_score: int | None = None
     next_review_date: datetime | None = None
+    studyset_id: uuid.UUID | None = None  # Optional, used in quick review
 
 
 class ReviewSubmission(BaseModel):
@@ -148,3 +149,44 @@ class StudyStats(BaseModel):
     average_recall_score: float
     total_study_time: float
     weak_terms: list[WeakTerm]
+
+
+# Due Cards and Notifications
+
+class DueCardInfo(BaseModel):
+    """Information about a due card"""
+    term_id: uuid.UUID
+    studyset_id: uuid.UUID
+    studyset_name: str
+    term_text: str
+    definition: str
+    example: str | None = None
+    image_url: str | None = None
+    next_review_date: datetime
+    ef: float
+    interval: int
+    last_reviewed: datetime
+
+
+class DueCardsResponse(BaseModel):
+    """Response containing all due cards for a user"""
+    total_due: int
+    due_today: int
+    due_this_week: int
+    cards: list[DueCardInfo]
+    studysets_affected: list[uuid.UUID]
+
+
+class QuickReviewSessionRequest(BaseModel):
+    """Request to start a quick review session with due cards"""
+    studyset_ids: list[uuid.UUID] | None = None  # If None, include all due cards
+    max_cards: int = Field(default=20, ge=1, le=100)
+
+
+class QuickReviewSessionResponse(BaseModel):
+    """Response when starting a quick review session"""
+    session_id: str
+    total_cards: int
+    cards: list[NextTermResponse]
+    studysets_included: list[uuid.UUID]
+    started_at: datetime

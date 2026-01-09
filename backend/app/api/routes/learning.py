@@ -23,6 +23,9 @@ from app.schemas import (
     UserProgressOverview,
     StudyStats,
     WeakTerm,
+    DueCardsResponse,
+    QuickReviewSessionRequest,
+    QuickReviewSessionResponse,
 )
 from app.services.learning_service import LearningService
 
@@ -390,3 +393,70 @@ def get_studyset_stats(
         total_study_time=0.0,  # TODO: Track study time
         weak_terms=weak_terms_list
     )
+
+
+# DUE CARDS AND QUICK REVIEW ENDPOINTS
+
+@router.get("/due-cards/", response_model=DueCardsResponse)
+def get_all_due_cards(
+    current_user: CurrentUser,
+    session: SessionDep,
+    include_future: bool = False,
+) -> Any:
+    """
+    Get all due cards across all studysets for current user
+    
+    Query params:
+    - include_future: If True, include cards due in next 7 days (default: False)
+    """
+    due_data = LearningService.get_all_due_cards(
+        session=session,
+        user_id=current_user.user_id,
+        include_future=include_future
+    )
+    
+    return DueCardsResponse(**due_data)
+
+
+@router.post("/quick-review/start/", response_model=QuickReviewSessionResponse)
+def start_quick_review_session(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    request_data: QuickReviewSessionRequest,
+) -> Any:
+    """
+    Start a quick review session with due cards
+    
+    This allows users to review all cards that are due for review
+    across multiple studysets in one session.
+    
+    Body:
+    - studyset_ids: Optional list of studyset IDs to filter (None = all)
+    - max_cards: Maximum cards in session (default: 20, max: 100)
+    """
+    # Verify studysets exist and user has access if studyset_ids provided
+    if request_data.studyset_ids:
+        for studyset_id in request_data.studyset_ids:
+            studyset = session.get(StudySet, studyset_id)
+            if not studyset:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Study set {studyset_id} not found"
+                )
+            
+            if not check_studyset_access(session, studyset_id, current_user.user_id):
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Not enough permissions for study set {studyset_id}"
+                )
+    
+    # Create quick review session
+    session_data = LearningService.create_quick_review_session(
+        session=session,
+        user_id=current_user.user_id,
+        studyset_ids=request_data.studyset_ids,
+        max_cards=request_data.max_cards
+    )
+    
+    return QuickReviewSessionResponse(**session_data)

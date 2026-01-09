@@ -139,7 +139,7 @@ class LeaderboardEntry(SQLModel):
     username: str
     email: str
     total_terms_mastered: int
-    accuracy: float  # 0-100
+    total_cards_reviewed: int  # Total number of cards reviewed
     study_streak_days: int
     total_study_time: int  # in seconds
     last_study_date: datetime | None = None

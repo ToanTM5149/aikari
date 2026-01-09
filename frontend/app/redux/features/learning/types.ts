@@ -26,6 +26,7 @@ export interface NextTermResponse {
   is_new: boolean;
   previous_recall_score?: number;
   next_review_date?: string;
+  studyset_id?: string; // Used in quick review
 }
 
 export interface ReviewSubmission {
@@ -94,6 +95,42 @@ export interface StudyStats {
   average_recall_score: number;
   total_study_time: number;
   weak_terms: WeakTerm[];
+}
+
+// Due Cards and Quick Review
+export interface DueCardInfo {
+  term_id: string;
+  studyset_id: string;
+  studyset_name: string;
+  term_text: string;
+  definition: string;
+  example?: string;
+  image_url?: string;
+  next_review_date: string;
+  ef: number;
+  interval: number;
+  last_reviewed: string;
+}
+
+export interface DueCardsResponse {
+  total_due: number;
+  due_today: number;
+  due_this_week: number;
+  cards: DueCardInfo[];
+  studysets_affected: string[];
+}
+
+export interface QuickReviewSessionRequest {
+  studyset_ids?: string[] | null;
+  max_cards?: number; // Default 20
+}
+
+export interface QuickReviewSessionResponse {
+  session_id: string;
+  total_cards: number;
+  cards: NextTermResponse[];
+  studysets_included: string[];
+  started_at: string;
 }
 
 // Learning Session State

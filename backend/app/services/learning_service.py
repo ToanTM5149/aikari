@@ -462,4 +462,173 @@ class LearningService:
                 "good": good_count,
                 "easy": easy_count
             }
+        }    
+    @staticmethod
+    def get_all_due_cards(
+        session: Session,
+        user_id: uuid.UUID,
+        include_future: bool = False
+    ) -> dict[str, Any]:
+        """
+        Get all due cards across all studysets for a user
+        
+        Args:
+            user_id: User ID
+            include_future: If True, include cards due in the next 7 days
+        
+        Returns:
+            Dictionary with due cards information
+        """
+        now = datetime.utcnow()
+        today_end = now.replace(hour=23, minute=59, second=59)
+        week_end = now + timedelta(days=7)
+        
+        # Get all study activities for this user
+        activities_statement = (
+            select(StudyActivity)
+            .where(
+                StudyActivity.user_id == user_id,
+                StudyActivity.next_review_date.isnot(None)
+            )
+        )
+        all_activities = session.exec(activities_statement).all()
+        
+        # Filter to latest activity per term
+        term_latest_activity: dict[uuid.UUID, StudyActivity] = {}
+        for activity in all_activities:
+            if activity.term_id not in term_latest_activity:
+                term_latest_activity[activity.term_id] = activity
+            else:
+                if activity.created_at > term_latest_activity[activity.term_id].created_at:
+                    term_latest_activity[activity.term_id] = activity
+        
+        # Filter due cards
+        due_cards = []
+        due_today = 0
+        due_this_week = 0
+        studysets_affected = set()
+        
+        for activity in term_latest_activity.values():
+            if not activity.next_review_date:
+                continue
+                
+            is_due_now = activity.next_review_date <= now
+            is_due_today = activity.next_review_date <= today_end
+            is_due_week = activity.next_review_date <= week_end
+            
+            if is_due_now or (include_future and is_due_week):
+                # Get term details
+                term = session.get(Term, activity.term_id)
+                if not term:
+                    continue
+                
+                # Get studyset details
+                studyset = session.get(StudySet, activity.studyset_id)
+                if not studyset:
+                    continue
+                
+                studysets_affected.add(activity.studyset_id)
+                
+                if is_due_now:
+                    due_cards.append({
+                        "term_id": activity.term_id,
+                        "studyset_id": activity.studyset_id,
+                        "studyset_name": studyset.title,
+                        "term_text": term.term_text,
+                        "definition": term.definition,
+                        "example": term.example,
+                        "image_url": term.image_url,
+                        "next_review_date": activity.next_review_date,
+                        "ef": activity.ef,
+                        "interval": activity.interval,
+                        "last_reviewed": activity.created_at
+                    })
+                
+                if is_due_today:
+                    due_today += 1
+                if is_due_week:
+                    due_this_week += 1
+        
+        # Sort by next_review_date (oldest first)
+        due_cards.sort(key=lambda x: x["next_review_date"])
+        
+        return {
+            "total_due": len(due_cards),
+            "due_today": due_today,
+            "due_this_week": due_this_week,
+            "cards": due_cards,
+            "studysets_affected": list(studysets_affected)
+        }
+    
+    @staticmethod
+    def create_quick_review_session(
+        session: Session,
+        user_id: uuid.UUID,
+        studyset_ids: list[uuid.UUID] | None = None,
+        max_cards: int = 20
+    ) -> dict[str, Any]:
+        """
+        Create a quick review session with due cards
+        
+        Args:
+            user_id: User ID
+            studyset_ids: Optional list of studyset IDs to filter. If None, include all.
+            max_cards: Maximum number of cards in session
+        
+        Returns:
+            Session information with cards
+        """
+        # Get all due cards
+        due_data = LearningService.get_all_due_cards(
+            session=session,
+            user_id=user_id,
+            include_future=False
+        )
+        
+        cards = due_data["cards"]
+        
+        # Filter by studyset_ids if provided
+        if studyset_ids:
+            cards = [c for c in cards if c["studyset_id"] in studyset_ids]
+        
+        # Limit to max_cards
+        cards = cards[:max_cards]
+        
+        # Convert to NextTermResponse format
+        cards_response = []
+        studysets_included = set()
+        
+        for card in cards:
+            studysets_included.add(card["studyset_id"])
+            
+            # Get previous activity to determine if term is new
+            prev_activity_statement = (
+                select(StudyActivity)
+                .where(
+                    StudyActivity.user_id == user_id,
+                    StudyActivity.term_id == card["term_id"]
+                )
+                .order_by(StudyActivity.created_at.desc())
+            )
+            prev_activity = session.exec(prev_activity_statement).first()
+            
+            cards_response.append({
+                "term_id": card["term_id"],
+                "term_text": card["term_text"],
+                "definition": card["definition"],
+                "example": card["example"],
+                "image_url": card["image_url"],
+                "category": None,
+                "is_new": False,  # Due cards are never new
+                "previous_recall_score": prev_activity.recall_score if prev_activity else None,
+                "next_review_date": card["next_review_date"],
+                "studyset_id": str(card["studyset_id"]),  # Include studyset_id for review submission
+            })
+        
+        return {
+            "session_id": str(uuid.uuid4()),
+            "total_cards": len(cards_response),
+            "cards": cards_response,
+            "studysets_included": list(studysets_included),
+            "started_at": datetime.utcnow()
         }

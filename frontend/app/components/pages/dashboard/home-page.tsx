@@ -11,13 +11,17 @@ import {
   Users, 
   TrendingUp,
   Play,
-  Eye
+  Eye,
+  Bell,
+  Zap,
 } from "lucide-react"
 import { useGetStudySetsQuery } from "~/redux/features/studyset/api"
 import { useGetClassesQuery } from "~/redux/features/class/api"
+import { useGetAllDueCardsQuery } from "~/redux/features/learning"
 import { useMemo } from "react"
 import { useNavigate } from "react-router"
 import { StudySetCard } from "~/components/shared/studyset-card"
+import { DueCardsBadge } from "~/components/shared/due-cards-badge"
 import { useAppSelector } from "~/redux/store"
 import { selectCurrentUser } from "~/redux/features/auth/slice"
 
@@ -32,6 +36,7 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
   // Fetch all studysets and classes
   const { data: studysetsData, isLoading: studysetsLoading } = useGetStudySetsQuery()
   const { data: classesData, isLoading: classesLoading } = useGetClassesQuery()
+  const { data: dueCards } = useGetAllDueCardsQuery({ includeFuture: false })
 
   // Process data
   const recentStudySets = useMemo(() => {
@@ -102,6 +107,42 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
 
   return (
     <div className="space-y-8 p-6">
+      {/* Welcome & Due Cards Alert */}
+      <div>
+        {/* Due Cards Alert */}
+        {dueCards && dueCards.total_due > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <Card className="border-primary bg-primary/5">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {dueCards.total_due} Card{dueCards.total_due !== 1 ? 's' : ''} Ready for Review!
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Keep your streak going • {dueCards.studysets_affected.length} study set{dueCards.studysets_affected.length !== 1 ? 's' : ''} affected
+                      </p>
+                    </div>
+                  </div>
+                  <Button onClick={() => navigate("/dashboard/quick-review")} size="lg">
+                    <Zap className="w-4 h-4 mr-2" />
+                    Start Review
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </div>
+
       {/* Recent Study Sets */}
       <section>
         <div className="flex items-center justify-between mb-6">

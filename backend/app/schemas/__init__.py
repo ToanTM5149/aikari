@@ -121,6 +121,10 @@ from app.schemas.learning import (
     ProgressHistory,
     WeakTerm,
     StudyStats,
+    DueCardsResponse,
+    DueCardInfo,
+    QuickReviewSessionRequest,
+    QuickReviewSessionResponse,
 )
 
 # Chatbot Schemas
@@ -217,6 +221,10 @@ __all__ = [
     "ProgressHistory",
     "WeakTerm",
     "StudyStats",
+    "DueCardsResponse",
+    "DueCardInfo",
+    "QuickReviewSessionRequest",
+    "QuickReviewSessionResponse",
     # Chatbot Schemas
     "ChatRequest",
     "ChatResponse",

@@ -277,7 +277,7 @@ export interface LeaderboardEntry {
   username: string;
   email: string;
   total_terms_mastered: number;
-  accuracy: number;  // 0-100
+  total_cards_reviewed: number;
   study_streak_days: number;
   total_study_time: number;  // in seconds
   last_study_date: string | null;

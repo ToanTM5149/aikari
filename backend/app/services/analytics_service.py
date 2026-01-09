@@ -89,9 +89,10 @@ class AnalyticsService:
         )
         
         # Calculate average accuracy from activities
+        # recall_score >= 3 means correct answer in SM2 algorithm
         if activities:
-            total_correct = sum(1 for a in activities if a.is_correct)
-            total_incorrect = sum(1 for a in activities if not a.is_correct)
+            total_correct = sum(1 for a in activities if a.recall_score >= 3)
+            total_incorrect = sum(1 for a in activities if a.recall_score < 3)
             total_reviews = total_correct + total_incorrect
             average_accuracy = (total_correct / total_reviews * 100) if total_reviews > 0 else 0.0
         else:
@@ -224,8 +225,9 @@ class AnalyticsService:
             average_completion_rate = sum(p.completion_rate for p in all_progress) / len(all_progress)
             
             # Calculate accuracy from activities
-            total_correct = sum(1 for a in all_activities if a.is_correct)
-            total_incorrect = sum(1 for a in all_activities if not a.is_correct)
+            # recall_score >= 3 means correct answer in SM2 algorithm
+            total_correct = sum(1 for a in all_activities if a.recall_score >= 3)
+            total_incorrect = sum(1 for a in all_activities if a.recall_score < 3)
             total_reviews = total_correct + total_incorrect
             average_accuracy = (total_correct / total_reviews * 100) if total_reviews > 0 else 0.0
         else:
@@ -377,7 +379,8 @@ class AnalyticsService:
                 ).all()
                 
                 if member_activities:
-                    correct = sum(1 for a in member_activities if a.is_correct)
+                    # recall_score >= 3 means correct answer in SM2 algorithm
+                    correct = sum(1 for a in member_activities if a.recall_score >= 3)
                     total = len(member_activities)
                     if total > 0:
                         accuracy = (correct / total) * 100
@@ -416,7 +419,8 @@ class AnalyticsService:
             ).all()
             
             if activities:
-                incorrect = sum(1 for a in activities if not a.is_correct)
+                # recall_score < 3 means incorrect answer in SM2 algorithm
+                incorrect = sum(1 for a in activities if a.recall_score < 3)
                 total = len(activities)
                 error_rate = (incorrect / total) * 100
                 
@@ -491,10 +495,10 @@ class AnalyticsService:
             ).all()
             
             # Calculate metrics
+            # Only count actual mastered terms (not reviewing or forgotten)
             total_terms_mastered = sum(
-                (p.mastered_terms + p.reviewing_terms + p.forgotten_terms) 
-                for p in progress_summaries 
-                if p.completion_rate >= 80.0
+                p.mastered_terms
+                for p in progress_summaries
             )
             
             # Get study activities first
@@ -509,11 +513,9 @@ class AnalyticsService:
                 .order_by(StudyActivity.created_at.desc())
             ).all()
             
-            # Calculate accuracy from activities
-            total_correct = sum(1 for a in activities if a.is_correct)
-            total_incorrect = sum(1 for a in activities if not a.is_correct)
-            total_reviews = total_correct + total_incorrect
-            accuracy = (total_correct / total_reviews * 100) if total_reviews > 0 else 0.0
+            # Calculate total unique cards/terms reviewed
+            unique_terms = set(a.term_id for a in activities)
+            total_cards_reviewed = len(unique_terms)
             
             total_study_time = sum(
                 int(a.response_time) if a.response_time else 0 
@@ -545,7 +547,7 @@ class AnalyticsService:
                     username=user.username,
                     email=user.email,
                     total_terms_mastered=total_terms_mastered,
-                    accuracy=round(accuracy, 2),
+                    total_cards_reviewed=total_cards_reviewed,
                     study_streak_days=study_streak_days,
                     total_study_time=total_study_time,
                     last_study_date=last_study_date
@@ -553,8 +555,8 @@ class AnalyticsService:
             )
         
         # Sort entries based on sort_by parameter
-        if sort_by == "accuracy":
-            entries.sort(key=lambda x: x.accuracy, reverse=True)
+        if sort_by == "cards":
+            entries.sort(key=lambda x: x.total_cards_reviewed, reverse=True)
         elif sort_by == "streak":
             entries.sort(key=lambda x: x.study_streak_days, reverse=True)
         elif sort_by == "time":
@@ -713,7 +715,8 @@ class AnalyticsService:
             ]
             
             if week_activities:
-                correct_count = sum(1 for a in week_activities if a.is_correct)
+                # recall_score >= 3 means correct answer in SM2 algorithm
+                correct_count = sum(1 for a in week_activities if a.recall_score >= 3)
                 incorrect_count = len(week_activities) - correct_count
                 total = len(week_activities)
                 
@@ -832,8 +835,9 @@ class AnalyticsService:
             # Get the studyset for this activity
             studyset = session.get(StudySet, activity.studyset_id)
             if studyset and studyset.category:
-                category = studyset.category
-                category_counts[category] = category_counts.get(category, 0) + 1
+                # Convert Category object to string (use name or value attribute)
+                category_name = studyset.category.name if hasattr(studyset.category, 'name') else str(studyset.category)
+                category_counts[category_name] = category_counts.get(category_name, 0) + 1
             else:
                 # Uncategorized studysets
                 category_counts["Uncategorized"] = category_counts.get("Uncategorized", 0) + 1
