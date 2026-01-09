@@ -46,17 +46,17 @@ export function CreateTestDialog({
 
   const handleCreate = async () => {
     if (!testTitle.trim()) {
-      toast.error("Vui lòng nhập tiêu đề bài test");
+      toast.error("Please enter a test title");
       return;
     }
 
     if (questionCount < 1 || questionCount > 100) {
-      toast.error("Số câu hỏi phải từ 1 đến 100");
+      toast.error("Number of questions must be between 1 and 100");
       return;
     }
 
     if (questionTypes.length === 0) {
-      toast.error("Vui lòng chọn ít nhất một loại câu hỏi");
+      toast.error("Please select at least one question type");
       return;
     }
 
@@ -76,7 +76,7 @@ export function CreateTestDialog({
         time_limit: timeLimitInSeconds,
       }).unwrap();
 
-      toast.success("Đã tạo test thành công!");
+      toast.success("Test created successfully!");
       onOpenChange(false);
       
       // Reset form
@@ -92,7 +92,7 @@ export function CreateTestDialog({
       onTestCreated?.();
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
-      toast.error(errorMsg || "Không thể tạo bài test");
+      toast.error(errorMsg || "Failed to create test");
     }
   };
 
@@ -107,7 +107,7 @@ export function CreateTestDialog({
     if (error?.data?.message) {
       return error.data.message;
     }
-    return "Đã xảy ra lỗi";
+    return "An error occurred";
   };
 
   const toggleQuestionType = (type: string) => {
@@ -120,35 +120,35 @@ export function CreateTestDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Tạo Test Mới</DialogTitle>
+          <DialogTitle>Create New Test</DialogTitle>
           <DialogDescription>
-            Cấu hình các tùy chọn cho test của bạn
+            Configure options for your test
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Tiêu đề */}
+          {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="test-title">
-              Tiêu đề <span className="text-destructive">*</span>
+              Title <span className="text-destructive">*</span>
             </Label>
             <Input
               id="test-title"
               value={testTitle}
               onChange={(e) => setTestTitle(e.target.value)}
-              placeholder="Ví dụ: Kiểm tra giữa kỳ"
+              placeholder="Example: Mid-term exam"
               className="w-full"
             />
           </div>
 
-          {/* Mô tả */}
+          {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="test-description">Mô tả</Label>
+            <Label htmlFor="test-description">Description</Label>
             <Textarea
               id="test-description"
               value={testDescription}
               onChange={(e) => setTestDescription(e.target.value)}
-              placeholder="Thêm mô tả cho bài test..."
+              placeholder="Add a description for the test..."
               rows={3}
               className="w-full"
             />
@@ -157,7 +157,7 @@ export function CreateTestDialog({
           {/* Số câu hỏi */}
           <div className="space-y-2">
             <Label htmlFor="question-count">
-              Số câu hỏi <span className="text-destructive">*</span>
+              Number of Questions <span className="text-destructive">*</span>
             </Label>
             <Input
               id="question-count"
@@ -169,13 +169,13 @@ export function CreateTestDialog({
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              Số câu hỏi từ 1 đến 100
+              Number of questions from 1 to 100
             </p>
           </div>
 
           {/* Time Limit */}
           <div className="space-y-2">
-            <Label htmlFor="time-limit">Thời gian giới hạn (tùy chọn)</Label>
+            <Label htmlFor="time-limit">Time Limit (optional)</Label>
             <div className="flex gap-2">
               <Input
                 id="time-limit"
@@ -186,7 +186,7 @@ export function CreateTestDialog({
                   const value = e.target.value;
                   setTimeLimit(value ? parseInt(value) : null);
                 }}
-                placeholder="Nhập thời gian"
+                placeholder="Enter time"
                 className="flex-1"
               />
               <select
@@ -194,18 +194,18 @@ export function CreateTestDialog({
                 onChange={(e) => setTimeLimitUnit(e.target.value as "minutes" | "seconds")}
                 className="px-3 py-2 border border-input bg-background rounded-md text-sm"
               >
-                <option value="minutes">Phút</option>
-                <option value="seconds">Giây</option>
+                <option value="minutes">Minutes</option>
+                <option value="seconds">Seconds</option>
               </select>
             </div>
             <p className="text-xs text-muted-foreground">
-              Để trống nếu không muốn giới hạn thời gian. Khi hết thời gian, bài test sẽ tự động nộp.
+              Leave empty if you don't want a time limit. When time runs out, the test will be automatically submitted.
             </p>
           </div>
 
           {/* Loại câu hỏi */}
           <div className="space-y-3">
-            <Label>Loại câu hỏi <span className="text-destructive">*</span></Label>
+            <Label>Question Type <span className="text-destructive">*</span></Label>
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -218,9 +218,9 @@ export function CreateTestDialog({
                   className="font-normal cursor-pointer flex-1"
                 >
                   <div>
-                    <div className="font-medium">Đúng/Sai</div>
+                    <div className="font-medium">True/False</div>
                     <div className="text-xs text-muted-foreground">
-                      Câu hỏi dạng đúng hoặc sai
+                      Questions with true or false answers
                     </div>
                   </div>
                 </Label>
@@ -237,9 +237,9 @@ export function CreateTestDialog({
                   className="font-normal cursor-pointer flex-1"
                 >
                   <div>
-                    <div className="font-medium">Trắc nghiệm (ABCD)</div>
+                    <div className="font-medium">Multiple Choice (ABCD)</div>
                     <div className="text-xs text-muted-foreground">
-                      Câu hỏi có nhiều lựa chọn
+                      Questions with multiple choices
                     </div>
                   </div>
                 </Label>
@@ -256,9 +256,9 @@ export function CreateTestDialog({
                   className="font-normal cursor-pointer flex-1"
                 >
                   <div>
-                    <div className="font-medium">Tự luận</div>
+                    <div className="font-medium">Essay</div>
                     <div className="text-xs text-muted-foreground">
-                      Hiển thị định nghĩa hoặc thuật ngữ, yêu cầu nhập phần còn lại
+                      Show definition or term, require entering the remaining part
                     </div>
                   </div>
                 </Label>
@@ -266,7 +266,7 @@ export function CreateTestDialog({
             </div>
           </div>
 
-          {/* Hiển thị đáp án */}
+          {/* Show Answers */}
           <div className="flex items-center space-x-2">
             <Checkbox
               id="show-answers"
@@ -278,9 +278,9 @@ export function CreateTestDialog({
               className="font-normal cursor-pointer flex-1"
             >
               <div>
-                <div className="font-medium">Hiển thị đáp án ngay</div>
+                <div className="font-medium">Show Answers Immediately</div>
                 <div className="text-xs text-muted-foreground">
-                  Hiển thị đáp án ngay sau khi trả lời mỗi câu hỏi
+                  Show answer immediately after answering each question
                 </div>
               </div>
             </Label>
@@ -293,16 +293,16 @@ export function CreateTestDialog({
             onClick={() => onOpenChange(false)}
             disabled={isCreating}
           >
-            Hủy
+            Cancel
           </Button>
           <Button onClick={handleCreate} disabled={isCreating}>
             {isCreating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Đang tạo...
+                Creating...
               </>
             ) : (
-              "Tạo Test"
+              "Create Test"
             )}
           </Button>
         </DialogFooter>

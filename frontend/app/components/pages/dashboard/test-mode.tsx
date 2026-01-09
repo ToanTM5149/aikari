@@ -118,16 +118,16 @@ export function TestMode() {
     if (error?.data?.message) {
       return error.data.message;
     }
-    return "Đã xảy ra lỗi";
+    return "An error occurred";
   };
 
   const handleRequestReattempt = async (attemptId: string) => {
     try {
       await createReattemptRequest({ attempt_id: attemptId }).unwrap();
-      toast.success("Đã gửi yêu cầu làm lại test. Vui lòng chờ phê duyệt.");
+      toast.success("Reattempt request sent. Please wait for approval.");
       refetchTests();
     } catch (error: any) {
-      toast.error(getErrorMessage(error) || "Không thể gửi yêu cầu làm lại");
+      toast.error(getErrorMessage(error) || "Failed to send reattempt request");
     }
   };
 
@@ -141,12 +141,12 @@ export function TestMode() {
 
     try {
       await deleteTest(deleteTestId).unwrap();
-      toast.success("Đã xóa bài test thành công!");
+      toast.success("Test deleted successfully!");
       setDeleteTestId(null);
       refetchTests();
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
-      toast.error(errorMsg || "Không thể xóa bài test");
+      toast.error(errorMsg || "Failed to delete test");
     }
   };
 
@@ -182,7 +182,7 @@ export function TestMode() {
         return (
           <Badge variant="secondary" className="gap-1">
             <Clock className="w-3 h-3" />
-            Đang làm
+            In Progress
           </Badge>
         );
       default:
@@ -239,7 +239,7 @@ export function TestMode() {
               {isOwner && (
                 <Button size="sm" onClick={handleCreateTest}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Tạo Test
+                  Create Test
                 </Button>
               )}
             </div>
@@ -250,16 +250,16 @@ export function TestMode() {
           {tests.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <FileText className="w-16 h-16 mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">Chưa có test nào</p>
+              <p className="text-lg font-medium mb-2">No tests yet</p>
               <p className="text-sm text-center max-w-md">
                 {isOwner
-                  ? "Tạo test đầu tiên để bắt đầu kiểm tra kiến thức của bạn"
-                  : "Chưa có test nào được tạo cho study set này"}
+                  ? "Create your first test to start testing your knowledge"
+                  : "No tests have been created for this study set"}
               </p>
               {isOwner && (
                 <Button className="mt-4" onClick={handleCreateTest}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Tạo Test
+                  Create Test
                 </Button>
               )}
             </div>
@@ -321,13 +321,13 @@ export function TestMode() {
       <AlertDialog open={!!deleteTestId} onOpenChange={() => setDeleteTestId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa bài test này? Hành động này không thể hoàn tác và sẽ xóa tất cả các câu hỏi và kết quả liên quan.
+              Are you sure you want to delete this test? This action cannot be undone and will delete all related questions and results.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteTest}
               disabled={deleting}
@@ -336,10 +336,10 @@ export function TestMode() {
               {deleting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Đang xóa...
+                  Deleting...
                 </>
               ) : (
-                "Xóa"
+                "Delete"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

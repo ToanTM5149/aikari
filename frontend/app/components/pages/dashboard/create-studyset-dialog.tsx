@@ -20,18 +20,23 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { toast } from "sonner"
-import { useCreateStudySetMutation } from "~/redux/features/studyset"
+import { useCreateStudySetMutation, useUpdateStudySetMutation } from "~/redux/features/studyset"
 import { useGetCategoriesQuery, useCreateCategoryMutation } from "~/redux/features/category/api"
-import type { StudySetCreate, ContentType } from "~/redux/features/studyset/types"
+import type { StudySetCreate, ContentType, StudySet } from "~/redux/features/studyset/types"
 import { Loader2, Plus } from "lucide-react"
+import { useEffect } from "react"
 
 interface CreateStudySetDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  studySet?: StudySet | null
+  mode?: "create" | "edit"
 }
 
-export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialogProps) {
-  const [createStudySet, { isLoading }] = useCreateStudySetMutation()
+export function CreateStudySetDialog({ open, onOpenChange, studySet, mode = "create" }: CreateStudySetDialogProps) {
+  const [createStudySet, { isLoading: isCreating }] = useCreateStudySetMutation()
+  const [updateStudySet, { isLoading: isUpdating }] = useUpdateStudySetMutation()
+  const isLoading = isCreating || isUpdating
   const { data: categoriesData } = useGetCategoriesQuery()
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation()
 
@@ -54,17 +59,39 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
     },
   })
 
-  const contentType = watch("content_type")
   const categoryId = watch("category_id")
+
+  // Populate form when editing
+  useEffect(() => {
+    if (mode === "edit" && studySet) {
+      setValue("title", studySet.title)
+      setValue("description", studySet.description || "")
+      setValue("category_id", studySet.category?.category_id)
+    } else {
+      reset()
+    }
+  }, [mode, studySet, setValue, reset])
 
   const onSubmit = async (data: StudySetCreate) => {
     try {
-      await createStudySet(data).unwrap()
-      toast.success("Study set created successfully!")
+      if (mode === "edit" && studySet) {
+        await updateStudySet({
+          studysetId: studySet.studyset_id,
+          data: {
+            title: data.title,
+            description: data.description,
+            category_id: data.category_id,
+          },
+        }).unwrap()
+        toast.success("Study set updated successfully!")
+      } else {
+        await createStudySet(data).unwrap()
+        toast.success("Study set created successfully!")
+      }
       reset()
       onOpenChange(false)
     } catch (error: any) {
-      const errorMessage = error?.data?.detail || "Failed to create study set"
+      const errorMessage = error?.data?.detail || (mode === "edit" ? "Failed to update study set" : "Failed to create study set")
       toast.error(errorMessage)
     }
   }
@@ -98,9 +125,9 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create New Study Set</DialogTitle>
+          <DialogTitle>{mode === "edit" ? "Edit Study Set" : "Create New Study Set"}</DialogTitle>
           <DialogDescription>
-            Create a new study set to organize your flashcards
+            {mode === "edit" ? "Update your study set information" : "Create a new study set to organize your flashcards"}
           </DialogDescription>
         </DialogHeader>
 
@@ -149,27 +176,6 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
             {errors.description && (
               <p className="text-sm text-destructive">{errors.description.message}</p>
             )}
-          </div>
-
-          {/* Content Type */}
-          <div className="space-y-2">
-            <Label htmlFor="content_type">Content Type</Label>
-            <Select
-              value={contentType}
-              onValueChange={(value) => setValue("content_type", value as ContentType)}
-              disabled={isLoading}
-            >
-              <SelectTrigger id="content_type">
-                <SelectValue placeholder="Select content type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DEFAULT">Default (Manual)</SelectItem>
-                <SelectItem value="AI_GENERATED">AI Generated</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Choose how you want to create flashcards in this set
-            </p>
           </div>
 
           {/* Category */}
@@ -272,7 +278,7 @@ export function CreateStudySetDialog({ open, onOpenChange }: CreateStudySetDialo
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Study Set
+              {mode === "edit" ? "Update Study Set" : "Create Study Set"}
             </Button>
           </DialogFooter>
         </form>

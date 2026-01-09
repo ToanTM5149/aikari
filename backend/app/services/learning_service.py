@@ -70,8 +70,7 @@ class LearningService:
     def get_next_term_to_review(
         session: Session,
         user_id: uuid.UUID,
-        studyset_id: uuid.UUID,
-        exclude_recent_minutes: int = 5
+        studyset_id: uuid.UUID
     ) -> Term | None:
         """
         Get the next term that needs review based on spaced repetition
@@ -80,10 +79,6 @@ class LearningService:
         1. Terms that are due for review (next_review_date <= now)
         2. Terms never studied before
         3. Terms with lowest EF (hardest ones)
-        
-        Args:
-            exclude_recent_minutes: Exclude terms reviewed in the last N minutes
-                                   to avoid showing the same term multiple times in one session
         """
         # Get all terms in studyset
         terms_statement = select(Term).where(Term.studyset_id == studyset_id)
@@ -118,7 +113,6 @@ class LearningService:
         reviewed_terms = []
         
         now = datetime.utcnow()
-        recent_threshold = now - timedelta(minutes=exclude_recent_minutes)
         
         for term in all_terms:
             activity = term_activity_map.get(term.term_id)
@@ -126,9 +120,6 @@ class LearningService:
             if not activity:
                 # Never studied
                 new_terms.append(term)
-            elif activity.created_at > recent_threshold:
-                # Recently reviewed in this session - skip
-                continue
             elif activity.next_review_date and activity.next_review_date <= now:
                 # Due for review
                 due_terms.append((term, activity))
@@ -160,9 +151,15 @@ class LearningService:
         limit: int = 20
     ) -> list[Term]:
         """
-        Get a list of terms for a learning session
+        Get all terms for a learning session
         
-        Returns up to 'limit' terms prioritized by review schedule
+        Returns ALL terms in the studyset, ordered by priority:
+        1. Due for review (oldest first)
+        2. Never studied (new terms)
+        3. Already reviewed (lowest EF = hardest first)
+        
+        This ensures users always see all flashcards in their set,
+        regardless of when they were last reviewed.
         """
         # Get all terms in studyset
         terms_statement = select(Term).where(Term.studyset_id == studyset_id)
@@ -170,9 +167,6 @@ class LearningService:
         
         if not all_terms:
             return []
-        
-        # Limit session size to available terms
-        actual_limit = min(limit, len(all_terms))
         
         # Get user's study activities for this studyset
         activities_statement = (
@@ -194,72 +188,41 @@ class LearningService:
                 if activity.created_at > term_activity_map[activity.term_id].created_at:
                     term_activity_map[activity.term_id] = activity
         
-        # Categorize terms
+        # Categorize terms for priority ordering
         due_terms = []
         new_terms = []
         reviewed_terms = []
         
         now = datetime.utcnow()
-        recent_threshold = now - timedelta(minutes=5)
         
         for term in all_terms:
             activity = term_activity_map.get(term.term_id)
             
             if not activity:
-                # Never studied
+                # Never studied - high priority
                 new_terms.append(term)
-            elif activity.created_at > recent_threshold:
-                # Recently reviewed in this session - skip
-                continue
             elif activity.next_review_date and activity.next_review_date <= now:
-                # Due for review
+                # Due for review - highest priority
                 due_terms.append((term, activity))
             else:
-                # Already reviewed, not due yet
+                # Already reviewed, not due yet - lowest priority
                 reviewed_terms.append((term, activity))
         
         # Sort by priority
-        # Due terms: oldest first
         due_terms.sort(key=lambda x: x[1].next_review_date)
+        reviewed_terms.sort(key=lambda x: x[1].ef)  # Hardest cards first
         
-        # Reviewed terms: lowest EF first (hardest)
-        reviewed_terms.sort(key=lambda x: x[1].ef)
-        
-        # Collect terms for session
+        # Combine all terms in priority order
         session_terms = []
         
-        # If limit is greater than or equal to total terms, include all terms
-        # This allows users to study all terms from the beginning in a new session
-        include_all = actual_limit >= len(all_terms)
+        # Priority 1: Due terms
+        session_terms.extend([term for term, _ in due_terms])
         
-        # Add due terms first (highest priority for spaced repetition)
-        for term, _ in due_terms:
-            if not include_all and len(session_terms) >= actual_limit:
-                break
-            session_terms.append(term)
+        # Priority 2: New terms
+        session_terms.extend(new_terms)
         
-        # Add new terms (second priority)
-        for term in new_terms:
-            if not include_all and len(session_terms) >= actual_limit:
-                break
-            session_terms.append(term)
-        
-        # Add reviewed terms if still need more (lowest priority, but still included)
-        for term, _ in reviewed_terms:
-            if not include_all and len(session_terms) >= actual_limit:
-                break
-            session_terms.append(term)
-        
-        # If no terms found (all are reviewed and not due), return all terms anyway
-        # This allows users to study again even if spaced repetition says they don't need to
-        if not session_terms:
-            # Return all terms, excluding recently reviewed ones
-            for term in all_terms:
-                activity = term_activity_map.get(term.term_id)
-                if not activity or activity.created_at <= recent_threshold:
-                    if not include_all and len(session_terms) >= actual_limit:
-                        break
-                    session_terms.append(term)
+        # Priority 3: Reviewed terms
+        session_terms.extend([term for term, _ in reviewed_terms])
         
         return session_terms
     
@@ -270,7 +233,6 @@ class LearningService:
         studyset_id: uuid.UUID,
         term_id: uuid.UUID,
         recall_score: int,
-        is_correct: bool,
         hint_used: bool = False,
         response_time: float = 0.0
     ) -> StudyActivity:
@@ -279,7 +241,6 @@ class LearningService:
         
         Args:
             recall_score: 0-5 rating (0=complete blackout, 5=perfect recall)
-            is_correct: Whether answer was correct
             hint_used: Whether user used a hint
             response_time: Response time in seconds
         """
@@ -297,12 +258,13 @@ class LearningService:
         # Get current values or defaults
         current_ef = prev_activity.ef if prev_activity else SpacedRepetitionSM2.INITIAL_EF
         current_interval = prev_activity.interval if prev_activity else 0
-        repetitions = 0
         
-        if prev_activity and prev_activity.is_correct:
-            # Count consecutive correct answers
-            repetitions = 1
-            # Could track this better with a counter field
+        # Get repetitions from previous activity if it was correct
+        # This tracks consecutive correct answers for SM-2 algorithm
+        if prev_activity and prev_activity.recall_score >= 3:
+            repetitions = prev_activity.repetitions
+        else:
+            repetitions = 0
         
         # Calculate next review using SM-2
         new_ef, new_interval, new_repetitions, next_review_date = (
@@ -321,12 +283,12 @@ class LearningService:
             term_id=term_id,
             start_time=datetime.utcnow(),
             end_time=datetime.utcnow(),
-            is_correct=is_correct,
             hint_used=hint_used,
             retry_count=0,
             recall_score=recall_score,
             ef=new_ef,
             interval=new_interval,
+            repetitions=new_repetitions,
             next_review_date=next_review_date,
             response_time=response_time
         )
@@ -474,21 +436,30 @@ class LearningService:
         if not activities:
             return {
                 "total_reviewed": 0,
-                "correct": 0,
-                "incorrect": 0,
-                "accuracy": 0.0,
-                "average_recall_score": 0.0
+                "average_recall_score": 0.0,
+                "difficulty_distribution": {
+                    "again": 0,
+                    "hard": 0,
+                    "good": 0,
+                    "easy": 0
+                }
             }
         
-        correct = sum(1 for a in activities if a.is_correct)
-        incorrect = len(activities) - correct
-        accuracy = (correct / len(activities)) * 100
+        # Calculate difficulty distribution
+        again_count = sum(1 for a in activities if a.recall_score <= 1)
+        hard_count = sum(1 for a in activities if a.recall_score == 2)
+        good_count = sum(1 for a in activities if 3 <= a.recall_score <= 4)
+        easy_count = sum(1 for a in activities if a.recall_score == 5)
+        
         avg_recall_score = sum(a.recall_score for a in activities) / len(activities)
         
         return {
             "total_reviewed": len(activities),
-            "correct": correct,
-            "incorrect": incorrect,
-            "accuracy": accuracy,
-            "average_recall_score": avg_recall_score
+            "average_recall_score": avg_recall_score,
+            "difficulty_distribution": {
+                "again": again_count,
+                "hard": hard_count,
+                "good": good_count,
+                "easy": easy_count
+            }
         }

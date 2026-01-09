@@ -82,7 +82,7 @@ export function StudyMode() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-primary" />
-          <p className="text-muted-foreground">Đang tải flashcards...</p>
+          <p className="text-muted-foreground">Loading flashcards...</p>
         </div>
       </div>
     );
@@ -95,14 +95,14 @@ export function StudyMode() {
         <div className="text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">
-            Không có flashcards để học
+            No Flashcards Available
           </h3>
           <p className="text-muted-foreground mb-4">
-            Hãy thêm flashcards vào study set này trước khi bắt đầu học
+            Add flashcards to this study set before starting
           </p>
           <Button onClick={() => navigate(`/dashboard/studysets/${studysetId}`)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
+            Go Back
           </Button>
         </div>
       </div>
@@ -179,8 +179,8 @@ export function StudyMode() {
                 className="absolute inset-0 backface-hidden shadow-lg bg-primary/5"
                 style={{ transform: "rotateY(180deg)" }}
               >
-                <CardContent className="flex flex-col items-center justify-center h-full p-8 text-center">
-                  <Badge variant="secondary" className="mb-6 text-base px-4 py-1">
+                <CardContent className="flex flex-col items-center justify-center h-full p-8 text-center overflow-auto">
+                  <Badge variant="secondary" className="mb-4 text-base px-4 py-1">
                     Answer
                   </Badge>
                   {currentTerm.image_url && (
@@ -188,22 +188,22 @@ export function StudyMode() {
                       <img
                         src={currentTerm.image_url}
                         alt={currentTerm.definition}
-                        className="w-full h-32 object-cover rounded-lg shadow-md"
+                        className="w-full h-24 object-cover rounded-lg shadow-md"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
                     </div>
                   )}
-                  <p className="text-2xl text-primary mb-4">
+                  <p className="text-xl font-semibold text-primary mb-3 px-2">
                     {currentTerm.definition}
                   </p>
                   {currentTerm.example && (
-                    <p className="text-sm text-muted-foreground italic mt-4">
-                      Ví dụ: {currentTerm.example}
+                    <p className="text-sm text-muted-foreground italic mt-2">
+                      Example: {currentTerm.example}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground mt-6">
+                  <p className="text-sm text-muted-foreground mt-auto pt-4">
                     Click to see question
                   </p>
                 </CardContent>

@@ -45,20 +45,20 @@ export function AttemptResultPage() {
   const getQuestionTypeLabel = (type: string) => {
     switch (type) {
       case QuestionType.TRUE_FALSE:
-        return "Đúng/Sai";
+        return "True/False";
       case QuestionType.MULTIPLE_CHOICE:
-        return "Trắc nghiệm";
+        return "Multiple Choice";
       case QuestionType.ESSAY:
-        return "Tự luận";
+        return "Essay";
       default:
         return type;
     }
   };
 
   const formatAnswer = (answer: string | undefined, type: string) => {
-    if (!answer) return "Chưa trả lời";
+    if (!answer) return "Not answered";
     if (type === QuestionType.TRUE_FALSE) {
-      return answer.toLowerCase() === "true" || answer === "Đúng" ? "Đúng" : "Sai";
+      return answer.toLowerCase() === "true" || answer === "True" ? "True" : "False";
     }
     return answer;
   };
@@ -94,12 +94,12 @@ export function AttemptResultPage() {
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Quay lại
+          Go Back
         </Button>
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-destructive">
-              Không thể tải kết quả bài test. Vui lòng thử lại.
+              Unable to load test results. Please try again.
             </p>
           </CardContent>
         </Card>
@@ -121,10 +121,10 @@ export function AttemptResultPage() {
           onClick={() => navigate("/history")}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Quay lại
+          Go Back
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">Kết quả bài test</h1>
+          <h1 className="text-3xl font-bold">Test Results</h1>
           <p className="text-muted-foreground mt-1">
             {attemptResult.completed_at && formatDate(attemptResult.completed_at)}
           </p>
@@ -134,7 +134,7 @@ export function AttemptResultPage() {
       {/* Score Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Tổng kết</CardTitle>
+          <CardTitle>Summary</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center space-x-8">
@@ -142,14 +142,14 @@ export function AttemptResultPage() {
               <div className="text-4xl font-bold text-primary">
                 {attemptResult.correct_answers}/{attemptResult.total_questions}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">Câu đúng</p>
+              <p className="text-sm text-muted-foreground mt-1">Correct Answers</p>
             </div>
             <div className="h-16 w-px bg-border" />
             <div className="text-center">
               <div className="text-4xl font-bold text-primary">
                 {formatScore(attemptResult.score)}%
               </div>
-              <p className="text-sm text-muted-foreground mt-1">Điểm số</p>
+              <p className="text-sm text-muted-foreground mt-1">Score</p>
             </div>
           </div>
         </CardContent>
@@ -158,7 +158,7 @@ export function AttemptResultPage() {
       {/* Questions Detail */}
       <Card>
         <CardHeader>
-          <CardTitle>Chi tiết câu trả lời</CardTitle>
+          <CardTitle>Answer Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -191,13 +191,13 @@ export function AttemptResultPage() {
                         <Badge variant="outline" className="text-xs">
                           {getQuestionTypeLabel(q.question_type)}
                         </Badge>
-                        <span className="font-medium">Câu {idx + 1}</span>
+                        <span className="font-medium">Question {idx + 1}</span>
                       </div>
                       <p className="font-medium mb-3">{q.question_text}</p>
                       
                       <div className="space-y-2 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Đáp án của bạn: </span>
+                          <span className="text-muted-foreground">Your answer: </span>
                           <span className={`font-medium ${
                             isCorrect ? "text-green-600" : "text-red-600"
                           }`}>
@@ -207,7 +207,7 @@ export function AttemptResultPage() {
                         
                         {!isCorrect && (
                           <div>
-                            <span className="text-muted-foreground">Đáp án đúng: </span>
+                            <span className="text-muted-foreground">Correct answer: </span>
                             <span className="font-medium text-green-600">
                               {q.question_type === QuestionType.MULTIPLE_CHOICE
                                 ? `${getCorrectAnswerLabel(q.correct_answer, q.options)}${stripOptionPrefix(q.correct_answer)}`
@@ -220,7 +220,7 @@ export function AttemptResultPage() {
                         {q.explanation ? (
                           <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
                             <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">
-                              💡 Giải thích:
+                              💡 Explanation:
                             </p>
                             <p className="text-sm text-blue-900 dark:text-blue-300">
                               {q.explanation}
@@ -228,13 +228,13 @@ export function AttemptResultPage() {
                           </div>
                         ) : (
                           <div className="mt-2 text-xs text-muted-foreground italic">
-                            (Câu hỏi này chưa có giải thích)
+                            (This question has no explanation)
                           </div>
                         )}
                         
                         {q.question_type === QuestionType.MULTIPLE_CHOICE && q.options && (
                           <div className="mt-2 pt-2 border-t">
-                            <p className="text-xs text-muted-foreground mb-1">Các lựa chọn:</p>
+                            <p className="text-xs text-muted-foreground mb-1">Options:</p>
                             <div className="grid grid-cols-2 gap-2">
                               {q.options.map((option, optIdx) => (
                                 <div
@@ -266,7 +266,7 @@ export function AttemptResultPage() {
       {/* Actions */}
       <div className="flex justify-end gap-2">
         <Button onClick={() => navigate("/history")}>
-          Quay lại lịch sử
+          Go Back lịch sử
         </Button>
       </div>
     </div>

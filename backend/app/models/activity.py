@@ -13,12 +13,12 @@ class StudyActivity(SQLModel, table=True):
     term_id: uuid.UUID = Field(foreign_key="Term.term_id")
     start_time: datetime = Field(default_factory=datetime.utcnow)
     end_time: datetime | None = Field(default=None)
-    is_correct: bool = Field(default=False)
     hint_used: bool = Field(default=False)
     retry_count: int = Field(default=0)
     recall_score: int = Field(default=0)  
     ef: float = Field(default=2.5)  
     interval: int = Field(default=0)  
+    repetitions: int = Field(default=0)  # Consecutive correct answers count
     next_review_date: datetime | None = Field(default=None)
     response_time: float = Field(default=0.0)
     created_at: datetime = Field(default_factory=datetime.utcnow)

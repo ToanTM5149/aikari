@@ -87,7 +87,7 @@ export function TestAttempt() {
       autoSubmitRef.current = false;
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
-      toast.error(errorMsg || "Không thể bắt đầu bài test");
+      toast.error(errorMsg || "Failed to start test");
       navigate(`/dashboard/studysets/${studysetId}/test`);
     }
   };
@@ -103,7 +103,7 @@ export function TestAttempt() {
     if (error?.data?.message) {
       return error.data.message;
     }
-    return "Đã xảy ra lỗi";
+    return "An error occurred";
   };
 
   // Use activeQuestions during attempt, attemptResult.questions after submission
@@ -133,11 +133,11 @@ export function TestAttempt() {
       }).unwrap();
 
       setIsSubmitted(true);
-      toast.warning("Hết thời gian! Bài test đã được tự động nộp.");
+      toast.warning("Time's up! The test has been automatically submitted.");
       // Keep the result modal open - removed automatic navigation
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
-      toast.error(errorMsg || "Không thể tự động nộp bài");
+      toast.error(errorMsg || "Failed to auto-submit test");
       autoSubmitRef.current = false; // Reset on error
     }
   }, [attemptId, isSubmitted, activeQuestions, answers, submitAttempt, studysetId, navigate]);
@@ -202,7 +202,7 @@ export function TestAttempt() {
   const handleSubmit = async () => {
     if (!attemptId) return;
 
-    if (!confirm("Bạn có chắc chắn muốn nộp bài? Bạn sẽ không thể chỉnh sửa sau khi nộp.")) {
+    if (!confirm("Are you sure you want to submit? You won't be able to edit after submission.")) {
       return;
     }
 
@@ -219,11 +219,11 @@ export function TestAttempt() {
       }).unwrap();
 
       setIsSubmitted(true);
-      toast.success("Đã nộp bài thành công!");
+      toast.success("Test submitted successfully!");
       // Keep the result modal open - removed automatic navigation
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
-      toast.error(errorMsg || "Không thể nộp bài");
+      toast.error(errorMsg || "Failed to submit test");
     }
   };
 
@@ -255,13 +255,13 @@ export function TestAttempt() {
               <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
                 <RadioGroupItem value="true" id="true" />
                 <Label htmlFor="true" className="cursor-pointer flex-1 font-normal">
-                  Đúng
+                  True
                 </Label>
               </div>
               <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
                 <RadioGroupItem value="false" id="false" />
                 <Label htmlFor="false" className="cursor-pointer flex-1 font-normal">
-                  Sai
+                  False
                 </Label>
               </div>
             </div>
@@ -286,7 +286,7 @@ export function TestAttempt() {
                     htmlFor={`option-${idx}`}
                     className="cursor-pointer flex-1 font-normal"
                   >
-                    {String.fromCharCode(65 + idx)}. {option}
+                    {String.fromCharCode(65 + idx)}. {option.replace(/^[A-D]\.\s*/, "")}
                   </Label>
                 </div>
               ))}
@@ -299,14 +299,14 @@ export function TestAttempt() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="essay-answer" className="mb-2 block">
-                Nhập câu trả lời:
+                Enter your answer:
               </Label>
               <Textarea
                 id="essay-answer"
                 value={answers[currentQuestion.question_id] || ""}
                 onChange={(e) => handleAnswerChange(currentQuestion.question_id, e.target.value)}
                 disabled={isSubmitted}
-                placeholder="Nhập câu trả lời của bạn..."
+                placeholder="Enter your answer..."
                 rows={5}
                 className="w-full"
               />
@@ -347,12 +347,12 @@ export function TestAttempt() {
             <XCircle className="w-5 h-5 text-red-600" />
           )}
           <span className={`font-semibold ${isCorrect ? "text-green-600" : "text-red-600"}`}>
-            {isCorrect ? "Đúng!" : "Sai"}
+            {isCorrect ? "Correct!" : "Incorrect"}
           </span>
         </div>
         {!isCorrect && correctAnswer && (
           <div className="text-sm">
-            <p className="text-muted-foreground mb-1">Đáp án đúng:</p>
+            <p className="text-muted-foreground mb-1">Correct Answer:</p>
             <p className="font-medium">{correctAnswer}</p>
           </div>
         )}
@@ -376,7 +376,7 @@ export function TestAttempt() {
       <div className="h-full flex flex-col p-6">
         <Card className="max-w-2xl mx-auto w-full">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Kết quả Test</CardTitle>
+            <CardTitle className="text-2xl text-center">Test Results</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center space-y-2">
@@ -385,12 +385,12 @@ export function TestAttempt() {
               </div>
               <div className="text-2xl font-semibold">{score.percentage}%</div>
               <Badge variant={score.percentage >= 70 ? "default" : "secondary"} className="text-lg px-4 py-1">
-                {score.percentage >= 70 ? "Đạt" : "Chưa đạt"}
+                {score.percentage >= 70 ? "Passed" : "Failed"}
               </Badge>
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-semibold">Chi tiết câu trả lời:</h3>
+              <h3 className="font-semibold">Answer Details:</h3>
               {attemptResult.questions.map((q, idx) => {
                 const answer = attemptResult.answers.find((a) => a.question_id === q.question_id);
                 const isCorrect = answer?.is_correct || false;
@@ -410,20 +410,31 @@ export function TestAttempt() {
                         <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                       )}
                       <div className="flex-1">
-                        <p className="font-medium">Câu {idx + 1}: {q.question_text}</p>
+                        <p className="font-medium">Question {idx + 1}: {q.question_text}</p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Đáp án của bạn:{" "}
+                          Your answer:{" "}
                           <span className="font-medium">
-                            {answer?.user_answer || "Chưa trả lời"}
+                            {answer?.user_answer || "Not answered"}
                           </span>
                         </p>
                         {!isCorrect && (
                           <p className="text-sm text-muted-foreground">
-                            Đáp án đúng:{" "}
+                            Correct answer:{" "}
                             <span className="font-medium text-green-600">
                               {q.correct_answer}
                             </span>
                           </p>
+                        )}
+                        {/* Explanation */}
+                        {q.explanation && (
+                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded">
+                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+                              💡 Explanation:
+                            </p>
+                            <p className="text-xs text-blue-900 dark:text-blue-300 mt-1">
+                              {q.explanation}
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -439,13 +450,13 @@ export function TestAttempt() {
                 onClick={() => navigate(`/dashboard/studysets/${studysetId}/test`)}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Quay lại danh sách
+                Back to List
               </Button>
               <Button
                 className="flex-1"
                 onClick={() => navigate(`/dashboard/studysets/${studysetId}`)}
               >
-                Về Study Set
+                Back to Study Set
               </Button>
             </div>
           </CardContent>
@@ -460,7 +471,7 @@ export function TestAttempt() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Đang tải câu hỏi...</p>
+          <p className="text-muted-foreground">Loading questions...</p>
         </div>
       </div>
     );
@@ -471,7 +482,7 @@ export function TestAttempt() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">Không có câu hỏi nào</p>
+          <p className="text-muted-foreground">No questions available</p>
         </div>
       </div>
     );
@@ -491,30 +502,30 @@ export function TestAttempt() {
                 <ArrowLeft className="w-4 h-4" />
               </Button>
               <div>
-                <CardTitle>Làm Test</CardTitle>
+                <CardTitle>Take Test</CardTitle>
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <FileText className="w-4 h-4" />
                     <span>
-                      Câu {currentQuestionIndex + 1}/{totalQuestions}
+                      Question {currentQuestionIndex + 1}/{totalQuestions}
                     </span>
                   </div>
                   {timeRemaining !== null ? (
                     <div className={`flex items-center gap-1 ${timeRemaining <= 60 ? "text-red-600 font-semibold" : ""}`}>
                       <Clock className="w-4 h-4" />
                       <span>
-                        Còn lại: {formatTime(timeRemaining)}
+                        Remaining: {formatTime(timeRemaining)}
                         {timeRemaining <= 60 && " ⚠️"}
                       </span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
-                      <span>Đã làm: {formatTime(timeElapsed)}</span>
+                      <span>Elapsed: {formatTime(timeElapsed)}</span>
                     </div>
                   )}
                   <Badge variant="secondary">
-                    Đã trả lời: {answeredCount}/{totalQuestions}
+                    Answered: {answeredCount}/{totalQuestions}
                   </Badge>
                 </div>
               </div>
@@ -539,10 +550,10 @@ export function TestAttempt() {
                   <div className="flex items-center gap-2 mb-4">
                     <Badge variant="outline">
                       {currentQuestion.question_type === QuestionType.TRUE_FALSE
-                        ? "Đúng/Sai"
+                        ? "True/False"
                         : currentQuestion.question_type === QuestionType.MULTIPLE_CHOICE
-                        ? "Trắc nghiệm"
-                        : "Tự luận"}
+                        ? "Multiple Choice"
+                        : "Essay"}
                     </Badge>
                   </div>
                   <h2 className="text-xl font-semibold">{currentQuestion.question_text}</h2>
@@ -560,7 +571,7 @@ export function TestAttempt() {
                 disabled={currentQuestionIndex === 0}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Câu trước
+                Previous
               </Button>
 
               <div className="flex gap-2">
@@ -583,7 +594,7 @@ export function TestAttempt() {
 
               {currentQuestionIndex < totalQuestions - 1 ? (
                 <Button onClick={handleNext}>
-                  Câu sau
+                  Next
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               ) : (
@@ -597,7 +608,7 @@ export function TestAttempt() {
                   ) : (
                     <Check className="w-4 h-4 mr-2" />
                   )}
-                  Nộp bài
+                  Submit
                 </Button>
               )}
             </div>

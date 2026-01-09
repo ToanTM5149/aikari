@@ -400,7 +400,7 @@ export function CreateFlashcard() {
                                   />
                                   <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-md hover:bg-accent transition-colors">
                                     <Upload className="w-4 h-4" />
-                                    <span className="text-sm">Upload từ máy tính</span>
+                                    <span className="text-sm">Upload from computer</span>
                                   </div>
                                 </label>
                                 <span className="text-xs text-muted-foreground">Max 2MB</span>

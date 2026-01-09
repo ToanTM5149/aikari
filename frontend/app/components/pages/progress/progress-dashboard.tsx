@@ -83,7 +83,7 @@ export function ProgressDashboard() {
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Quay lại
+          Go Back
         </Button>
         <h1 className="text-3xl font-bold mb-2">Learning Progress</h1>
         <p className="text-gray-600">Track your progress and performance</p>
@@ -118,10 +118,10 @@ export function ProgressDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {progress.mastered_terms}
+              {progress.mastered_terms}/{stats.total_terms}
             </div>
             <p className="text-xs text-muted-foreground">
-              {((progress.mastered_terms / stats.total_terms) * 100).toFixed(0)}% of total
+              {((progress.mastered_terms / stats.total_terms) * 100).toFixed(0)}% mastered
             </p>
           </CardContent>
         </Card>
@@ -129,16 +129,16 @@ export function ProgressDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Accuracy
+              Avg Recall Score
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.accuracy.toFixed(1)}%
+              {stats.average_recall_score.toFixed(1)}/5
             </div>
             <p className="text-xs text-muted-foreground">
-              Avg recall: {stats.average_recall_score.toFixed(1)}/5
+              Based on {stats.total_terms} terms
             </p>
           </CardContent>
         </Card>

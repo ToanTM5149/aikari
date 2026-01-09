@@ -13,8 +13,12 @@ const initialState: LearningSessionState = {
   currentCardIndex: 0,
   totalCards: 0,
   cardsReviewed: 0,
-  correctCount: 0,
-  incorrectCount: 0,
+  difficultyDistribution: {
+    again: 0,
+    hard: 0,
+    good: 0,
+    easy: 0,
+  },
   isFlipped: false,
   currentTerm: undefined,
 };
@@ -37,8 +41,12 @@ export const learningSlice = createSlice({
       state.sessionStartTime = new Date().toISOString();
       state.currentCardIndex = 0;
       state.cardsReviewed = 0;
-      state.correctCount = 0;
-      state.incorrectCount = 0;
+      state.difficultyDistribution = {
+        again: 0,
+        hard: 0,
+        good: 0,
+        easy: 0,
+      };
       state.isFlipped = false;
     },
 
@@ -53,13 +61,20 @@ export const learningSlice = createSlice({
 
     recordReview: (
       state,
-      action: PayloadAction<{ isCorrect: boolean }>
+      action: PayloadAction<{ recallScore: number }>
     ) => {
       state.cardsReviewed += 1;
-      if (action.payload.isCorrect) {
-        state.correctCount += 1;
+      const score = action.payload.recallScore;
+      
+      // Track difficulty distribution
+      if (score <= 1) {
+        state.difficultyDistribution.again += 1;
+      } else if (score === 2) {
+        state.difficultyDistribution.hard += 1;
+      } else if (score <= 4) {
+        state.difficultyDistribution.good += 1;
       } else {
-        state.incorrectCount += 1;
+        state.difficultyDistribution.easy += 1;
       }
     },
 

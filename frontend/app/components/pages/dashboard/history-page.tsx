@@ -111,16 +111,16 @@ export function HistoryPage() {
 
     try {
       await deleteAttempt(attemptToDelete).unwrap();
-      toast.success("Đã xóa lịch sử làm bài thành công");
+      toast.success("Test history deleted successfully");
       setDeleteDialogOpen(false);
       setAttemptToDelete(null);
     } catch (error: any) {
-      toast.error(error?.data?.detail || "Không thể xóa lịch sử làm bài");
+      toast.error(error?.data?.detail || "Failed to delete test history");
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("vi-VN", {
+    return new Date(dateString).toLocaleString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -143,9 +143,9 @@ export function HistoryPage() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Lịch sử làm bài</h1>
+          <h1 className="text-3xl font-bold">Test History</h1>
           <p className="text-muted-foreground mt-1">
-            Xem lại tất cả các bài test bạn đã hoàn thành
+            View all your completed tests
           </p>
         </div>
       </div>
@@ -155,7 +155,7 @@ export function HistoryPage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
-            <CardTitle>Bộ lọc</CardTitle>
+            <CardTitle>Filters</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -165,7 +165,7 @@ export function HistoryPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  placeholder="Tìm kiếm theo tên test..."
+                  placeholder="Search by test name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -181,10 +181,10 @@ export function HistoryPage() {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Tất cả lớp học" />
+                <SelectValue placeholder="All Classes" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả lớp học</SelectItem>
+                <SelectItem value="all">All Classes</SelectItem>
                 {uniqueClasses.map((cls) => (
                   <SelectItem key={cls.id} value={cls.id!}>
                     {cls.name}
@@ -201,20 +201,20 @@ export function HistoryPage() {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Người tạo test" />
+                <SelectValue placeholder="Test Creator" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="user">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4" />
-                    <span>User tạo</span>
+                    <span>User Created</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="ai">
                   <div className="flex items-center gap-2">
                     <Bot className="w-4 h-4" />
-                    <span>AI tạo</span>
+                    <span>AI Generated</span>
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -233,16 +233,16 @@ export function HistoryPage() {
       ) : historyError ? (
         <Card>
           <CardContent className="py-8 text-center text-destructive">
-            <p>Đã xảy ra lỗi khi tải lịch sử</p>
+            <p>Error loading test history</p>
           </CardContent>
         </Card>
       ) : attempts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-lg font-medium">Chưa có lịch sử làm bài</p>
+            <p className="text-lg font-medium">No Test History</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Hoàn thành bài test để xem lịch sử ở đây
+              Complete a test to see your history here
             </p>
           </CardContent>
         </Card>
@@ -290,7 +290,7 @@ export function HistoryPage() {
                         {attempt.test_creator_username && (
                           <div className="flex items-center gap-1">
                             <User className="w-4 h-4" />
-                            <span>Tạo bởi: {attempt.test_creator_username}</span>
+                            <span>Created by: {attempt.test_creator_username}</span>
                           </div>
                         )}
                         {attempt.completed_at && (
@@ -304,7 +304,7 @@ export function HistoryPage() {
                       <div className="flex items-center gap-4 ml-13">
                         <Badge variant="default" className="gap-1">
                           <CheckCircle2 className="w-3 h-3" />
-                          Điểm: {attempt.correct_answers}/{attempt.total_questions} ({formatScore(attempt.score)}%)
+                          Score: {attempt.correct_answers}/{attempt.total_questions} ({formatScore(attempt.score)}%)
                         </Badge>
                       </div>
                     </div>
@@ -316,7 +316,7 @@ export function HistoryPage() {
                         onClick={() => handleViewResult(attempt.attempt_id)}
                       >
                         <Eye className="w-4 h-4 mr-2" />
-                        Xem kết quả
+                        View Result
                       </Button>
                       <Button
                         size="sm"
@@ -325,7 +325,7 @@ export function HistoryPage() {
                         disabled={isDeleting}
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
-                        Xóa
+                        Delete
                       </Button>
                     </div>
                   </div>
@@ -340,20 +340,20 @@ export function HistoryPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa lịch sử làm bài này không? Hành động này không thể hoàn tác.
+              Are you sure you want to delete this test history? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setAttemptToDelete(null)}>
-              Hủy
+              Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Xóa
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

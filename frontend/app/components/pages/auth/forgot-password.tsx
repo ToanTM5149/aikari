@@ -28,10 +28,10 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
     try {
       await forgotPassword({ email }).unwrap()
       
-      toast.success("Email đã được gửi! Vui lòng kiểm tra hộp thư của bạn.")
+      toast.success("Email sent! Please check your inbox.");
       setEmailSent(true)
     } catch (error: any) {
-      const errorMessage = error?.data?.detail || authError || "Không thể gửi email. Vui lòng thử lại."
+      const errorMessage = error?.data?.detail || authError || "Failed to send email. Please try again."
       toast.error(errorMessage)
     }
   }
@@ -63,15 +63,15 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
               >
                 <CheckCircle2 className="w-16 h-16 text-green-500" />
               </motion.div>
-              <CardTitle className="text-2xl">Email đã được gửi!</CardTitle>
+              <CardTitle className="text-2xl">Email Sent!</CardTitle>
               <CardDescription>
-                Chúng tôi đã gửi link đặt lại mật khẩu đến email <strong>{email}</strong>
+                We have sent a password reset link to <strong>{email}</strong>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-sm text-muted-foreground text-center space-y-2">
-                <p>Vui lòng kiểm tra hộp thư của bạn và làm theo hướng dẫn trong email.</p>
-                <p>Link sẽ hết hạn sau 48 giờ.</p>
+                <p>Please check your inbox and follow the instructions in the email.</p>
+                <p>The link will expire after 48 hours.</p>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
@@ -81,15 +81,15 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                 className="w-full"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Quay lại đăng nhập
+                Back to Login
               </Button>
               <div className="text-center text-sm text-muted-foreground">
-                Không nhận được email?{" "}
+                Didn't receive the email?{" "}
                 <button
                   onClick={() => setEmailSent(false)}
                   className="text-primary hover:underline"
                 >
-                  Gửi lại
+                  Resend
                 </button>
               </div>
             </CardFooter>
@@ -117,9 +117,9 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
             >
               <Logo size="lg" showText={false} />
             </motion.div>
-            <CardTitle className="text-2xl">Quên mật khẩu?</CardTitle>
+            <CardTitle className="text-2xl">Forgot Password?</CardTitle>
             <CardDescription>
-              Nhập email của bạn và chúng tôi sẽ gửi link đặt lại mật khẩu
+              Enter your email and we will send you a password reset link
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -136,7 +136,7 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Nhập email của bạn"
+                    placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -162,7 +162,7 @@ export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
                       className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full"
                     />
                   ) : (
-                    "Gửi email đặt lại mật khẩu"
+                    "Send Password Reset Email"
                   )}
                 </Button>
               </motion.div>

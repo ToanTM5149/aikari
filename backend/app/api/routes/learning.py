@@ -61,11 +61,47 @@ def start_learning_session(
     total_terms_statement = select(Term).where(Term.studyset_id == session_data.studyset_id)
     total_terms = len(list(session.exec(total_terms_statement).all()))
     
+    # Get activities to determine if terms are new
+    activities_statement = (
+        select(StudyActivity)
+        .where(
+            StudyActivity.user_id == current_user.user_id,
+            StudyActivity.studyset_id == session_data.studyset_id
+        )
+    )
+    activities = session.exec(activities_statement).all()
+    
+    # Create map of term_id -> latest activity
+    term_activity_map: dict[uuid.UUID, StudyActivity] = {}
+    for activity in activities:
+        if activity.term_id not in term_activity_map:
+            term_activity_map[activity.term_id] = activity
+        else:
+            if activity.created_at > term_activity_map[activity.term_id].created_at:
+                term_activity_map[activity.term_id] = activity
+    
+    # Build terms response
+    terms_response = [
+        NextTermResponse(
+            term_id=term.term_id,
+            term_text=term.term_text,
+            definition=term.definition,
+            example=term.example,
+            image_url=term.image_url,
+            category=None,
+            is_new=term.term_id not in term_activity_map,
+            previous_recall_score=term_activity_map[term.term_id].recall_score if term.term_id in term_activity_map else None,
+            next_review_date=term_activity_map[term.term_id].next_review_date if term.term_id in term_activity_map else None
+        )
+        for term in terms
+    ]
+    
     return LearningSessionStartResponse(
         session_id=str(uuid.uuid4()),  # Generate session ID
         studyset_id=session_data.studyset_id,
         total_terms=total_terms,
         terms_in_session=len(terms),
+        terms=terms_response,
         started_at=datetime.utcnow()
     )
 
@@ -154,7 +190,6 @@ def submit_review(
         studyset_id=studyset_id,
         term_id=review.term_id,
         recall_score=review.recall_score,
-        is_correct=review.is_correct,
         hint_used=review.hint_used,
         response_time=review.response_time
     )
@@ -231,10 +266,8 @@ def end_learning_session(
         studyset_id=studyset_id,
         session_duration=duration_minutes,
         total_reviewed=summary["total_reviewed"],
-        correct=summary["correct"],
-        incorrect=summary["incorrect"],
-        accuracy=summary["accuracy"],
         average_recall_score=summary["average_recall_score"],
+        difficulty_distribution=summary["difficulty_distribution"],
         cards_due_next=cards_due_next,
         next_review_date=next_activity.next_review_date if next_activity else None
     )
@@ -321,11 +354,7 @@ def get_studyset_stats(
     reviewing = sum(1 for a in term_latest_activity.values() if a.recall_score >= 3 and not (a.ef > 2.5 and a.interval > 21))
     forgotten = sum(1 for a in term_latest_activity.values() if a.recall_score < 3)
     
-    # Calculate accuracy
-    correct_count = sum(1 for a in activities if a.is_correct)
-    accuracy = (correct_count / len(activities) * 100) if activities else 0.0
-    
-    # Average recall score
+    # Average recall score across all reviews
     avg_recall = sum(a.recall_score for a in activities) / len(activities) if activities else 0.0
     
     # Find weak terms (recall_score < 3)
@@ -356,7 +385,7 @@ def get_studyset_stats(
         reviewing_terms=reviewing,
         forgotten_terms=forgotten,
         never_studied=never_studied,
-        accuracy=accuracy,
+        accuracy=avg_recall,  # Now using average recall score instead of accuracy
         average_recall_score=avg_recall,
         total_study_time=0.0,  # TODO: Track study time
         weak_terms=weak_terms_list

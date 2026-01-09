@@ -105,21 +105,21 @@ export function TestCard({
         return (
           <Badge variant="default" className="gap-1">
             <CheckCircle2 className="w-3 h-3" />
-            Hoàn thành
+            Completed
           </Badge>
         );
       case "in_progress":
         return (
           <Badge variant="secondary" className="gap-1">
             <Clock className="w-3 h-3" />
-            Đang làm
+            In Progress
           </Badge>
         );
       default:
         return (
           <Badge variant="outline" className="gap-1">
             <FileText className="w-3 h-3" />
-            Chưa làm
+            Not Started
           </Badge>
         );
     }
@@ -144,22 +144,22 @@ export function TestCard({
               <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                 <div className="flex items-center gap-1">
                   <FileText className="w-4 h-4" />
-                  <span>{test.total_questions} câu hỏi</span>
+                  <span>{test.total_questions} questions</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  <span>Tạo: {formatDate(test.created_at)}</span>
+                  <span>Created: {formatDate(test.created_at)}</span>
                 </div>
                 {status === "completed" && latestAttempt && (
                   <div className="flex items-center gap-1">
                     <span className="font-medium">
-                      Điểm: {latestAttempt.correct_answers}/{latestAttempt.total_questions}
+                      Score: {latestAttempt.correct_answers}/{latestAttempt.total_questions}
                     </span>
                   </div>
                 )}
                 {attemptCount > 0 && (
                   <div className="flex items-center gap-1">
-                    <span>Đã làm: {attemptCount} lần</span>
+                    <span>Attempted: {attemptCount} time(s)</span>
                   </div>
                 )}
               </div>
@@ -167,7 +167,7 @@ export function TestCard({
                 <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 dark:bg-orange-950/20 px-3 py-2 rounded-md">
                   <AlertCircle className="w-4 h-4" />
                   <span>
-                    Bạn đã hoàn thành test này. Cần yêu cầu để làm lại.
+                    You have completed this test. A request is required to retake it.
                   </span>
                 </div>
               )}
@@ -175,7 +175,7 @@ export function TestCard({
                 <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 dark:bg-blue-950/20 px-3 py-2 rounded-md">
                   <Clock className="w-4 h-4" />
                   <span>
-                    Đang chờ phê duyệt yêu cầu làm lại test
+                    Waiting for approval of retake request
                   </span>
                 </div>
               )}
@@ -183,7 +183,7 @@ export function TestCard({
                 <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-950/20 px-3 py-2 rounded-md">
                   <CheckCircle2 className="w-4 h-4" />
                   <span>
-                    Yêu cầu làm lại đã được phê duyệt. Kết quả cũ đã bị xóa.
+                    Retake request has been approved. Old results have been deleted.
                   </span>
                 </div>
               )}
@@ -196,7 +196,7 @@ export function TestCard({
                     size="sm"
                   >
                     <BookOpen className="w-4 h-4 mr-2" />
-                    {status === "completed" && isTestOwner ? "Làm lại" : "Làm Test"}
+                    {status === "completed" && isTestOwner ? "Retake" : "Take Test"}
                   </Button>
                   {isTestOwner && (
                     <Button
@@ -216,7 +216,7 @@ export function TestCard({
                     variant="secondary"
                   >
                     <Clock className="w-4 h-4 mr-2" />
-                    Tiếp tục
+                    Continue
                   </Button>
                   {isTestOwner && (
                     <Button
@@ -237,7 +237,7 @@ export function TestCard({
                       variant="outline"
                     >
                       <Eye className="w-4 h-4 mr-2" />
-                      Xem kết quả
+                      View Results
                     </Button>
                   )}
                   {/* Test owner can always reattempt without request */}
@@ -247,7 +247,7 @@ export function TestCard({
                       size="sm"
                     >
                       <BookOpen className="w-4 h-4 mr-2" />
-                      Làm lại
+                      Retake
                     </Button>
                   )}
                   {/* Member needs to request reattempt */}
@@ -258,7 +258,7 @@ export function TestCard({
                       variant="outline"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Yêu cầu làm lại
+                      Request Retake
                     </Button>
                   )}
                   {isMember && !isTestOwner && reattemptRequestStatus === "approved" && (
@@ -267,7 +267,7 @@ export function TestCard({
                       size="sm"
                     >
                       <BookOpen className="w-4 h-4 mr-2" />
-                      Làm lại
+                      Retake
                     </Button>
                   )}
                   {isTestOwner && (

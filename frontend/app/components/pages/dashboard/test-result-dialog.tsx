@@ -68,7 +68,7 @@ export function TestResultDialog({
                 variant={result.percentage >= 70 ? "default" : "secondary"}
                 className="text-lg px-4 py-1"
               >
-                {result.percentage >= 70 ? "Đạt" : "Chưa đạt"}
+                {result.percentage >= 70 ? "Passed" : "Failed"}
               </Badge>
             </div>
             <div className="grid grid-cols-3 gap-4">
@@ -76,26 +76,26 @@ export function TestResultDialog({
                 <div className="text-3xl font-bold text-primary">
                   {result.score}/{result.max_score}
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">Điểm số</div>
+                <div className="text-sm text-muted-foreground mt-1">Score</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary">
                   {result.percentage}%
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">Tỷ lệ đúng</div>
+                <div className="text-sm text-muted-foreground mt-1">Accuracy</div>
               </div>
               <div className="text-center">
                 <div className="text-sm font-medium">
                   {formatDate(result.completed_at)}
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">Hoàn thành</div>
+                <div className="text-sm text-muted-foreground mt-1">Completed</div>
               </div>
             </div>
           </div>
 
           {/* Questions Detail */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Chi tiết câu trả lời:</h3>
+            <h3 className="font-semibold text-lg">Answer Details:</h3>
             {result.questions.map((q, idx) => (
               <div
                 key={q.id}

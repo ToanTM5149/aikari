@@ -38,6 +38,8 @@ import { CreateStudySetDialog } from "./create-studyset-dialog"
 import { Skeleton } from "~/components/ui/skeleton"
 import { DataPagination } from "~/components/common/data-pagination"
 import { CategoryFilter } from "~/components/category-filter"
+import { StudySetCard } from "~/components/shared/studyset-card"
+import type { StudySet } from "~/redux/features/shared/types"
 
 export function StudySetList() {
   const navigate = useNavigate()
@@ -46,6 +48,8 @@ export function StudySetList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editingStudySet, setEditingStudySet] = useState<StudySet | null>(null)
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(9)
 
@@ -184,7 +188,11 @@ export function StudySetList() {
                   <List className="w-4 h-4" />
                 </Button>
               </div>
-              <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Button size="sm" onClick={() => {
+                setDialogMode("create")
+                setEditingStudySet(null)
+                setCreateDialogOpen(true)
+              }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create Study Set
               </Button>
@@ -216,7 +224,7 @@ export function StudySetList() {
             <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-sm text-muted-foreground">Đang tải...</p>
+                <p className="text-sm text-muted-foreground">Loading...</p>
               </div>
             </div>
           )}
@@ -236,7 +244,11 @@ export function StudySetList() {
                     <p className="text-sm mt-2">Create your first study set to get started</p>
                     <Button 
                       className="mt-4" 
-                      onClick={() => setCreateDialogOpen(true)}
+                      onClick={() => {
+                        setDialogMode("create")
+                        setEditingStudySet(null)
+                        setCreateDialogOpen(true)
+                      }}
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Create Study Set
@@ -256,136 +268,21 @@ export function StudySetList() {
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                 >
                   {filteredStudySets.map((studySet, index) => (
-                    <motion.div
+                    <StudySetCard
                       key={studySet.studyset_id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Card
-                        className="cursor-pointer hover:shadow-lg transition-all group overflow-hidden"
-                        onClick={() => handleViewDetail(studySet.studyset_id)}
-                      >
-                        <CardContent className="p-6 space-y-4">
-                          {/* Header */}
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap mb-2">
-                                <h3 className="font-semibold text-lg truncate">{studySet.title}</h3>
-                                {studySet.category && (
-                                  <Badge variant="outline" className="shrink-0 text-xs">
-                                    {studySet.category.name}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {studySet.description || "No description"}
-                              </p>
-                            </div>
-                            <div onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem 
-                                    onClick={() => handleViewDetail(studySet.studyset_id)}
-                                  >
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    View Details
-                                  </DropdownMenuItem>
-                                  {studySet.owner_id === user?.user_id && (
-                                    <>
-                                      <DropdownMenuItem>
-                                        <Edit className="w-4 h-4 mr-2" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        onClick={() => handleDelete(studySet.studyset_id, studySet.title)}
-                                        className="text-destructive"
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-
-                          {/* Metadata */}
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <BookOpen className="w-4 h-4" />
-                              {studySet.term_count || 0} cards
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {(() => {
-                                // Only show time if user has actually studied (last_activity_at exists)
-                                if (!studySet.last_activity_at) {
-                                  return 'Not started'
-                                }
-                                // Parse datetime string as UTC if no timezone indicator
-                                // Backend returns naive datetime (UTC) without timezone info
-                                const dateStr = studySet.last_activity_at
-                                // Check if string has timezone indicator (Z, +HH:MM, or -HH:MM after position 10)
-                                const hasTimezone = dateStr.includes('Z') || 
-                                  (dateStr.includes('+') && dateStr.length > 19) ||
-                                  (dateStr.lastIndexOf('-') > 10) // Timezone offset like -05:00
-                                const activityTime = hasTimezone
-                                  ? new Date(dateStr)
-                                  : new Date(dateStr + 'Z') // Append 'Z' to treat as UTC
-                                const now = new Date()
-                                const diffMs = now.getTime() - activityTime.getTime()
-                                const diffMinutes = Math.floor(diffMs / (1000 * 60))
-                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-                                const diffDays = Math.floor(diffHours / 24)
-                                
-                                if (diffMinutes < 1) return 'Just now'
-                                if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`
-                                if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-                                if (diffDays === 1) return '1 day ago'
-                                return `${diffDays} days ago`
-                              })()}
-                            </span>
-                          </div>
-
-                          {/* Progress */}
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Progress</span>
-                              <span className="font-medium">{Math.round(studySet.progress || 0)}%</span>
-                            </div>
-                            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                              <motion.div 
-                                className="bg-foreground rounded-full h-2"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${studySet.progress || 0}%` }}
-                                transition={{ delay: index * 0.05 + 0.2, duration: 0.6, ease: "easeOut" }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Continue/Start Button */}
-                          <Button 
-                            className="w-full bg-foreground hover:bg-foreground/90 text-background"
-                            disabled={!studySet.term_count || studySet.term_count === 0}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              navigate(`/dashboard/studysets/${studySet.studyset_id}/study`)
-                            }}
-                          >
-                            <Play className="w-4 h-4 mr-2" />
-                            {studySet.last_activity_at ? 'Continue Studying' : 'Start Learning'}
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
+                      studySet={studySet}
+                      variant="default"
+                      showProgress={true}
+                      animationDelay={index * 0.05}
+                      currentUserId={user?.user_id}
+                      showActions={true}
+                      onEdit={(studySet) => {
+                        setEditingStudySet(studySet)
+                        setDialogMode("edit")
+                        setCreateDialogOpen(true)
+                      }}
+                      onDelete={() => handleDelete(studySet.studyset_id, studySet.title)}
+                    />
                   ))}
                 </motion.div>
               ) : (
@@ -397,80 +294,20 @@ export function StudySetList() {
                   className="space-y-2"
                 >
                   {filteredStudySets.map((studySet, index) => (
-                    <motion.div
+                    <StudySetCard
                       key={studySet.studyset_id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Card
-                        className="cursor-pointer hover:shadow-sm transition-shadow"
-                        onClick={() => handleViewDetail(studySet.studyset_id)}
-                      >
-                        <CardContent className="flex items-center gap-4 p-4">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <Layers className="w-5 h-5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold truncate">{studySet.title}</h3>
-                              {studySet.category && (
-                                <Badge variant="outline" className="shrink-0">
-                                  {studySet.category.name}
-                                </Badge>
-                              )}
-                              <Badge variant="outline" className="shrink-0">
-                                {studySet.content_type}
-                              </Badge>
-                            </div>
-                            {studySet.description && (
-                              <p className="text-sm text-muted-foreground truncate">
-                                {studySet.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-4 shrink-0 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {new Date(studySet.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem 
-                                  onClick={() => handleViewDetail(studySet.studyset_id)}
-                                >
-                                  <FileText className="w-4 h-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                {studySet.owner_id === user?.user_id && (
-                                  <>
-                                    <DropdownMenuItem>
-                                      <Edit className="w-4 h-4 mr-2" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => handleDelete(studySet.studyset_id, studySet.title)}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
+                      studySet={studySet}
+                      variant="compact"
+                      animationDelay={index * 0.05}
+                      currentUserId={user?.user_id}
+                      showActions={true}
+                      onEdit={(studySet) => {
+                        setEditingStudySet(studySet)
+                        setDialogMode("edit")
+                        setCreateDialogOpen(true)
+                      }}
+                      onDelete={() => handleDelete(studySet.studyset_id, studySet.title)}
+                    />
                   ))}
                 </motion.div>
               )}
@@ -492,10 +329,12 @@ export function StudySetList() {
         </CardContent>
       </Card>
 
-      {/* Create Dialog */}
+      {/* Create/Edit Dialog */}
       <CreateStudySetDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        studySet={editingStudySet}
+        mode={dialogMode}
       />
     </div>
   )

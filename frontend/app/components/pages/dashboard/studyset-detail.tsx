@@ -12,8 +12,6 @@ import {
   Plus,
   Trash2,
   Save,
-  Eye,
-  EyeOff,
   ArrowLeft,
   Sparkles,
   Check,
@@ -106,8 +104,6 @@ export function StudySetDetail() {
   const [deleteStudySet, { isLoading: deletingSet }] = useDeleteStudySetMutation();
 
   // Local state
-  const [previewMode, setPreviewMode] = useState(false);
-  const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
   const [editingTerms, setEditingTerms] = useState<TermInput[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   
@@ -205,11 +201,11 @@ export function StudySetDetail() {
     if (term.isNew) {
       // Just remove from local state if it's new
       if (editingTerms.length === 1) {
-        toast.error("Bạn phải có ít nhất một flashcard");
+        toast.error("You must have at least one flashcard");
         return;
       }
       setEditingTerms(editingTerms.filter((_, i) => i !== index));
-      toast.success("Đã xóa flashcard");
+      toast.success("Flashcard deleted");
     } else if (term.id) {
       // Delete from server if it exists
       try {
@@ -218,7 +214,7 @@ export function StudySetDetail() {
           termId: term.id,
         }).unwrap();
         setEditingTerms(editingTerms.filter((_, i) => i !== index));
-        toast.success("Đã xóa flashcard");
+        toast.success("Flashcard deleted");
       } catch (error: any) {
         const errorMsg = getErrorMessage(error);
         toast.error(errorMsg);
@@ -229,7 +225,7 @@ export function StudySetDetail() {
   const saveSingleTerm = async (term: TermInput, index: number) => {
     // Validate
     if (!term.term_text.trim() || !term.definition.trim()) {
-      toast.error("Vui lòng điền đầy đủ thuật ngữ và định nghĩa");
+      toast.error("Please fill in both term and definition");
       return;
     }
 
@@ -254,7 +250,7 @@ export function StudySetDetail() {
               : t
           )
         );
-        toast.success("Đã lưu flashcard!");
+        toast.success("Flashcard saved!");
       } else if (term.id) {
         // Update existing term
         await updateTerm({
@@ -267,7 +263,7 @@ export function StudySetDetail() {
             image_url: term.image_url || undefined,
           },
         }).unwrap();
-        toast.success("Đã cập nhật flashcard!");
+        toast.success("Flashcard updated!");
       }
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
@@ -286,7 +282,7 @@ export function StudySetDetail() {
     if (error?.data?.message) {
       return error.data.message;
     }
-    return "Đã xảy ra lỗi";
+    return "An error occurred";
   };
 
   // Open edit dialog for single term
@@ -306,7 +302,7 @@ export function StudySetDetail() {
     if (!editingTerm) return;
 
     if (!editingTerm.term_text.trim() || !editingTerm.definition.trim()) {
-      toast.error("Vui lòng điền đầy đủ thuật ngữ và định nghĩa");
+      toast.error("Please fill in both term and definition");
       return;
     }
 
@@ -345,14 +341,14 @@ export function StudySetDetail() {
   const handleImageUpload = (index: number, file: File) => {
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error("Vui lòng chọn file ảnh");
+      toast.error("Please select an image file");
       return;
     }
 
     // Validate file size (max 2MB)
     const maxSize = 2 * 1024 * 1024; // 2MB in bytes
     if (file.size > maxSize) {
-      toast.error("Kích thước ảnh phải nhỏ hơn 2MB");
+      toast.error("Image size must be less than 2MB");
       return;
     }
 
@@ -361,27 +357,17 @@ export function StudySetDetail() {
     reader.onload = (e) => {
       const base64 = e.target?.result as string;
       updateTermInput(index, "image_url", base64);
-      toast.success("Đã tải ảnh lên thành công");
+      toast.success("Image uploaded successfully");
     };
     reader.onerror = () => {
-      toast.error("Không thể tải ảnh lên");
+      toast.error("Failed to upload image");
     };
     reader.readAsDataURL(file);
   };
 
   const removeImage = (index: number) => {
     updateTermInput(index, "image_url", "");
-    toast.success("Đã xóa ảnh");
-  };
-
-  const handleFlipCard = (id: string) => {
-    const newFlipped = new Set(flippedCards);
-    if (newFlipped.has(id)) {
-      newFlipped.delete(id);
-    } else {
-      newFlipped.add(id);
-    }
-    setFlippedCards(newFlipped);
+    toast.success("Image removed");
   };
 
   const cancelEditing = () => {
@@ -396,7 +382,7 @@ export function StudySetDetail() {
     );
 
     if (validTerms.length === 0) {
-      toast.error("Vui lòng thêm ít nhất một flashcard với nội dung");
+      toast.error("Please add at least one flashcard with content");
       return;
     }
 
@@ -404,7 +390,7 @@ export function StudySetDetail() {
       (term) => !term.term_text.trim() || !term.definition.trim()
     );
     if (incompleteTerms.length > 0) {
-      toast.error(`${incompleteTerms.length} flashcard(s) chưa hoàn thành`);
+      toast.error(`${incompleteTerms.length} flashcard(s) incomplete`);
       return;
     }
 
@@ -438,7 +424,7 @@ export function StudySetDetail() {
       });
 
       await Promise.all(promises);
-      toast.success(`Đã lưu ${validTerms.length} flashcard(s)!`);
+      toast.success(`Saved ${validTerms.length} flashcard(s)!`);
       setIsEditing(false);
       setEditingTerms([]);
     } catch (error: any) {
@@ -450,7 +436,7 @@ export function StudySetDetail() {
   const handleDeleteStudySet = async () => {
     try {
       await deleteStudySet(studysetId!).unwrap();
-      toast.success("Đã xóa study set");
+      toast.success("Study set deleted");
       navigate("/dashboard/studysets");
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
@@ -485,13 +471,13 @@ export function StudySetDetail() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
-          <h3 className="text-lg font-semibold mb-2">Không tìm thấy Study Set</h3>
+          <h3 className="text-lg font-semibold mb-2">Study Set Not Found</h3>
           <p className="text-muted-foreground mb-4">
-            Study set này không tồn tại hoặc bạn không có quyền truy cập.
+            This study set does not exist or you do not have access to it.
           </p>
           <Button onClick={() => navigate("/dashboard/studysets")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
+            Go Back
           </Button>
         </div>
       </div>
@@ -554,7 +540,7 @@ export function StudySetDetail() {
                       <SelectItem value="study">
                         <div className="flex items-center gap-2">
                           <BookOpen className="w-4 h-4" />
-                          <span>Học</span>
+                          <span>Learn</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="test">
@@ -571,24 +557,7 @@ export function StudySetDetail() {
                     onClick={() => navigate(`/dashboard/studysets/${studysetId}/progress`)}
                   >
                     <BarChart3 className="w-4 h-4 mr-2" />
-                    Tiến độ
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPreviewMode(!previewMode)}
-                  >
-                    {previewMode ? (
-                      <>
-                        <EyeOff className="w-4 h-4 mr-2" />
-                        Xem danh sách
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-4 h-4 mr-2" />
-                        Preview
-                      </>
-                    )}
+                    Progress
                   </Button>
                   {isOwner && (
                     <Button size="sm" onClick={initializeEditMode}>
@@ -607,7 +576,7 @@ export function StudySetDetail() {
                     onClick={cancelEditing}
                     disabled={creating || updating}
                   >
-                    Hủy
+                    Cancel
                   </Button>
                   <Button
                     size="sm"
@@ -617,12 +586,12 @@ export function StudySetDetail() {
                     {creating || updating ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Đang lưu...
+                        Saving...
                       </>
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Lưu tất cả
+                        Save All
                       </>
                     )}
                   </Button>
@@ -642,19 +611,19 @@ export function StudySetDetail() {
                   </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Xóa Study Set?</AlertDialogTitle>
+                    <AlertDialogTitle>Delete Study Set?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Hành động này không thể hoàn tác. Study set và tất cả flashcards
-                      sẽ bị xóa vĩnh viễn.
+                      This action cannot be undone. The study set and all flashcards
+                      will be permanently deleted.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Hủy</AlertDialogCancel>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteStudySet}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      Xóa
+                      Delete
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -669,109 +638,7 @@ export function StudySetDetail() {
           className="flex-1 overflow-auto p-6"
         >
           <AnimatePresence mode="wait">
-            {previewMode && !isEditing ? (
-              // Preview Mode
-              <motion.div
-                key="preview"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="grid grid-cols-2 gap-4"
-              >
-                {termsData?.data && termsData.data.length > 0 ? (
-                  termsData.data.map((term, index) => (
-                    <motion.div
-                      key={term.term_id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="h-48"
-                      style={{ perspective: 1000 }}
-                    >
-                      <motion.div
-                        className="relative w-full h-full cursor-pointer"
-                        style={{ transformStyle: "preserve-3d" }}
-                        animate={{
-                          rotateY: flippedCards.has(term.term_id) ? 180 : 0,
-                        }}
-                        transition={{ duration: 0.6, ease: "easeInOut" }}
-                        onClick={() => handleFlipCard(term.term_id)}
-                      >
-                        {/* Front */}
-                        <Card className="absolute inset-0 backface-hidden">
-                          <CardContent className="flex flex-col items-center justify-center h-full p-4 text-center">
-                            {term.image_url && (
-                              <div className="mb-2 w-full">
-                                <img
-                                  src={term.image_url}
-                                  alt={term.term_text}
-                                  className="w-full h-20 object-cover rounded-md shadow-sm"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
-                            )}
-                            <p className="line-clamp-4 text-lg font-medium">
-                              {term.term_text}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-3">
-                              Click để lật
-                            </p>
-                          </CardContent>
-                        </Card>
-
-                        {/* Back */}
-                        <Card
-                          className="absolute inset-0 backface-hidden bg-primary/5"
-                          style={{ transform: "rotateY(180deg)" }}
-                        >
-                          <CardContent className="flex flex-col items-center justify-center h-full p-4 text-center">
-                            <Badge variant="secondary" className="mb-3">
-                              Định nghĩa
-                            </Badge>
-                            {term.image_url && (
-                              <div className="mb-2 w-full">
-                                <img
-                                  src={term.image_url}
-                                  alt={term.definition}
-                                  className="w-full h-20 object-cover rounded-md shadow-sm"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
-                            )}
-                            <p className="line-clamp-4 text-primary">
-                              {term.definition}
-                            </p>
-                            {term.example && (
-                              <p className="text-xs text-muted-foreground mt-2 italic line-clamp-2">
-                                Ví dụ: {term.example}
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-3">
-                              Click để lật
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="col-span-2 flex items-center justify-center h-64 text-muted-foreground">
-                    <div className="text-center">
-                      <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Chưa có flashcard nào</p>
-                      <p className="text-sm mt-2">
-                        Click "Chỉnh sửa" để tạo flashcards
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            ) : isEditing ? (
+            {isEditing ? (
               // Edit Mode
               <motion.div
                 key="edit"
@@ -809,11 +676,11 @@ export function StudySetDetail() {
                                   className="text-sm mb-2 flex items-center gap-2"
                                 >
                                   <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                                  Thuật ngữ / Câu hỏi
+                                  Term / Question
                                 </Label>
                                 <Textarea
                                   id={`term-${index}`}
-                                  placeholder="Nhập thuật ngữ hoặc câu hỏi..."
+                                  placeholder="Enter term or question..."
                                   value={term.term_text}
                                   onChange={(e) =>
                                     updateTermInput(
@@ -832,11 +699,11 @@ export function StudySetDetail() {
                                   className="text-sm mb-2 flex items-center gap-2"
                                 >
                                   <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                  Định nghĩa / Câu trả lời
+                                  Definition / Answer
                                 </Label>
                                 <Textarea
                                   id={`definition-${index}`}
-                                  placeholder="Nhập định nghĩa hoặc câu trả lời..."
+                                  placeholder="Enter definition or answer..."
                                   value={term.definition}
                                   onChange={(e) =>
                                     updateTermInput(
@@ -856,11 +723,11 @@ export function StudySetDetail() {
                                 htmlFor={`example-${index}`}
                                 className="text-sm mb-2 block text-muted-foreground"
                               >
-                                Ví dụ (tùy chọn)
+                                Example (optional)
                               </Label>
                               <Textarea
                                 id={`example-${index}`}
-                                placeholder="Nhập ví dụ để minh họa..."
+                                placeholder="Enter example to illustrate..."
                                 value={term.example || ""}
                                 onChange={(e) =>
                                   updateTermInput(index, "example", e.target.value)
@@ -913,7 +780,7 @@ export function StudySetDetail() {
                                   />
                                   <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-md hover:bg-accent transition-colors">
                                     <Upload className="w-4 h-4" />
-                                    <span className="text-sm">Upload từ máy tính</span>
+                                    <span className="text-sm">Upload from computer</span>
                                   </div>
                                 </label>
                                 <span className="text-xs text-muted-foreground">Max 2MB</span>
@@ -929,7 +796,7 @@ export function StudySetDetail() {
                               onClick={() => saveSingleTerm(term, index)}
                               disabled={creating || updating || !term.term_text.trim() || !term.definition.trim()}
                               className="text-primary hover:text-primary hover:bg-primary/10"
-                              title="Lưu flashcard này"
+                              title="Save this flashcard"
                             >
                               <Save className="w-4 h-4" />
                             </Button>
@@ -939,7 +806,7 @@ export function StudySetDetail() {
                               onClick={() => removeTerm(term, index)}
                               disabled={deleting}
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              title="Xóa flashcard"
+                              title="Delete flashcard"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -961,7 +828,7 @@ export function StudySetDetail() {
                                   : "text-muted-foreground"
                               }
                             >
-                              Thuật ngữ
+                              Term
                             </span>
                           </div>
                           <div className="flex items-center gap-1 text-xs">
@@ -977,7 +844,7 @@ export function StudySetDetail() {
                                   : "text-muted-foreground"
                               }
                             >
-                              Định nghĩa
+                              Definition
                             </span>
                           </div>
                         </div>
@@ -998,7 +865,7 @@ export function StudySetDetail() {
                     onClick={addTerm}
                   >
                     <Plus className="w-5 h-5 mr-2" />
-                    Thêm Flashcard
+                    Add Flashcard
                   </Button>
                 </motion.div>
               </motion.div>
@@ -1033,7 +900,7 @@ export function StudySetDetail() {
                                 <div className="flex items-center gap-2 mb-2">
                                   <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                                   <span className="text-xs font-medium text-muted-foreground">
-                                    THUẬT NGỮ
+                                    TERM
                                   </span>
                                 </div>
                                 <p className="text-sm">{term.term_text}</p>
@@ -1042,7 +909,7 @@ export function StudySetDetail() {
                                 <div className="flex items-center gap-2 mb-2">
                                   <span className="w-2 h-2 rounded-full bg-green-500"></span>
                                   <span className="text-xs font-medium text-muted-foreground">
-                                    ĐỊNH NGHĨA
+                                    DEFINITION
                                   </span>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
@@ -1050,7 +917,7 @@ export function StudySetDetail() {
                                 </p>
                                 {term.example && (
                                   <p className="text-xs text-muted-foreground mt-2 italic">
-                                    Ví dụ: {term.example}
+                                    Example: {term.example}
                                   </p>
                                 )}
                               </div>
@@ -1061,7 +928,7 @@ export function StudySetDetail() {
                                 size="icon"
                                 onClick={() => navigate(`/dashboard/studysets/${studysetId}/terms/${term.term_id}`)}
                                 className="shrink-0"
-                                title="Xem chi tiết"
+                                title="View details"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -1075,9 +942,9 @@ export function StudySetDetail() {
                   <div className="flex items-center justify-center h-64 text-muted-foreground">
                     <div className="text-center">
                       <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Chưa có flashcard nào</p>
+                      <p>No flashcards yet</p>
                       <p className="text-sm mt-2">
-                        Click "Chỉnh sửa" để tạo flashcards
+                        Click "Add flashcard" to create flashcards
                       </p>
                     </div>
                   </div>
@@ -1092,20 +959,20 @@ export function StudySetDetail() {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Chỉnh sửa Flashcard</DialogTitle>
+            <DialogTitle>Edit Flashcard</DialogTitle>
             <DialogDescription>
-              Cập nhật thông tin cho flashcard này
+              Update information for this flashcard
             </DialogDescription>
           </DialogHeader>
           {editingTerm && (
             <div className="space-y-4 py-4">
               <div>
                 <Label htmlFor="edit-term">
-                  Thuật ngữ / Câu hỏi <span className="text-destructive">*</span>
+                  Term / Question <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="edit-term"
-                  placeholder="Nhập thuật ngữ hoặc câu hỏi..."
+                  placeholder="Enter term or question..."
                   value={editingTerm.term_text}
                   onChange={(e) =>
                     setEditingTerm({ ...editingTerm, term_text: e.target.value })
@@ -1115,11 +982,11 @@ export function StudySetDetail() {
               </div>
               <div>
                 <Label htmlFor="edit-definition">
-                  Định nghĩa / Câu trả lời <span className="text-destructive">*</span>
+                  Definition / Answer <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="edit-definition"
-                  placeholder="Nhập định nghĩa hoặc câu trả lời..."
+                  placeholder="Enter definition or answer..."
                   value={editingTerm.definition}
                   onChange={(e) =>
                     setEditingTerm({ ...editingTerm, definition: e.target.value })
@@ -1128,10 +995,10 @@ export function StudySetDetail() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-example">Ví dụ (tùy chọn)</Label>
+                <Label htmlFor="edit-example">Example (optional)</Label>
                 <Textarea
                   id="edit-example"
-                  placeholder="Nhập ví dụ để minh họa..."
+                  placeholder="Enter example to illustrate..."
                   value={editingTerm.example || ""}
                   onChange={(e) =>
                     setEditingTerm({ ...editingTerm, example: e.target.value })
@@ -1175,13 +1042,13 @@ export function StudySetDetail() {
                         if (file) {
                           // Validate file type
                           if (!file.type.startsWith('image/')) {
-                            toast.error("Vui lòng chọn file ảnh");
+                            toast.error("Please select an image file");
                             return;
                           }
                           // Validate file size (max 2MB)
                           const maxSize = 2 * 1024 * 1024;
                           if (file.size > maxSize) {
-                            toast.error("Kích thước ảnh phải nhỏ hơn 2MB");
+                            toast.error("Image size must be less than 2MB");
                             return;
                           }
                           // Convert to base64
@@ -1189,10 +1056,10 @@ export function StudySetDetail() {
                           reader.onload = (event) => {
                             const base64 = event.target?.result as string;
                             setEditingTerm({ ...editingTerm, image_url: base64 });
-                            toast.success("Đã tải ảnh lên thành công");
+                            toast.success("Image uploaded successfully");
                           };
                           reader.onerror = () => {
-                            toast.error("Không thể tải ảnh lên");
+                            toast.error("Failed to upload image");
                           };
                           reader.readAsDataURL(file);
                         }
@@ -1225,26 +1092,18 @@ export function StudySetDetail() {
               {updating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Đang lưu...
+                  Saving...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Lưu thay đổi
+                  Save Changes
                 </>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
         </Dialog>
-
-        {/* CSS for backface visibility */}
-        <style>{`
-          .backface-hidden {
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-          }
-        `}</style>
       </div>
       
       {/* Right Chatbot Sidebar */}

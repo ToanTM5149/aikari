@@ -11,6 +11,7 @@ import {
   useLazyGetNextTermQuery,
   useSubmitReviewMutation,
   useEndLearningSessionMutation,
+  type NextTermResponse,
 } from '~/redux/features/learning';
 import {
   startSession,
@@ -45,7 +46,11 @@ export function FlashcardLearningPage() {
 
   // Local state
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [sessionCompleted, setSessionCompleted] = useState(false);
   const [startTime, setStartTime] = useState<number>(0);
+  const [sessionSize, setSessionSize] = useState<number>(10); // Default 10 cards
+  const [sessionTerms, setSessionTerms] = useState<NextTermResponse[]>([]); // All terms in session
+  const [currentTermIndex, setCurrentTermIndex] = useState(0); // Current position
 
   // Start session on mount
   useEffect(() => {
@@ -59,20 +64,13 @@ export function FlashcardLearningPage() {
     };
   }, [studysetId]);
 
-  // Load next term when term data is available
-  useEffect(() => {
-    if (nextTerm) {
-      dispatch(setCurrentTerm(nextTerm));
-    }
-  }, [nextTerm, dispatch]);
-
   const handleStartSession = async () => {
     if (!studysetId) return;
 
     try {
       const response = await startSessionMutation({
         studyset_id: studysetId,
-        session_size: 10,  // Start with 10 cards per session
+        session_size: sessionSize,  
       }).unwrap();
 
       dispatch(
@@ -83,14 +81,14 @@ export function FlashcardLearningPage() {
         })
       );
 
+      // Set session terms from response
+      setSessionTerms(response.terms);
       setSessionStarted(true);
       setStartTime(Date.now());
-
+      
       // Load first term
-      const result = await getNextTerm(studysetId);
-      if (result.isError) {
-        // No terms available
-        dispatch(setCurrentTerm(undefined));
+      if (response.terms.length > 0) {
+        dispatch(setCurrentTerm(response.terms[0]));
       }
     } catch (error) {
       console.error('Failed to start session:', error);
@@ -101,7 +99,7 @@ export function FlashcardLearningPage() {
     dispatch(flipCard());
   };
 
-  const handleReview = async (recallScore: number, isCorrect: boolean) => {
+  const handleReview = async (recallScore: number) => {
     if (!studysetId || !learningState.currentTerm) return;
 
     const responseTime = (Date.now() - startTime) / 1000; // seconds
@@ -112,23 +110,23 @@ export function FlashcardLearningPage() {
         review: {
           term_id: learningState.currentTerm.term_id,
           recall_score: recallScore,
-          is_correct: isCorrect,
           hint_used: false,
           response_time: responseTime,
         },
       }).unwrap();
 
-      // Record in local state
-      dispatch(recordReview({ isCorrect }));
+      dispatch(recordReview({ recallScore }));
 
-      // Load next term
-      setStartTime(Date.now());
-      const result = await getNextTerm(studysetId);
-      
-      // Check if no more terms available (404 response)
-      if (result.isError) {
+      const nextIndex = currentTermIndex + 1;
+      if (nextIndex >= sessionTerms.length) {
+        setSessionCompleted(true);
         dispatch(setCurrentTerm(undefined));
+        return;
       }
+
+      setCurrentTermIndex(nextIndex);
+      setStartTime(Date.now());
+      dispatch(setCurrentTerm(sessionTerms[nextIndex]));
     } catch (error) {
       console.error('Failed to submit review:', error);
       // Clear current term on error
@@ -162,10 +160,10 @@ export function FlashcardLearningPage() {
       ? (learningState.cardsReviewed / learningState.totalCards) * 100
       : 0;
 
-  const accuracy =
-    learningState.cardsReviewed > 0
-      ? (learningState.correctCount / learningState.cardsReviewed) * 100
-      : 0;
+  const { again, hard, good, easy } = learningState.difficultyDistribution;
+  const averageScore = learningState.cardsReviewed > 0
+    ? ((again * 0 + hard * 2 + good * 3.5 + easy * 5) / learningState.cardsReviewed).toFixed(1)
+    : '0.0';
 
   if (!sessionStarted || isLoadingTerm) {
     return (
@@ -192,8 +190,22 @@ export function FlashcardLearningPage() {
                 Total Reviewed: <strong>{learningState.cardsReviewed}</strong>
               </p>
               <p>
-                Accuracy: <strong>{accuracy.toFixed(1)}%</strong>
+                Average Score: <strong>{averageScore}/5</strong>
               </p>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div className="p-2 bg-red-50 rounded">
+                  <span className="text-red-700">Again: {again}</span>
+                </div>
+                <div className="p-2 bg-yellow-50 rounded">
+                  <span className="text-yellow-700">Hard: {hard}</span>
+                </div>
+                <div className="p-2 bg-green-50 rounded">
+                  <span className="text-green-700">Good: {good}</span>
+                </div>
+                <div className="p-2 bg-blue-50 rounded">
+                  <span className="text-blue-700">Easy: {easy}</span>
+                </div>
+              </div>
             </div>
             <Button onClick={handleEndSession}>Back to Study Set</Button>
           </CardContent>
@@ -221,7 +233,6 @@ export function FlashcardLearningPage() {
             <span>
               Progress: {learningState.cardsReviewed} / {learningState.totalCards}
             </span>
-            <span>Accuracy: {accuracy.toFixed(0)}%</span>
           </div>
           <Progress value={progressPercentage} className="h-2" />
         </div>
@@ -283,18 +294,18 @@ export function FlashcardLearningPage() {
       {learningState.isFlipped && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Button
-            onClick={() => handleReview(0, false)}
+            onClick={() => handleReview(0)}
             disabled={isSubmitting}
             variant="destructive"
             className="flex-col h-auto py-4"
           >
             <X className="h-6 w-6 mb-2" />
             <span>Again</span>
-            <span className="text-xs opacity-75">&lt; 1 min</span>
+            <span className="text-xs opacity-75">&lt; 1 day</span>
           </Button>
 
           <Button
-            onClick={() => handleReview(2, false)}
+            onClick={() => handleReview(2)}
             disabled={isSubmitting}
             variant="outline"
             className="flex-col h-auto py-4"
@@ -305,24 +316,24 @@ export function FlashcardLearningPage() {
           </Button>
 
           <Button
-            onClick={() => handleReview(3, true)}
+            onClick={() => handleReview(3)}
             disabled={isSubmitting}
             variant="outline"
             className="flex-col h-auto py-4"
           >
             <Check className="h-6 w-6 mb-2" />
             <span>Good</span>
-            <span className="text-xs opacity-75">3 days</span>
+            <span className="text-xs opacity-75">6 days</span>
           </Button>
 
           <Button
-            onClick={() => handleReview(5, true)}
+            onClick={() => handleReview(5)}
             disabled={isSubmitting}
             className="flex-col h-auto py-4"
           >
             <Check className="h-6 w-6 mb-2" />
             <span>Easy</span>
-            <span className="text-xs opacity-75">7 days</span>
+            <span className="text-xs opacity-75">Calculated</span>
           </Button>
         </div>
       )}

@@ -17,6 +17,9 @@ import { useGetStudySetsQuery } from "~/redux/features/studyset/api"
 import { useGetClassesQuery } from "~/redux/features/class/api"
 import { useMemo } from "react"
 import { useNavigate } from "react-router"
+import { StudySetCard } from "~/components/shared/studyset-card"
+import { useAppSelector } from "~/redux/store"
+import { selectCurrentUser } from "~/redux/features/auth/slice"
 
 interface HomePageProps {
   onStudySetClick: () => void
@@ -24,6 +27,7 @@ interface HomePageProps {
 
 export function HomePage({ onStudySetClick }: HomePageProps) {
   const navigate = useNavigate()
+  const user = useAppSelector(selectCurrentUser)
   
   // Fetch all studysets and classes
   const { data: studysetsData, isLoading: studysetsLoading } = useGetStudySetsQuery()
@@ -114,63 +118,15 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentStudySets.map((set, index) => (
-              <motion.div
+              <StudySetCard
                 key={set.studyset_id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onStudySetClick}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-base">{set.title}</CardTitle>
-                      <Badge variant="secondary">{set.content_type}</Badge>
-                    </div>
-                    {set.description && (
-                      <p className="text-sm text-muted-foreground">{set.description}</p>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-1">
-                          <BookOpen className="w-4 h-4" />
-                          {set.term_count || 0} cards
-                        </span>
-                        <span className="text-muted-foreground">{formatLastStudied(set.last_activity_at)}</span>
-                      </div>
-                      {set.progress !== undefined && (
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Progress</span>
-                            <span>{set.progress}%</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <motion.div 
-                              className="bg-primary rounded-full h-2"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${set.progress}%` }}
-                              transition={{ delay: index * 0.1 + 0.3, duration: 0.8 }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      <Button 
-                        className="w-full" 
-                        size="sm"
-                        disabled={!set.term_count || set.term_count === 0}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/dashboard/studysets/${set.studyset_id}/study`)
-                        }}
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        {set.last_activity_at ? 'Continue Studying' : 'Start Learning'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                studySet={set}
+                variant="recent"
+                showProgress={true}
+                animationDelay={index * 0.1}
+                currentUserId={user?.user_id}
+                showActions={false}
+              />
             ))}
           </div>
         )}
@@ -192,52 +148,14 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommendedStudySets.map((set, index) => (
-              <motion.div
+              <StudySetCard
                 key={set.studyset_id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-              >
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onStudySetClick}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{set.title}</CardTitle>
-                    {set.description && (
-                      <p className="text-sm text-muted-foreground">{set.description}</p>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm flex-wrap gap-2">
-                        <span className="flex items-center gap-1">
-                          <BookOpen className="w-4 h-4" />
-                          {set.term_count || 0} cards
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {set.category && (
-                            <Badge variant="outline" className="text-xs">
-                              {set.category}
-                            </Badge>
-                          )}
-                          <Badge variant="secondary">{set.content_type}</Badge>
-                        </div>
-                      </div>
-                      <Button 
-                        className="w-full" 
-                        variant="outline" 
-                        size="sm"
-                        disabled={!set.term_count || set.term_count === 0}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/dashboard/studysets/${set.studyset_id}/study`)
-                        }}
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        Start Studying
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                studySet={set}
+                variant="default"
+                animationDelay={0.4 + index * 0.1}
+                currentUserId={user?.user_id}
+                showActions={false}
+              />
             ))}
           </div>
         )}

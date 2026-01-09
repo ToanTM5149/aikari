@@ -8,7 +8,6 @@ from sqlmodel import SQLModel
 class CategoryBase(SQLModel):
     name: str
     description: str | None = None
-    color: str | None = None
 
 
 # Properties to receive on category creation
@@ -20,7 +19,6 @@ class CategoryCreate(CategoryBase):
 class CategoryUpdate(SQLModel):
     name: str | None = None
     description: str | None = None
-    color: str | None = None
 
 
 # Database model, with ID and owner_id

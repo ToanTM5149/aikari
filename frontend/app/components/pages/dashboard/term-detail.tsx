@@ -125,7 +125,7 @@ export function TermDetail() {
     if (!editingTerm || !termId) return;
 
     if (!editingTerm.term_text.trim() || !editingTerm.definition.trim()) {
-      toast.error("Vui lòng điền đầy đủ thuật ngữ và định nghĩa");
+      toast.error("Please fill in both term and definition");
       return;
     }
 
@@ -140,7 +140,7 @@ export function TermDetail() {
           image_url: editingTerm.image_url || undefined,
         },
       }).unwrap();
-      toast.success("Đã cập nhật flashcard!");
+      toast.success("Flashcard updated!");
       setEditDialogOpen(false);
     } catch (error: any) {
       const errorMsg =
@@ -148,7 +148,7 @@ export function TermDetail() {
           ? error.data.detail
           : Array.isArray(error?.data?.detail)
           ? error.data.detail.map((e: any) => e.msg).join(", ")
-          : error?.data?.message || "Đã xảy ra lỗi";
+          : error?.data?.message || "An error occurred";
       toast.error(errorMsg);
     }
   };
@@ -173,12 +173,12 @@ export function TermDetail() {
               <AlertCircle className="w-6 h-6 text-destructive" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Không tìm thấy Flashcard</h3>
+              <h3 className="font-semibold text-lg">Flashcard Not Found</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Flashcard này không tồn tại hoặc bạn không có quyền truy cập.
+                This flashcard does not exist or you do not have access to it.
               </p>
             </div>
-            <Button onClick={handleBack}>Quay lại</Button>
+            <Button onClick={handleBack}>Go Back</Button>
           </div>
         </Card>
       </div>
@@ -195,11 +195,11 @@ export function TermDetail() {
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={handleBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
+            Go Back
           </Button>
           <Button size="sm" onClick={handleOpenEditDialog}>
             <Edit2 className="w-4 h-4 mr-2" />
-            Chỉnh sửa
+            Edit
           </Button>
         </div>
 
@@ -235,7 +235,7 @@ export function TermDetail() {
                       {term.term_text}
                     </p>
                     <p className="text-xs text-muted-foreground mt-6">
-                      Click để lật
+                      Click to flip
                     </p>
                   </CardContent>
                 </Card>
@@ -247,7 +247,7 @@ export function TermDetail() {
                 >
                   <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center">
                     <Badge variant="secondary" className="mb-4">
-                      Định nghĩa
+                      Definition
                     </Badge>
                     {term.image_url && (
                       <div className="mb-4 w-full max-w-xs">
@@ -265,7 +265,7 @@ export function TermDetail() {
                       {term.definition}
                     </p>
                     <p className="text-xs text-muted-foreground mt-6">
-                      Click để lật
+                      Click to flip
                     </p>
                   </CardContent>
                 </Card>
@@ -277,7 +277,7 @@ export function TermDetail() {
         {/* Tabs: Example và AI Example */}
         <Card>
           <CardHeader>
-            <CardTitle>Thông tin bổ sung</CardTitle>
+            <CardTitle>Additional Information</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="example" className="w-full">
@@ -292,9 +292,9 @@ export function TermDetail() {
                   </div>
                 ) : (
                   <div className="p-8 text-center text-muted-foreground">
-                    <p>Chưa có ví dụ</p>
+                    <p>No example yet</p>
                     <p className="text-xs mt-2">
-                      Click "Chỉnh sửa" để thêm ví dụ
+                      Click "Edit" to add an example
                     </p>
                   </div>
                 )}
@@ -339,9 +339,9 @@ export function TermDetail() {
                   if (paragraphs.length === 0) {
                     return (
                       <div className="p-8 text-center text-muted-foreground">
-                        <p>Chưa có AI Example</p>
+                        <p>No AI Example yet</p>
                         <p className="text-xs mt-2">
-                          Sử dụng chatbot bên phải để tạo paragraph cho term này
+                          Use the chatbot on the right to generate a paragraph for this term
                         </p>
                       </div>
                     );
@@ -367,7 +367,7 @@ export function TermDetail() {
                               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 {metadata.word_count && (
                                   <Badge variant="outline">
-                                    {metadata.word_count} từ
+                                    {metadata.word_count} words
                                   </Badge>
                                 )}
                                 {metadata.generated_at && (
@@ -429,20 +429,20 @@ export function TermDetail() {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Chỉnh sửa Flashcard</DialogTitle>
+            <DialogTitle>Edit Flashcard</DialogTitle>
             <DialogDescription>
-              Cập nhật thông tin cho flashcard này
+              Update information for this flashcard
             </DialogDescription>
           </DialogHeader>
           {editingTerm && (
             <div className="space-y-4 py-4">
               <div>
                 <Label htmlFor="edit-term">
-                  Thuật ngữ / Câu hỏi <span className="text-destructive">*</span>
+                  Term / Question <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="edit-term"
-                  placeholder="Nhập thuật ngữ hoặc câu hỏi..."
+                  placeholder="Enter term or question..."
                   value={editingTerm.term_text}
                   onChange={(e) =>
                     setEditingTerm({ ...editingTerm, term_text: e.target.value })
@@ -452,11 +452,11 @@ export function TermDetail() {
               </div>
               <div>
                 <Label htmlFor="edit-definition">
-                  Định nghĩa / Câu trả lời <span className="text-destructive">*</span>
+                  Definition / Answer <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="edit-definition"
-                  placeholder="Nhập định nghĩa hoặc câu trả lời..."
+                  placeholder="Enter definition or answer..."
                   value={editingTerm.definition}
                   onChange={(e) =>
                     setEditingTerm({ ...editingTerm, definition: e.target.value })
@@ -465,10 +465,10 @@ export function TermDetail() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-example">Ví dụ (tùy chọn)</Label>
+                <Label htmlFor="edit-example">Example (optional)</Label>
                 <Textarea
                   id="edit-example"
-                  placeholder="Nhập ví dụ để minh họa..."
+                  placeholder="Enter example to illustrate..."
                   value={editingTerm.example || ""}
                   onChange={(e) =>
                     setEditingTerm({ ...editingTerm, example: e.target.value })
@@ -512,13 +512,13 @@ export function TermDetail() {
                         if (file) {
                           // Validate file type
                           if (!file.type.startsWith('image/')) {
-                            toast.error("Vui lòng chọn file ảnh");
+                            toast.error("Please select an image file");
                             return;
                           }
                           // Validate file size (max 2MB)
                           const maxSize = 2 * 1024 * 1024;
                           if (file.size > maxSize) {
-                            toast.error("Kích thước ảnh phải nhỏ hơn 2MB");
+                            toast.error("Image size must be less than 2MB");
                             return;
                           }
                           // Convert to base64
@@ -526,10 +526,10 @@ export function TermDetail() {
                           reader.onload = (event) => {
                             const base64 = event.target?.result as string;
                             setEditingTerm({ ...editingTerm, image_url: base64 });
-                            toast.success("Đã tải ảnh lên thành công");
+                            toast.success("Image uploaded successfully");
                           };
                           reader.onerror = () => {
-                            toast.error("Không thể tải ảnh lên");
+                            toast.error("Failed to upload image");
                           };
                           reader.readAsDataURL(file);
                         }
@@ -539,7 +539,7 @@ export function TermDetail() {
                     />
                     <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-md hover:bg-accent transition-colors">
                       <Upload className="w-4 h-4" />
-                      <span className="text-sm">Upload từ máy tính</span>
+                      <span className="text-sm">Upload from computer</span>
                     </div>
                   </label>
                   <span className="text-xs text-muted-foreground">Max 2MB</span>
@@ -553,7 +553,7 @@ export function TermDetail() {
               onClick={() => setEditDialogOpen(false)}
               disabled={updating}
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               onClick={handleSaveEditDialog}
@@ -562,12 +562,12 @@ export function TermDetail() {
               {updating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Đang lưu...
+                  Saving...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Lưu thay đổi
+                  Save Changes
                 </>
               )}
             </Button>

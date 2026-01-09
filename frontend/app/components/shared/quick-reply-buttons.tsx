@@ -28,7 +28,6 @@ export function QuickReplyButtons({ buttons, onButtonClick, disabled }: QuickRep
           disabled={disabled}
           className="text-sm"
         >
-          {button.icon && <span className="mr-1">{button.icon}</span>}
           {button.label}
         </Button>
       ))}

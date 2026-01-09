@@ -22,6 +22,7 @@ class LearningSessionStartResponse(BaseModel):
     studyset_id: uuid.UUID
     total_terms: int
     terms_in_session: int
+    terms: list['NextTermResponse']  # List of terms for this session
     started_at: datetime
 
 
@@ -42,7 +43,6 @@ class ReviewSubmission(BaseModel):
     """Submission of a review for a term"""
     term_id: uuid.UUID
     recall_score: int = Field(ge=0, le=5, description="Quality of recall (0-5)")
-    is_correct: bool
     hint_used: bool = False
     response_time: float = Field(default=0.0, ge=0, description="Response time in seconds")
 
@@ -63,11 +63,8 @@ class SessionSummary(BaseModel):
     studyset_id: uuid.UUID
     session_duration: float  # in minutes
     total_reviewed: int
-    correct: int
-    incorrect: int
-    accuracy: float
     average_recall_score: float
-    cards_due_next: int
+    difficulty_distribution: dict[str, int]  # {\"again\": 0, \"hard\": 1, \"good\": 2, \"easy\": 5}\n    cards_due_next: int
     next_review_date: datetime | None = None
 
 
@@ -97,12 +94,12 @@ class StudyActivityPublic(BaseModel):
     term_id: uuid.UUID
     start_time: datetime
     end_time: datetime | None
-    is_correct: bool
     hint_used: bool
     retry_count: int
     recall_score: int
     ef: float
     interval: int
+    repetitions: int
     next_review_date: datetime | None
     response_time: float
     created_at: datetime

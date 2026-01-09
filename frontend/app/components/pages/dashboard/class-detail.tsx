@@ -55,6 +55,7 @@ import {
   useApproveMemberMutation,
   useRejectMemberMutation,
 } from "~/redux/features/class"
+import { StudySetCard } from "~/components/shared/studyset-card"
 import {
   useGetReattemptRequestsForClassQuery,
   useUpdateReattemptRequestMutation,
@@ -860,11 +861,11 @@ export function ClassDetail() {
                                         )}
                                         {request.attempt_completed_at && (
                                           <div className="text-xs text-muted-foreground">
-                                            Hoàn thành: {new Date(request.attempt_completed_at).toLocaleString("vi-VN")}
+                                            Completed: {new Date(request.attempt_completed_at).toLocaleString("en-US")}
                                           </div>
                                         )}
                                         <div className="text-xs text-muted-foreground">
-                                          Yêu cầu: {new Date(request.requested_at).toLocaleString("vi-VN")}
+                                          Requested: {new Date(request.requested_at).toLocaleString("en-US")}
                                         </div>
                                       </div>
                                     )}
@@ -883,10 +884,10 @@ export function ClassDetail() {
                                             requestId: request.request_id,
                                             data: { status: ReattemptStatus.APPROVED },
                                           }).unwrap()
-                                          toast.success("Đã phê duyệt yêu cầu làm lại test")
+                                          toast.success("Retake request approved")
                                           refetchReattemptRequests()
                                         } catch (error: any) {
-                                          const errorMsg = error?.data?.detail || "Không thể phê duyệt yêu cầu"
+                                          const errorMsg = error?.data?.detail || "Failed to approve request"
                                           toast.error(errorMsg)
                                         }
                                       }}
@@ -903,10 +904,10 @@ export function ClassDetail() {
                                             requestId: request.request_id,
                                             data: { status: ReattemptStatus.REJECTED },
                                           }).unwrap()
-                                          toast.success("Đã từ chối yêu cầu làm lại test")
+                                          toast.success("Retake request rejected")
                                           refetchReattemptRequests()
                                         } catch (error: any) {
-                                          const errorMsg = error?.data?.detail || "Không thể từ chối yêu cầu"
+                                          const errorMsg = error?.data?.detail || "Failed to reject request"
                                           toast.error(errorMsg)
                                         }
                                       }}
@@ -961,72 +962,27 @@ export function ClassDetail() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {studySets.map((studySet: any) => (
-                      <motion.div
+                    {studySets.map((studySet: any, index: number) => (
+                      <StudySetCard
                         key={studySet.studyset_id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        <Card 
-                          className="hover:shadow-md transition-shadow cursor-pointer"
-                          onClick={() => navigate(`/dashboard/studysets/${studySet.studyset_id}?classId=${classId}`)}
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between">
-                              <div 
-                                className="flex items-center gap-3 flex-1 min-w-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                  <BookOpen className="w-5 h-5 text-primary" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-medium truncate">{studySet.title}</h4>
-                                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                    {studySet.category && (
-                                      <Badge variant="outline" className="text-xs">
-                                        {studySet.category}
-                                      </Badge>
-                                    )}
-                                    <Badge variant="outline" className="text-xs">
-                                      {studySet.content_type}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {canManage && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={async (e) => {
-                                    e.stopPropagation()
-                                    if (confirm(`Remove "${studySet.title}" from this class?`)) {
-                                      try {
-                                        await removeStudySet({
-                                          classId: classId!,
-                                          studysetId: studySet.studyset_id,
-                                        }).unwrap()
-                                        toast.success("Study set removed from class")
-                                      } catch (error) {
-                                        toast.error("Failed to remove study set")
-                                      }
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                            
-                            {studySet.description && (
-                              <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
-                                {studySet.description}
-                              </p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </motion.div>
+                        studySet={studySet}
+                        variant="compact"
+                        animationDelay={index * 0.05}
+                        showActions={canManage}
+                        onDelete={async () => {
+                          if (confirm(`Remove "${studySet.title}" from this class?`)) {
+                            try {
+                              await removeStudySet({
+                                classId: classId!,
+                                studysetId: studySet.studyset_id,
+                              }).unwrap()
+                              toast.success("Study set removed from class")
+                            } catch (error) {
+                              toast.error("Failed to remove study set")
+                            }
+                          }
+                        }}
+                      />
                     ))}
                   </div>
                 )}

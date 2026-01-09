@@ -12,6 +12,7 @@ export interface LearningSessionStartResponse {
   studyset_id: string;
   total_terms: number;
   terms_in_session: number;
+  terms: NextTermResponse[];  // List of terms for this session
   started_at: string;
 }
 
@@ -30,7 +31,6 @@ export interface NextTermResponse {
 export interface ReviewSubmission {
   term_id: string;
   recall_score: number; // 0-5
-  is_correct: boolean;
   hint_used?: boolean;
   response_time?: number; // seconds
 }
@@ -104,8 +104,12 @@ export interface LearningSessionState {
   currentCardIndex: number;
   totalCards: number;
   cardsReviewed: number;
-  correctCount: number;
-  incorrectCount: number;
+  difficultyDistribution: {
+    again: number;    // recall_score 0-1
+    hard: number;     // recall_score 2
+    good: number;     // recall_score 3-4
+    easy: number;     // recall_score 5
+  };
   isFlipped: boolean;
   currentTerm?: NextTermResponse;
 }

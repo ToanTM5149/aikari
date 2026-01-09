@@ -16,207 +16,152 @@ from app.models import (
     UserRole, ClassRole, MembershipStatus,
     TestAttempt, ReattemptRequest, Test,
     ProgressSummary, StudyActivity, AIGeneratedContents, Attribute,
-    ChatConversation
+    ChatConversation, Category
 )
 from app.core.security import get_password_hash
 import uuid
 from datetime import datetime
 
+# Category data - 3 categories
+CATEGORY_DATA = [
+    {
+        "name": "Science",
+        "description": "Natural sciences and scientific concepts",
+        "color": "#3B82F6"  # Blue
+    },
+    {
+        "name": "Language",
+        "description": "Languages and vocabulary",
+        "color": "#10B981"  # Green
+    },
+    {
+        "name": "Programming",
+        "description": "Programming and information technology",
+        "color": "#F59E0B"  # Orange
+    },
+]
+
 # Test data: Topics and their terms
 # Format: (term_text, definition, example, image_url)
-# 10 Study Sets với chủ đề thực tế, ảnh và ví dụ phù hợp
+# 8 Study Sets với mỗi cái 5 terms, ảnh phù hợp với nội dung
 STUDYSET_DATA = [
     {
-        "title": "Spanish Basics",
-        "description": "Essential Spanish vocabulary for beginners with real-world examples",
-        "category": "Language",
+        "title": "Biology Basics",
+        "description": "Fundamental biological concepts",
+        "category_name": "Science",
         "terms": [
-            ("Hola", "Hello", "¡Hola! ¿Cómo estás? (Hello! How are you?)", "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400&h=400&fit=crop"),
-            ("Gracias", "Thank you", "Gracias por tu ayuda. (Thank you for your help.)", "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=400&fit=crop"),
-            ("Por favor", "Please", "Un café, por favor. (A coffee, please.)", "https://images.unsplash.com/photo-1511920170033-83939c283aa6?w=400&h=400&fit=crop"),
-            ("Buenos días", "Good morning", "Buenos días, señor. (Good morning, sir.)", "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=400&fit=crop"),
-            ("Buenas noches", "Good night", "Buenas noches, que descanses. (Good night, rest well.)", "https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=400&h=400&fit=crop"),
-            ("Adiós", "Goodbye", "Adiós, hasta luego. (Goodbye, see you later.)", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"),
-            ("Sí", "Yes", "Sí, estoy de acuerdo. (Yes, I agree.)", "https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=400&h=400&fit=crop"),
-            ("No", "No", "No, gracias. (No, thank you.)", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"),
-            ("¿Cómo te llamas?", "What's your name?", "¿Cómo te llamas? Me llamo María. (What's your name? My name is María.)", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"),
-            ("Mucho gusto", "Nice to meet you", "Mucho gusto en conocerte. (Nice to meet you.)", "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400&h=400&fit=crop"),
+            ("Photosynthesis", "Process by which plants convert sunlight into chemical energy", "Plants use photosynthesis to convert CO2 and water into glucose, releasing oxygen. This is the primary energy source for most living organisms on Earth. The process occurs in chloroplasts and requires chlorophyll to capture light energy.", "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop"),
+            ("Mitochondria", "Organelle that produces energy in the cell", "Mitochondria are called the 'powerhouse of the cell'. They convert glucose into ATP through cellular respiration, providing energy for all life activities. These organelles have their own DNA and can replicate independently within the cell.", "https://images.unsplash.com/photo-1532619675605-1ede6c7edfe0?w=400&h=400&fit=crop"),
+            ("DNA", "Molecule that carries genetic information", "DNA contains genes that determine an organism's traits. The double helix structure of DNA allows it to replicate accurately and transmit genetic information from one generation to the next. DNA sequences code for proteins that perform various functions in living cells.", "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop"),
+            ("Enzyme", "Protein that catalyzes chemical reactions in the body", "Enzymes speed up chemical reactions without being consumed. For example, the enzyme amylase in saliva helps break down starch into simpler sugars. Each enzyme is specific to its substrate and works best at optimal temperature and pH conditions.", "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop"),
+            ("Cell Membrane", "Membrane surrounding the cell that controls substance transport", "The cell membrane is a selective protective layer that only allows certain substances to pass through. It maintains a stable internal environment and protects the cell from external agents. The membrane is composed of a phospholipid bilayer with embedded proteins.", "https://images.unsplash.com/photo-1532619675605-1ede6c7edfe0?w=400&h=400&fit=crop"),
         ]
     },
     {
-        "title": "Python Programming",
-        "description": "Core Python concepts with practical examples",
-        "category": "Programming",
+        "title": "Chemistry Fundamentals",
+        "description": "Fundamental principles of chemistry",
+        "category_name": "Science",
         "terms": [
-            ("Variable", "A named storage location for data", "x = 10  # x stores the value 10", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("Function", "Reusable block of code that performs a task", "def greet(name): return f'Hello, {name}!'", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("List", "Ordered collection of items", "fruits = ['apple', 'banana', 'orange']  # List of fruits", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("Dictionary", "Key-value pairs for storing data", "person = {'name': 'John', 'age': 30}  # Dictionary with name and age", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("Loop", "Repeats code multiple times", "for i in range(5): print(i)  # Prints 0, 1, 2, 3, 4", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("Class", "Blueprint for creating objects", "class Dog: def bark(self): return 'Woof!'  # Dog class with bark method", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("Import", "Includes external modules", "import math  # Now you can use math.sqrt(16) to get 4.0", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("Exception", "Handles errors in code", "try: result = 10/0 except ZeroDivisionError: print('Cannot divide by zero')", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("String", "Text data type", "name = 'Alice'  # String variable containing text", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
-            ("Boolean", "True or False value", "is_valid = True  # Boolean variable for validation", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Ionic Bond", "Chemical bond between oppositely charged ions", "When sodium (Na) loses an electron and chlorine (Cl) gains an electron, they form an ionic bond in the compound NaCl (table salt). This bond is very stable and creates a crystalline structure. Ionic compounds typically have high melting and boiling points.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
+            ("Covalent Bond", "Chemical bond when atoms share electrons", "In a water molecule (H2O), the oxygen atom shares electrons with two hydrogen atoms, forming covalent bonds. This is the most common type of bond in organic compounds. Covalent bonds can be polar or nonpolar depending on electronegativity differences.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
+            ("Catalyst", "Substance that increases the rate of a chemical reaction", "Catalysts lower the activation energy required for a reaction without being consumed. For example, enzymes in the body and catalytic converters in cars are both catalysts. They provide an alternative reaction pathway with lower energy requirements.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
+            ("Oxidation", "Process of losing electrons by an atom or molecule", "When iron comes into contact with oxygen, it oxidizes to form rust (Fe2O3). Oxidation often releases energy and is an important part of cellular respiration. The opposite process is reduction, where electrons are gained.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
+            ("pH Scale", "Scale measuring the acidity or basicity of a solution", "The pH scale ranges from 0-14, with 7 being neutral. Below 7 is acidic (like lemon juice with pH=2), above 7 is basic (like soap with pH=9). pH affects many biological and chemical processes, including enzyme activity and nutrient availability.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
         ]
     },
     {
-        "title": "Biology Terms",
-        "description": "Essential biology vocabulary with real-world examples",
-        "category": "Science",
+        "title": "Physics Principles",
+        "description": "Fundamental physics principles",
+        "category_name": "Science",
         "terms": [
-            ("Cell", "Basic unit of life", "All living things are made of cells. For example, your body contains trillions of cells.", "https://images.unsplash.com/photo-1532619675605-1ede6c7edfe0?w=400&h=400&fit=crop"),
-            ("DNA", "Genetic material that carries hereditary information", "DNA contains the instructions for life. Your DNA determines your eye color and height.", "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop"),
-            ("Photosynthesis", "Process by which plants make food using sunlight", "Plants use photosynthesis to convert sunlight, water, and CO2 into glucose. This is why plants need sunlight to grow.", "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop"),
-            ("Mitosis", "Cell division that produces identical cells", "During mitosis, one cell divides into two identical cells. This is how your body grows and repairs itself.", "https://images.unsplash.com/photo-1532619675605-1ede6c7edfe0?w=400&h=400&fit=crop"),
-            ("Enzyme", "Protein that speeds up chemical reactions", "Enzymes speed up chemical reactions in your body. For example, digestive enzymes break down food in your stomach.", "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop"),
-            ("Gene", "Unit of heredity that determines traits", "Genes determine traits like hair color. You inherit genes from your parents.", "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop"),
-            ("Protein", "Large molecule made of amino acids", "Proteins are essential for your body. For example, muscle tissue is made of proteins.", "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop"),
-            ("Chromosome", "Structure that contains DNA", "Humans have 46 chromosomes. Chromosomes carry your genetic information.", "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop"),
-            ("Nucleus", "Control center of the cell", "The nucleus contains DNA and controls cell activities. It's like the brain of the cell.", "https://images.unsplash.com/photo-1532619675605-1ede6c7edfe0?w=400&h=400&fit=crop"),
-            ("Membrane", "Boundary that surrounds the cell", "The cell membrane controls what enters and leaves the cell. It protects the cell like a wall.", "https://images.unsplash.com/photo-1532619675605-1ede6c7edfe0?w=400&h=400&fit=crop"),
+            ("Electromagnetic Wave", "Wave that transmits energy through electric and magnetic fields", "Light, radio waves, and X-rays are all electromagnetic waves. They transmit energy through space without requiring a medium, traveling at the speed of light (300,000 km/s). These waves have both electric and magnetic components that oscillate perpendicular to each other.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
+            ("Thermodynamics", "Study of heat and energy", "The laws of thermodynamics describe how energy is converted. For example, a car engine converts heat from fuel combustion into mechanical energy to move the vehicle. The first law states energy is conserved; the second law states entropy always increases.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
+            ("Quantum Mechanics", "Theory describing the behavior of matter at the atomic level", "Quantum mechanics explains phenomena like the photoelectric effect and lasers. It shows that particles can exist in multiple states simultaneously (superposition) and that observation affects the system. This theory is fundamental to understanding atomic and subatomic behavior.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
+            ("Relativity", "Theory about space, time, and gravity", "Einstein's theory of relativity shows that time and space can be curved by mass. GPS systems must account for this effect to function accurately. The theory has two parts: special relativity (for objects in uniform motion) and general relativity (for accelerated motion and gravity).", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
+            ("Entropy", "Measure of disorder or randomness in a system", "Entropy always increases in closed systems. For example, a hot cup of coffee will cool down and the temperature will distribute evenly throughout the room, increasing the system's entropy. This is the second law of thermodynamics in action.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
         ]
     },
     {
-        "title": "Chemistry Basics",
-        "description": "Fundamental chemistry terms with practical examples",
-        "category": "Science",
+        "title": "English Vocabulary",
+        "description": "Advanced English vocabulary",
+        "category_name": "Language",
         "terms": [
-            ("Atom", "Smallest unit of an element", "Atoms make up everything. For example, a gold ring is made of gold atoms.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Molecule", "Two or more atoms bonded together", "H2O is a water molecule made of 2 hydrogen atoms and 1 oxygen atom.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Element", "Pure substance made of one type of atom", "Gold is an element. Oxygen and carbon are also elements found on the periodic table.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Compound", "Substance made of two or more different elements", "Salt (NaCl) is a compound made of sodium and chlorine. Water (H2O) is also a compound.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Ion", "Atom or molecule with an electric charge", "Na+ is a sodium ion with a positive charge. Ions are important in batteries and nerve signals.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Acid", "Substance with pH less than 7", "Vinegar is an acid with pH around 3. Lemon juice and stomach acid are also acids.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Base", "Substance with pH greater than 7", "Soap is a base with pH around 9-10. Baking soda is also a base used in cooking.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Reaction", "Process where substances change into new substances", "Rust is a chemical reaction where iron reacts with oxygen. Burning wood is also a chemical reaction.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Solution", "Homogeneous mixture of substances", "Salt water is a solution where salt dissolves in water. Sweet tea is also a solution.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
-            ("Catalyst", "Substance that speeds up a chemical reaction", "Enzymes are biological catalysts. Catalytic converters in cars use catalysts to reduce pollution.", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=400&fit=crop"),
+            ("Ephemeral", "Lasting for a very short time, transient", "Cherry blossoms are beautiful but ephemeral - they only last a few weeks each year. Many beautiful moments in life are also ephemeral, making them more precious. The word comes from Greek 'ephemeros' meaning 'lasting only a day'.", "https://images.unsplash.com/photo-1492571350019-22de08371fd3?w=400&h=400&fit=crop"),
+            ("Ubiquitous", "Present everywhere, widespread", "Smartphones have become ubiquitous in modern society. The internet is also ubiquitous, allowing us to access information from anywhere in the world. This term describes something that seems to be everywhere at once.", "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400&h=400&fit=crop"),
+            ("Paradigm", "A model, pattern, or way of thinking", "The shift from fossil fuels to renewable energy represents a paradigm shift. The way we work has also changed paradigms with technological development. A paradigm is a framework of ideas and assumptions that shapes how we understand the world.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
+            ("Serendipity", "The occurrence of pleasant discoveries by accident", "The discovery of penicillin is an example of serendipity - Alexander Fleming accidentally discovered mold that killed bacteria. Many important inventions have come from serendipity, where chance encounters lead to valuable findings.", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"),
+            ("Resilience", "The ability to recover and adapt after difficulties", "Resilience is the capacity to overcome challenges and become stronger. Forest trees demonstrate resilience when they regrow after fires, similar to how humans learn from failure. It's the mental toughness to bounce back from adversity.", "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=400&fit=crop"),
         ]
     },
     {
-        "title": "Physics Concepts",
-        "description": "Basic physics terms with real-world applications",
-        "category": "Science",
+        "title": "Spanish Advanced",
+        "description": "Advanced Spanish vocabulary and grammar",
+        "category_name": "Language",
         "terms": [
-            ("Force", "Push or pull that causes motion", "F = ma (Newton's law). For example, pushing a shopping cart requires force to move it.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Energy", "Ability to do work or cause change", "Energy cannot be created or destroyed, only transformed. Food gives your body energy to move.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Motion", "Change in position over time", "Velocity is speed with direction. A car moving at 60 mph north has both speed and direction.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Gravity", "Force that attracts objects toward each other", "Earth's gravity pulls objects down. This is why apples fall from trees and why you stay on the ground.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Momentum", "Mass times velocity (p = mv)", "A moving truck has more momentum than a moving bicycle because it has more mass. Momentum explains why it's hard to stop a fast-moving object.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Work", "Force applied over a distance (W = F × d)", "Lifting a box requires work. The more force or distance, the more work is done.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Power", "Rate of doing work (P = W / t)", "Power is work per time. A powerful engine can do work faster than a weak engine.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Wave", "Disturbance that transfers energy", "Light and sound are waves. Ocean waves carry energy from wind to the shore.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Friction", "Force that resists motion between surfaces", "Friction slows things down. Without friction, you couldn't walk because your feet would slip.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Acceleration", "Rate of change in velocity (a = Δv / Δt)", "When a car speeds up, it accelerates. Acceleration is how quickly velocity changes.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
+            ("Subjuntivo", "Subjunctive mood in Spanish, expressing uncertainty or subjectivity", "Subjuntivo is used to express desires, emotions, or possibilities. For example: 'Espero que vengas' (I hope you come) - 'vengas' is subjuntivo, not indicativo. It's triggered by expressions of doubt, emotion, or influence.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
+            ("Pretérito Perfecto", "Present perfect tense, expressing completed actions", "Pretérito perfecto is used for actions in the recent past or those related to the present. For example: 'He comido' (I have eaten) - uses 'haber' + past participle. It's formed with the present tense of 'haber' plus the past participle.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
+            ("Reflexivo", "Reflexive verb, where the action affects the subject itself", "Reflexive verbs end with 'se' in the infinitive form. Examples: 'levantarse' (to get up), 'ducharse' (to shower). 'Me levanto a las 7' (I get up at 7) - 'me' is the reflexive pronoun. These verbs indicate the subject performs and receives the action.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
+            ("Gustar", "Special verb meaning 'to like', with inverted structure", "Gustar has a special structure: 'Me gusta el café' (I like coffee) - literally means 'Coffee pleases me'. The grammatical subject is 'el café', not 'yo'. It's conjugated based on what is liked, not who likes it.", "https://images.unsplash.com/photo-1511920170033-83939c283aa6?w=400&h=400&fit=crop"),
+            ("Por vs Para", "Two prepositions with different uses", "'Por' is used for reason, approximate time, exchange. 'Para' is used for purpose, destination, deadline. 'Estudio por placer' (I study for pleasure) vs 'Estudio para ser médico' (I study to become a doctor). Understanding this distinction is crucial for Spanish fluency.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
         ]
     },
     {
-        "title": "History - World War II",
-        "description": "Key WW2 terms and events with historical context",
-        "category": "History",
+        "title": "Python Advanced",
+        "description": "Advanced Python programming concepts",
+        "category_name": "Programming",
         "terms": [
-            ("D-Day", "Allied invasion of Normandy, France", "On June 6, 1944, Allied forces launched the largest seaborne invasion in history, beginning the liberation of Western Europe from Nazi control.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("Pearl Harbor", "Japanese surprise attack on US naval base", "On December 7, 1941, Japan attacked Pearl Harbor in Hawaii, bringing the United States into World War II.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("Holocaust", "Systematic genocide of six million Jews by Nazi Germany", "The Holocaust was the systematic murder of 6 million Jews and millions of others during WWII. It remains one of history's greatest tragedies.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("Atomic Bomb", "Nuclear weapon used to end the war", "The US dropped atomic bombs on Hiroshima and Nagasaki in August 1945, leading to Japan's surrender and ending WWII.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("Allies", "Countries that fought against the Axis powers", "The Allies included the US, UK, Soviet Union, and France. They worked together to defeat Nazi Germany and Japan.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("Axis", "Alliance of Germany, Italy, and Japan", "The Axis powers were Germany, Italy, and Japan. They fought against the Allies during World War II.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("Blitzkrieg", "Lightning-fast military attack strategy", "Blitzkrieg was Germany's fast military attack strategy using tanks and aircraft. It means 'lightning war' in German.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("V-E Day", "Victory in Europe Day", "V-E Day on May 8, 1945 marked the end of WWII in Europe when Germany surrendered to the Allies.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("V-J Day", "Victory over Japan Day", "V-J Day on August 15, 1945 marked Japan's surrender, officially ending World War II.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
-            ("Cold War", "Post-WW2 political tension between US and Soviet Union", "The Cold War was a period of political tension between the US and Soviet Union from 1947-1991, without direct military conflict.", "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"),
+            ("Decorator", "Function that wraps another function to extend behavior without modifying it", "Decorators allow adding functionality like logging, caching, or access control. For example: @property decorator converts a method into an attribute, allowing access like 'obj.name' instead of 'obj.name()'. Decorators use the @ syntax and are powerful tools for code reuse.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Generator", "Function that returns an iterator, creating values on demand rather than all at once", "Generators use 'yield' instead of 'return', allowing creation of large datasets without consuming memory. Example: 'def count(): yield from range(1000000)' generates numbers from 0 to 999999 without storing all in memory. They're memory-efficient for large sequences.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Context Manager", "Object that manages resources with 'with' statement", "Context managers ensure resources are properly released. 'with open('file.txt') as f:' automatically closes the file when exiting the block, even if an error occurs. This is crucial for preventing resource leaks and follows the RAII (Resource Acquisition Is Initialization) pattern.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Metaclass", "Class of a class, controlling how classes are created", "Metaclasses allow customizing how classes are created. For example, ORMs like SQLAlchemy use metaclasses to automatically generate database methods from class definitions. They operate at a higher level than decorators, controlling class creation itself.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Async/Await", "Asynchronous programming for efficient I/O operations", "Async/await allows waiting for I/O tasks (like reading files, calling APIs) without blocking the main thread. 'async def fetch(): await response.json()' enables handling multiple requests concurrently, improving web application performance. It's essential for scalable applications.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
         ]
     },
     {
-        "title": "World Geography",
-        "description": "Major countries, capitals, and geographic facts",
-        "category": "Geography",
+        "title": "Data Structures",
+        "description": "Data structures and algorithms",
+        "category_name": "Programming",
         "terms": [
-            ("France", "Capital: Paris. Located in Western Europe", "France is famous for the Eiffel Tower in Paris, wine, and the French Riviera. It's the largest country in Western Europe.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
-            ("Japan", "Capital: Tokyo. Island nation in East Asia", "Japan consists of four main islands. Tokyo is one of the world's largest cities. Japan is known for technology, sushi, and cherry blossoms.", "https://images.unsplash.com/photo-1492571350019-22de08371fd3?w=400&h=400&fit=crop"),
-            ("Brazil", "Capital: Brasília. Largest country in South America", "Brazil is the fifth largest country in the world. It's famous for the Amazon rainforest, soccer, and Carnival in Rio de Janeiro.", "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=400&h=400&fit=crop"),
-            ("Egypt", "Capital: Cairo. Located in North Africa", "Egypt is home to the ancient pyramids and the Sphinx. The Nile River flows through Egypt, making it one of the world's oldest civilizations.", "https://images.unsplash.com/photo-1539650116574-75c0c6d73a6e?w=400&h=400&fit=crop"),
-            ("Australia", "Capital: Canberra. Both a continent and country", "Australia is the world's smallest continent but sixth largest country. It's known for unique wildlife like kangaroos and the Great Barrier Reef.", "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop"),
-            ("Canada", "Capital: Ottawa. Second largest country by area", "Canada is the second largest country in the world after Russia. It's known for maple syrup, hockey, and beautiful natural landscapes like Niagara Falls.", "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop"),
-            ("India", "Capital: New Delhi. World's most populous democracy", "India is the second most populous country with over 1.4 billion people. It's famous for the Taj Mahal, Bollywood, and diverse cultures and languages.", "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&h=400&fit=crop"),
-            ("Germany", "Capital: Berlin. Largest economy in Europe", "Germany is Europe's largest economy and most populous country. It's known for engineering, beer, and historical landmarks like the Brandenburg Gate.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
-            ("Mexico", "Capital: Mexico City. Located south of the United States", "Mexico shares a border with the US. It's famous for ancient Mayan and Aztec ruins, tacos, and beautiful beaches like Cancún.", "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=400&h=400&fit=crop"),
-            ("China", "Capital: Beijing. World's most populous country", "China has over 1.4 billion people. It's famous for the Great Wall, pandas, and being a major manufacturing center. Shanghai and Beijing are major cities.", "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=400&h=400&fit=crop"),
+            ("Hash Table", "Data structure mapping key-value pairs with average O(1) access", "Hash tables use a hash function to convert keys into indices, enabling fast access. Dictionaries in Python and HashMaps in Java are hash tables. Average time complexity is O(1) for insert, delete, and lookup operations, making them highly efficient for large datasets.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Binary Search Tree", "Ordered binary tree enabling efficient searching", "BST has the property: left node < root < right node. This allows searching with O(log n) complexity when balanced. However, if the tree becomes unbalanced, complexity can degrade to O(n). Self-balancing trees like AVL or Red-Black trees maintain optimal performance.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Graph", "Data structure consisting of nodes and edges connecting them", "Graphs describe relationships between objects. Social networks are graphs: users are nodes, friend connections are edges. Algorithms like BFS (Breadth-First Search) and DFS (Depth-First Search) are used to find paths or explore graphs. They're fundamental in network analysis.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Dynamic Programming", "Problem-solving technique by breaking down and storing results", "Dynamic programming avoids recomputation by storing results of subproblems. For example, calculating Fibonacci numbers: instead of recalculating F(n-1) and F(n-2) each time, store computed values in an array for reuse. This trades space for time efficiency.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Big O Notation", "Notation describing time and space complexity of algorithms", "Big O describes how algorithms scale as input increases. O(1) is constant, O(n) is linear, O(n²) is quadratic. Example: searching an unsorted array is O(n), while searching a sorted array is O(log n) with binary search. It's essential for algorithm analysis.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
         ]
     },
     {
-        "title": "Mathematics - Algebra",
-        "description": "Basic algebra terms with practical examples",
-        "category": "Mathematics",
+        "title": "Web Development",
+        "description": "Modern web development concepts",
+        "category_name": "Programming",
         "terms": [
-            ("Variable", "Symbol representing an unknown value", "In the equation x + 5 = 10, x is a variable. Common variables are x, y, and z.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Equation", "Mathematical statement showing equality", "2x + 3 = 7 is an equation. To solve it, subtract 3 from both sides: 2x = 4, so x = 2.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Expression", "Mathematical phrase without an equals sign", "3x + 2y is an expression. It represents a value but doesn't state it equals something.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Coefficient", "Number multiplied by a variable", "In 3x, 3 is the coefficient. In 5y, 5 is the coefficient. Coefficients tell you how many times to multiply the variable.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Constant", "Fixed number that doesn't change", "In x + 5, 5 is a constant. In 2x - 7, -7 is a constant. Constants are numbers without variables.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Polynomial", "Expression with multiple terms", "x² + 3x + 2 is a polynomial with three terms. Polynomials can have variables raised to different powers.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Quadratic", "Polynomial of degree 2 (highest power is 2)", "ax² + bx + c is a quadratic equation. For example, x² + 5x + 6 = 0 is a quadratic equation.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Factor", "To break down an expression into simpler parts", "x² - 4 can be factored as (x+2)(x-2). Factoring helps solve equations and simplify expressions.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Solve", "To find the value of a variable", "To solve 2x = 10, divide both sides by 2: x = 5. Solving means finding what value makes the equation true.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-            ("Simplify", "To reduce an expression to its simplest form", "2x + 3x simplifies to 5x by combining like terms. Simplifying makes expressions easier to work with.", "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=400&fit=crop"),
-        ]
-    },
-    {
-        "title": "English Grammar",
-        "description": "Parts of speech with sentence examples",
-        "category": "Language",
-        "terms": [
-            ("Noun", "Word that names a person, place, thing, or idea", "Examples: 'dog' (thing), 'city' (place), 'happiness' (idea). In 'The dog barked', 'dog' is a noun.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Verb", "Word that shows action or state of being", "Examples: 'run' (action), 'think' (action), 'is' (state). In 'She runs fast', 'runs' is a verb.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Adjective", "Word that describes or modifies a noun", "Examples: 'beautiful' (describes appearance), 'tall' (describes height), 'red' (describes color). In 'the red car', 'red' is an adjective.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Adverb", "Word that describes a verb, adjective, or another adverb", "Examples: 'quickly' (how), 'very' (degree), 'happily' (manner). In 'She runs quickly', 'quickly' is an adverb.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Pronoun", "Word that replaces a noun", "Examples: 'he' (replaces a male name), 'she' (replaces a female name), 'it' (replaces a thing), 'they' (replaces multiple people). Instead of 'John went', we say 'He went'.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Preposition", "Word that shows relationship between words", "Examples: 'in' (location), 'on' (position), 'at' (place), 'under' (position). In 'The book is on the table', 'on' is a preposition.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Conjunction", "Word that connects words, phrases, or clauses", "Examples: 'and' (addition), 'but' (contrast), 'or' (choice). In 'I like apples and oranges', 'and' is a conjunction.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Interjection", "Word or phrase that expresses strong emotion", "Examples: 'Wow!' (surprise), 'Oh!' (realization), 'Ouch!' (pain). Interjections often end with exclamation marks.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Article", "Word that introduces a noun (a, an, the)", "Examples: 'the' (specific), 'a' (general, before consonant), 'an' (general, before vowel). 'The book' is specific, while 'a cat' is any cat.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-            ("Subject", "The person or thing that performs the action in a sentence", "In 'The dog barked', 'The dog' is the subject because it performs the action of barking. The subject usually comes before the verb.", "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop"),
-        ]
-    },
-    {
-        "title": "Business Terms",
-        "description": "Essential business vocabulary with real-world examples",
-        "category": "Business",
-        "terms": [
-            ("Revenue", "Total income from business operations", "Revenue is money from sales. For example, if a store sells $10,000 worth of products, that's its revenue.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("Expense", "Costs incurred in running a business", "Expenses are money spent on operations. Examples include rent, salaries, and utilities. Revenue minus expenses equals profit.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("Asset", "Resource owned by a company that has value", "Assets include property, equipment, cash, and inventory. For example, a company's building and computers are assets.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("Liability", "Debt or financial obligation a company owes", "Liabilities are what a company owes. Examples include loans, accounts payable, and mortgages. A company must pay its liabilities.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("Equity", "Owner's stake in a company (Assets - Liabilities)", "Equity represents ownership value. If a company has $100,000 in assets and $40,000 in liabilities, its equity is $60,000.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("ROI", "Return on Investment - measure of investment profitability", "ROI shows profit from investment. If you invest $1,000 and earn $1,200, your ROI is 20%. Higher ROI means better investment.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("Marketing", "Activities to promote and sell products or services", "Marketing includes advertising, social media, and sales. For example, a company uses TV ads and social media to market its products.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("Strategy", "Long-term plan to achieve business goals", "A business strategy is a plan for success. For example, a company's strategy might be to expand into new markets or improve product quality.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("Stakeholder", "Person or group with interest in a business", "Stakeholders include investors, employees, customers, and suppliers. They all have a stake in the company's success.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
-            ("Budget", "Financial plan for income and expenses", "A budget allocates money for different purposes. For example, a monthly budget might allocate $500 for rent, $300 for food, and $200 for savings.", "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=400&fit=crop"),
+            ("RESTful API", "API architecture following REST principles", "RESTful APIs use HTTP methods (GET, POST, PUT, DELETE) to manipulate resources. URLs represent resources: '/api/users/123' is the user with ID 123. Being stateless and cacheable makes APIs scalable and maintainable. REST stands for Representational State Transfer.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("JWT Token", "JSON Web Token, stateless authentication method", "JWT contains encoded user information, allowing server authentication without storing sessions. Tokens consist of 3 parts: header, payload, signature. After login, clients store tokens and include them with each request for authentication. This enables distributed systems.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Single Page Application", "Web application that loads once and updates dynamically", "SPAs load initial HTML/CSS/JS, then update content using JavaScript without page reloads. React, Vue, and Angular all create SPAs. Advantages: smooth experience, reduced server load; disadvantages: more complex SEO, longer initial load time. They provide app-like experiences in browsers.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("Microservices", "Architecture dividing applications into independent services", "Microservices break large applications into small services, each with its own database and communicating via APIs. Advantages: easy scaling, independent deployment, technology diversity. Disadvantages: more complexity, need to manage networks and data consistency. This contrasts with monolithic architectures.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
+            ("CI/CD Pipeline", "Automated process for building, testing, and deploying", "CI (Continuous Integration) automatically tests new code. CD (Continuous Deployment) automatically deploys tested code. Pipelines run on new commits: build → test → deploy. This helps catch errors early, reduces release time, and ensures code quality. Tools include Jenkins, GitHub Actions, and GitLab CI.", "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop"),
         ]
     },
 ]
 
-# Class data - 3 classes with relevant study sets
+# Class data - 3 classes: 1 private, 2 public
 CLASS_DATA = [
     {
-        "name": "Language Learning - Spanish",
-        "description": "Learn Spanish vocabulary and phrases for beginners",
+        "name": "Natural Sciences",
+        "description": "Comprehensive study of sciences: Biology, Chemistry, Physics",
         "is_public": True,
-        "studyset_indices": [0]  # Spanish Basics
+        "studyset_indices": [0, 1, 2]  # Biology, Chemistry, Physics
     },
     {
-        "name": "Programming Fundamentals",
-        "description": "Learn Python programming from basics to advanced concepts",
+        "name": "Language Studies",
+        "description": "Advanced English and Spanish learning",
         "is_public": True,
-        "studyset_indices": [1]  # Python Programming
+        "studyset_indices": [3, 4]  # English, Spanish
     },
     {
-        "name": "Science & Mathematics",
-        "description": "Comprehensive study of Biology, Chemistry, Physics, and Algebra",
-        "is_public": True,
-        "studyset_indices": [2, 3, 4, 7]  # Biology (2), Chemistry (3), Physics (4), Algebra (7)
+        "name": "Advanced Programming",
+        "description": "In-depth Python programming and web development course",
+        "is_public": False,  # Private class
+        "studyset_indices": [5, 6, 7]  # Python Advanced, Data Structures, Web Development
     },
 ]
 
@@ -245,6 +190,43 @@ def get_existing_student(session: Session) -> User | None:
     
     print("✗ No student found in database")
     return None
+
+
+def seed_categories(session: Session, teacher: User) -> dict[str, Category]:
+    """Create categories and return mapping of category name to Category object"""
+    categories = {}
+    
+    print("📁 Creating Categories...")
+    
+    for data in CATEGORY_DATA:
+        # Check if category already exists
+        existing = session.exec(
+            select(Category).where(
+                Category.name == data["name"],
+                Category.owner_id == teacher.user_id
+            )
+        ).first()
+        
+        if existing:
+            categories[data["name"]] = existing
+            print(f"  ✓ Using existing: {data['name']}")
+        else:
+            category = Category(
+                category_id=uuid.uuid4(),
+                name=data["name"],
+                description=data.get("description"),
+                color=data.get("color"),
+                owner_id=teacher.user_id,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(category)
+            session.commit()
+            session.refresh(category)
+            categories[data["name"]] = category
+            print(f"  ✓ Created: {data['name']}")
+    
+    return categories
 
 
 def cleanup_old_seed_data(session: Session, teacher: User):
@@ -412,19 +394,25 @@ def cleanup_old_seed_data(session: Session, teacher: User):
     print()
 
 
-def seed_studysets(session: Session, teacher: User) -> list[StudySet]:
+def seed_studysets(session: Session, teacher: User, categories: dict[str, Category]) -> list[StudySet]:
     """Create studysets with terms"""
     studysets = []
     
-    print("📚 Creating StudySets...")
+    print("\n📚 Creating StudySets...")
     
     for idx, data in enumerate(STUDYSET_DATA):
+        # Get category_id from category name
+        category_name = data.get("category_name")
+        category_id = None
+        if category_name and category_name in categories:
+            category_id = categories[category_name].category_id
+        
         # Create studyset
         studyset = StudySet(
             studyset_id=uuid.uuid4(),
             title=data["title"],
             description=data["description"],
-            category=data.get("category"),
+            category_id=category_id,
             owner_id=teacher.user_id,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -559,8 +547,11 @@ def main():
         # Clean up old seed data
         cleanup_old_seed_data(session, teacher)
         
+        # Create categories
+        categories = seed_categories(session, teacher)
+        
         # Create studysets
-        studysets = seed_studysets(session, teacher)
+        studysets = seed_studysets(session, teacher, categories)
         
         # Create classes
         seed_classes(session, teacher, student, studysets)
@@ -569,12 +560,14 @@ def main():
     print("✅ SEEDING COMPLETE!")
     print("=" * 60)
     print("\n📊 Data Summary:")
+    print(f"  Categories: {len(CATEGORY_DATA)}")
     print(f"  StudySets: {len(STUDYSET_DATA)}")
     print(f"  Classes: {len(CLASS_DATA)}")
-    print(f"  Terms per StudySet: ~10")
+    print(f"  Terms per StudySet: 5")
     print("\n🔗 Class Codes:")
     for idx in range(len(CLASS_DATA)):
-        print(f"  Class {idx+1}: TEST{idx+1:03d}")
+        class_type = "Public" if CLASS_DATA[idx]["is_public"] else "Private"
+        print(f"  Class {idx+1} ({class_type}): TEST{idx+1:03d}")
     print()
 
 
