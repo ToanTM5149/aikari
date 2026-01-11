@@ -22,11 +22,11 @@ export function QuickReplyButtons({ buttons, onButtonClick, disabled }: QuickRep
       {buttons.map((button, index) => (
         <Button
           key={index}
-          variant={button.type === "number" ? "outline" : "secondary"}
+          variant="outline"
           size="sm"
           onClick={() => !disabled && onButtonClick(button.value)}
           disabled={disabled}
-          className="text-sm"
+          className="text-sm rounded-lg shadow-md hover:shadow-lg transition-shadow border !bg-white !text-blue-600 hover:!bg-blue-50 hover:!text-blue-700"
         >
           {button.label}
         </Button>

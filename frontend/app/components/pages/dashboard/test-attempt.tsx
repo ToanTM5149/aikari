@@ -88,7 +88,7 @@ export function TestAttempt() {
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
       toast.error(errorMsg || "Failed to start test");
-      navigate(`/dashboard/studysets/${studysetId}/test`);
+      navigate(`/dashboard/studysets/${studysetId}`);
     }
   };
 
@@ -447,7 +447,7 @@ export function TestAttempt() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => navigate(`/dashboard/studysets/${studysetId}/test`)}
+                onClick={() => navigate(`/dashboard/studysets/${studysetId}`)}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to List
@@ -497,7 +497,7 @@ export function TestAttempt() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate(`/dashboard/studysets/${studysetId}/test`)}
+                onClick={() => navigate(`/dashboard/studysets/${studysetId}`)}
               >
                 <ArrowLeft className="w-4 h-4" />
               </Button>

@@ -416,7 +416,7 @@ class GenerationService:
             logger.info(f"Successfully generated test {test.test_id} with {len(questions)} questions")
             
             return {
-                "message": f"✅ Đã tạo bài test thành công với {len(questions)} câu hỏi!",
+                "message": f"Test created successfully with {len(questions)} questions!",
                 "metadata": {
                     "test_id": str(test.test_id),
                     "total_questions": len(questions),
@@ -426,7 +426,7 @@ class GenerationService:
             
         except Exception as e:
             logger.error(f"Error generating test: {str(e)}", exc_info=True)
-            raise ValueError(f"Lỗi khi tạo test: {str(e)}")
+            raise ValueError(f"Error creating test: {str(e)}")
     
     async def generate_paragraph(
         self,
@@ -701,7 +701,7 @@ class GenerationService:
                 logger.info(f"Successfully generated paragraph for term {term_id} ({term.term_text}). Total paragraphs: {len(term.paragraphs)}")
                 
                 return {
-                    "message": f"✅ Đoạn văn đã được tạo cho term '{term.term_text}':\n\n{paragraph_text}",
+                    "message": f"Paragraph created for term '{term.term_text}':\n\n{paragraph_text}",
                     "metadata": {
                         "paragraph": paragraph_text,
                         "key_concepts": paragraph_data.get("key_concepts", []),
@@ -746,7 +746,7 @@ class GenerationService:
             logger.info(f"Successfully generated paragraph for studyset {studyset_id} and saved to {updated_count} terms")
             
             return {
-                "message": f"Đoạn văn đã được tạo và lưu vào {updated_count} terms:\n\n{paragraph_text}",
+                "message": f"Paragraph created and saved to {updated_count} terms:\n\n{paragraph_text}",
                 "metadata": {
                     "paragraph": paragraph_text,
                     "key_concepts": paragraph_data.get("key_concepts", []),
@@ -757,7 +757,7 @@ class GenerationService:
             
         except Exception as e:
             logger.error(f"Error generating paragraph: {str(e)}", exc_info=True)
-            raise ValueError(f"Lỗi khi tạo paragraph: {str(e)}")
+            raise ValueError(f"Error creating paragraph: {str(e)}")
     
     async def answer_academic_question(
         self,
@@ -821,7 +821,7 @@ class GenerationService:
         except Exception as e:
             logger.error(f"Error answering question: {str(e)}", exc_info=True)
             return {
-                "answer": f"Xin lỗi, có lỗi xảy ra khi trả lời câu hỏi: {str(e)}",
+                "answer": f"Sorry, an error occurred while answering the question: {str(e)}",
                 "metadata": {"error": str(e)},
             }
 

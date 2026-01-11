@@ -89,7 +89,7 @@ class ChatbotService:
         session.commit()
         
         # Create welcome message
-        welcome_text = "Xin chào! Tôi có thể giúp gì cho bạn?"
+        welcome_text = "Hello! How can I help you?"
         
         # Check if user is member only (không cho phép gen test)
         is_member = self.is_member_only(
@@ -105,22 +105,19 @@ class ChatbotService:
         if not is_member:
             quick_replies.append(
                 QuickReplyButton(
-                    label="Tạo bài test",
+                    label="Create Test",
                     value="gen_test",
-                    icon="📝",
                 )
             )
         
         quick_replies.extend([
             QuickReplyButton(
-                label="Tạo paragraph",
+                label="Create Paragraph",
                 value="gen_paragraph",
-                icon="📄",
             ),
             QuickReplyButton(
-                label="Hỏi về nội dung",
+                label="Ask Question",
                 value="ask_question",
-                icon="❓",
             ),
         ])
         
@@ -179,7 +176,7 @@ class ChatbotService:
             # Still generating, ignore message
             return ChatResponse(
                 conversation_id=conversation.conversation_id,
-                message="Đang xử lý, vui lòng đợi...",
+                message="Processing, please wait...",
                 state=conversation.state,
                 show_input=False,
             )
@@ -217,7 +214,7 @@ class ChatbotService:
                 # Member không được phép gen test
                 return ChatResponse(
                     conversation_id=conversation.conversation_id,
-                    message="❌ Bạn không có quyền tạo bài test. Chỉ có thể tạo paragraph hoặc đặt câu hỏi.",
+                    message="You don't have permission to create tests. You can only create paragraphs or ask questions.",
                     state=conversation.state,
                     show_input=True,
                 )
@@ -270,13 +267,13 @@ class ChatbotService:
         session: Session,
     ) -> ChatResponse:
         """Hỏi số câu hỏi"""
-        message_text = "Bạn muốn bao nhiêu câu hỏi trong bài test?"
+        message_text = "How many questions do you want in the test?"
         
         quick_replies = [
-            QuickReplyButton(label="5 câu", value="5", type="number"),
-            QuickReplyButton(label="10 câu", value="10", type="number"),
-            QuickReplyButton(label="15 câu", value="15", type="number"),
-            QuickReplyButton(label="20 câu", value="20", type="number"),
+            QuickReplyButton(label="5 questions", value="5", type="number"),
+            QuickReplyButton(label="10 questions", value="10", type="number"),
+            QuickReplyButton(label="15 questions", value="15", type="number"),
+            QuickReplyButton(label="20 questions", value="20", type="number"),
         ]
         
         # Save bot message
@@ -372,13 +369,13 @@ class ChatbotService:
                 if count < 1 or count > 50:
                     return ChatResponse(
                         conversation_id=conversation.conversation_id,
-                        message="Vui lòng nhập số từ 1 đến 50",
+                        message="Please enter a number between 1 and 50",
                         state=conversation.state,
                         quick_replies=[
-                            QuickReplyButton(label="5 câu", value="5", type="number"),
-                            QuickReplyButton(label="10 câu", value="10", type="number"),
-                            QuickReplyButton(label="15 câu", value="15", type="number"),
-                            QuickReplyButton(label="20 câu", value="20", type="number"),
+                            QuickReplyButton(label="5 questions", value="5", type="number"),
+                            QuickReplyButton(label="10 questions", value="10", type="number"),
+                            QuickReplyButton(label="15 questions", value="15", type="number"),
+                            QuickReplyButton(label="20 questions", value="20", type="number"),
                         ],
                         show_input=True,
                     )
@@ -399,13 +396,13 @@ class ChatbotService:
                 # Not a number - show error with buttons
                 return ChatResponse(
                     conversation_id=conversation.conversation_id,
-                    message="Vui lòng nhập số hợp lệ hoặc chọn từ các lựa chọn bên dưới:",
+                    message="Please enter a valid number or choose from the options below:",
                     state=conversation.state,
                     quick_replies=[
-                        QuickReplyButton(label="5 câu", value="5", type="number"),
-                        QuickReplyButton(label="10 câu", value="10", type="number"),
-                        QuickReplyButton(label="15 câu", value="15", type="number"),
-                        QuickReplyButton(label="20 câu", value="20", type="number"),
+                        QuickReplyButton(label="5 questions", value="5", type="number"),
+                        QuickReplyButton(label="10 questions", value="10", type="number"),
+                        QuickReplyButton(label="15 questions", value="15", type="number"),
+                        QuickReplyButton(label="20 questions", value="20", type="number"),
                     ],
                     show_input=True,
                 )
@@ -455,13 +452,13 @@ class ChatbotService:
                 logger.warning(f"Question type not found for message: '{message}'")
                 return ChatResponse(
                     conversation_id=conversation.conversation_id,
-                    message="Vui lòng chọn loại câu hỏi từ các lựa chọn bên dưới:",
+                    message="Please select a question type from the options below:",
                     state=conversation.state,
                     quick_replies=[
-                        QuickReplyButton(label="📋 Trắc nghiệm", value="MULTIPLE_CHOICE", type="option"),
-                        QuickReplyButton(label="✓/✗ Đúng/Sai", value="TRUE_FALSE", type="option"),
-                        QuickReplyButton(label="✍️ Tự luận", value="ESSAY", type="option"),
-                        QuickReplyButton(label="🎲 Hỗn hợp", value="MIXED", type="option"),
+                        QuickReplyButton(label="Multiple Choice", value="MULTIPLE_CHOICE", type="option"),
+                        QuickReplyButton(label="True/False", value="TRUE_FALSE", type="option"),
+                        QuickReplyButton(label="Essay", value="ESSAY", type="option"),
+                        QuickReplyButton(label="Mixed", value="MIXED", type="option"),
                     ],
                     show_input=True,
                 )
@@ -501,21 +498,21 @@ class ChatbotService:
                 # IMPORTANT: Get fresh params and ensure it's a dict
                 params = dict(conversation.collected_params) if conversation.collected_params else {}
                 
-                if message_lower in ["không", "không giới hạn", "none", "no"]:
+                if message_lower in ["không", "không giới hạn", "none", "no", "unlimited", "no limit"]:
                     params["time_limit"] = None
                 else:
                     limit = int(message.strip())
                     if limit < 1:
                         return ChatResponse(
                             conversation_id=conversation.conversation_id,
-                            message="Vui lòng nhập số phút hợp lệ (≥1) hoặc chọn từ các lựa chọn bên dưới:",
+                            message="Please enter a valid number of minutes (≥1) or choose from the options below:",
                             state=conversation.state,
                             quick_replies=[
-                                QuickReplyButton(label="10 phút", value="10", type="number"),
-                                QuickReplyButton(label="15 phút", value="15", type="number"),
-                                QuickReplyButton(label="20 phút", value="20", type="number"),
-                                QuickReplyButton(label="30 phút", value="30", type="number"),
-                                QuickReplyButton(label="Không giới hạn", value="none", type="text"),
+                                QuickReplyButton(label="10 minutes", value="10", type="number"),
+                                QuickReplyButton(label="15 minutes", value="15", type="number"),
+                                QuickReplyButton(label="20 minutes", value="20", type="number"),
+                                QuickReplyButton(label="30 minutes", value="30", type="number"),
+                                QuickReplyButton(label="Unlimited", value="none", type="text"),
                             ],
                             show_input=True,
                         )
@@ -537,14 +534,14 @@ class ChatbotService:
             except ValueError:
                 return ChatResponse(
                     conversation_id=conversation.conversation_id,
-                    message="Vui lòng nhập số phút hợp lệ hoặc chọn từ các lựa chọn bên dưới:",
+                    message="Please enter a valid number of minutes or choose from the options below:",
                     state=conversation.state,
                     quick_replies=[
-                        QuickReplyButton(label="10 phút", value="10", type="number"),
-                        QuickReplyButton(label="15 phút", value="15", type="number"),
-                        QuickReplyButton(label="20 phút", value="20", type="number"),
-                        QuickReplyButton(label="30 phút", value="30", type="number"),
-                        QuickReplyButton(label="Không giới hạn", value="none", type="text"),
+                        QuickReplyButton(label="10 minutes", value="10", type="number"),
+                        QuickReplyButton(label="15 minutes", value="15", type="number"),
+                        QuickReplyButton(label="20 minutes", value="20", type="number"),
+                        QuickReplyButton(label="30 minutes", value="30", type="number"),
+                        QuickReplyButton(label="Unlimited", value="none", type="text"),
                     ],
                     show_input=True,
                 )
@@ -567,13 +564,13 @@ class ChatbotService:
         session: Session,
     ) -> ChatResponse:
         """Hỏi loại câu hỏi"""
-        message_text = "Bạn muốn loại câu hỏi nào?"
+        message_text = "What type of questions do you want?"
         
         quick_replies = [
-            QuickReplyButton(label="📋 Trắc nghiệm", value="MULTIPLE_CHOICE", icon="📋"),
-            QuickReplyButton(label="✓✗ Đúng/Sai", value="TRUE_FALSE", icon="✓✗"),
-            QuickReplyButton(label="✍️ Tự luận", value="ESSAY", icon="✍️"),
-            QuickReplyButton(label="🎲 Hỗn hợp", value="MIXED", icon="🎲"),
+            QuickReplyButton(label="Multiple Choice", value="MULTIPLE_CHOICE"),
+            QuickReplyButton(label="True/False", value="TRUE_FALSE"),
+            QuickReplyButton(label="Essay", value="ESSAY"),
+            QuickReplyButton(label="Mixed", value="MIXED"),
         ]
         
         bot_message = ChatMessage(
@@ -599,14 +596,14 @@ class ChatbotService:
         session: Session,
     ) -> ChatResponse:
         """Hỏi giới hạn thời gian"""
-        message_text = "Giới hạn thời gian bao nhiêu phút?"
+        message_text = "What is the time limit in minutes?"
         
         quick_replies = [
-            QuickReplyButton(label="10 phút", value="10", type="number"),
-            QuickReplyButton(label="15 phút", value="15", type="number"),
-            QuickReplyButton(label="20 phút", value="20", type="number"),
-            QuickReplyButton(label="30 phút", value="30", type="number"),
-            QuickReplyButton(label="Không giới hạn", value="none", type="text"),
+            QuickReplyButton(label="10 minutes", value="10", type="number"),
+            QuickReplyButton(label="15 minutes", value="15", type="number"),
+            QuickReplyButton(label="20 minutes", value="20", type="number"),
+            QuickReplyButton(label="30 minutes", value="30", type="number"),
+            QuickReplyButton(label="Unlimited", value="none", type="text"),
         ]
         
         bot_message = ChatMessage(
@@ -633,19 +630,27 @@ class ChatbotService:
     ) -> ChatResponse:
         """Hiển thị confirmation trước khi generate"""
         params = conversation.collected_params
-        time_text = f"{params['time_limit']} phút" if params.get('time_limit') else "Không giới hạn"
+        time_text = f"{params['time_limit']} minutes" if params.get('time_limit') else "Unlimited"
+        
+        question_type_map = {
+            "MULTIPLE_CHOICE": "Multiple Choice",
+            "TRUE_FALSE": "True/False",
+            "ESSAY": "Essay",
+            "MIXED": "Mixed"
+        }
+        question_type_display = question_type_map.get(params['question_types'][0], params['question_types'][0])
         
         message_text = (
-            f"Tạo bài test với:\n"
-            f"- Số câu: {params['total_questions']}\n"
-            f"- Loại: {params['question_types'][0]}\n"
-            f"- Thời gian: {time_text}\n\n"
-            f"Xác nhận tạo test?"
+            f"Create test with:\n"
+            f"- Questions: {params['total_questions']}\n"
+            f"- Type: {question_type_display}\n"
+            f"- Time limit: {time_text}\n\n"
+            f"Confirm to create test?"
         )
         
         quick_replies = [
-            QuickReplyButton(label="✅ Xác nhận", value="confirm", icon="✅"),
-            QuickReplyButton(label="✏️ Sửa lại", value="edit", icon="✏️"),
+            QuickReplyButton(label="Confirm", value="confirm"),
+            QuickReplyButton(label="Edit", value="edit"),
         ]
         
         bot_message = ChatMessage(

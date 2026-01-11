@@ -75,6 +75,18 @@ import {
 import { Skeleton } from "~/components/ui/skeleton";
 import { useAppSelector } from "~/redux/store";
 import { selectCurrentUser } from "~/redux/features/auth/slice";
+import { CreateTestDialog } from "./create-test-dialog";
+import {
+  useGetTestsForStudysetQuery,
+  useGetMyAttemptsQuery,
+  useCreateReattemptRequestMutation,
+  useGetAttemptResultQuery,
+  useDeleteTestMutation,
+  type Test,
+  type TestAttempt,
+} from "~/redux/features/test";
+import { TestCard } from "./test-card";
+import { TestResultDialog } from "./test-result-dialog";
 
 interface TermInput {
   id?: string; // UUID nếu đã tồn tại, undefined nếu mới
@@ -126,7 +138,7 @@ export function StudySetDetail() {
   // Local state
   const [editingTerms, setEditingTerms] = useState<TermInput[]>([]);
   const [isEditing, setIsEditing] = useState(false);
-  
+
   // Edit single term dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingTerm, setEditingTerm] = useState<{
@@ -141,6 +153,36 @@ export function StudySetDetail() {
   // Chatbot state
   const [isChatbotCollapsed, setIsChatbotCollapsed] = useState(false);
   const [chatbotWidth, setChatbotWidth] = useState(320); // Default 320px
+
+  // Test dialog state
+  const [createTestDialogOpen, setCreateTestDialogOpen] = useState(false);
+  const [viewResultDialogOpen, setViewResultDialogOpen] = useState(false);
+  const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
+  const [deleteTestId, setDeleteTestId] = useState<string | null>(null);
+
+  // Card filter state
+  const [cardFilter, setCardFilter] = useState<string>("all");
+
+  // Test queries
+  const {
+    data: testsData,
+    isLoading: loadingTests,
+    refetch: refetchTests,
+  } = useGetTestsForStudysetQuery(
+    { studysetId: studysetId! },
+    { skip: !studysetId }
+  );
+
+  const [createReattemptRequest] = useCreateReattemptRequestMutation();
+  const [deleteTest, { isLoading: deletingTest }] = useDeleteTestMutation();
+
+  // Get attempt result for viewing
+  const { data: attemptResult } = useGetAttemptResultQuery(
+    selectedAttemptId!,
+    { skip: !selectedAttemptId }
+  );
+
+  const tests = testsData?.data || [];
 
   // Load saved preferences from localStorage
   useEffect(() => {
@@ -473,7 +515,111 @@ export function StudySetDetail() {
     return termsData?.data?.length || 0;
   };
 
-  const displayTerms = isEditing ? editingTerms : termsData?.data || [];
+  // Filter cards based on status
+  const getFilteredCards = () => {
+    const cards = termsData?.data || [];
+    if (isEditing || cardFilter === "all") {
+      return isEditing ? editingTerms : cards;
+    }
+
+    if (!statsData?.weak_terms) {
+      return cards;
+    }
+
+    // Create a map of term status from statsData
+    const masteredIds = new Set<string>();
+    const reviewingIds = new Set<string>();
+    const forgottenIds = new Set<string>();
+
+    // Get weak terms (forgotten)
+    statsData.weak_terms.forEach(term => {
+      forgottenIds.add(term.term_id);
+    });
+
+    // Calculate mastered and reviewing from the stats
+    // Mastered: EF > 2.5 AND interval > 21 days (based on backend logic)
+    // For now, we'll use a simpler approach based on what we have
+    cards.forEach(card => {
+      const isWeak = forgottenIds.has(card.term_id);
+      const isStudied = statsData.studied_terms && statsData.studied_terms > 0;
+
+      if (!isWeak && isStudied) {
+        // If studied and not weak, could be mastered or reviewing
+        // We'll need to make an assumption here without detailed per-card data
+        if (statsData.mastered_terms && masteredIds.size < statsData.mastered_terms) {
+          masteredIds.add(card.term_id);
+        } else if (statsData.reviewing_terms && reviewingIds.size < statsData.reviewing_terms) {
+          reviewingIds.add(card.term_id);
+        }
+      }
+    });
+
+    switch (cardFilter) {
+      case "mastered":
+        return cards.filter(card => masteredIds.has(card.term_id));
+      case "learning":
+        return cards.filter(card => reviewingIds.has(card.term_id));
+      case "not-learned":
+        // Cards that are not mastered, not reviewing, and not forgotten
+        return cards.filter(card =>
+          !masteredIds.has(card.term_id) &&
+          !reviewingIds.has(card.term_id) &&
+          !forgottenIds.has(card.term_id)
+        );
+      default:
+        return cards;
+    }
+  };
+
+  const displayTerms = getFilteredCards();
+
+  // Test handlers
+  const handleAttemptTest = (testId: string) => {
+    navigate(`/dashboard/studysets/${studysetId}/test/${testId}`);
+  };
+
+  const handleViewResult = async (attemptId: string) => {
+    setSelectedAttemptId(attemptId);
+    setViewResultDialogOpen(true);
+  };
+
+  const handleRequestReattempt = async (attemptId: string) => {
+    try {
+      await createReattemptRequest({ attempt_id: attemptId }).unwrap();
+      toast.success("Reattempt request sent. Please wait for approval.");
+      refetchTests();
+    } catch (error: any) {
+      const errorMsg = getErrorMessage(error);
+      toast.error(errorMsg || "Failed to send reattempt request");
+    }
+  };
+
+  const handleTestCreated = () => {
+    setCreateTestDialogOpen(false);
+    refetchTests();
+  };
+
+  const handleDeleteTest = async () => {
+    if (!deleteTestId) return;
+
+    try {
+      await deleteTest(deleteTestId).unwrap();
+      toast.success("Test deleted successfully!");
+      setDeleteTestId(null);
+      refetchTests();
+    } catch (error: any) {
+      const errorMsg = getErrorMessage(error);
+      toast.error(errorMsg || "Failed to delete test");
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   // Loading state
   if (loadingStudySet || loadingTerms) {
@@ -683,8 +829,8 @@ export function StudySetDetail() {
                             <BarChart3 className="w-5 h-5 text-purple-600" />
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">Accuracy</p>
-                            <p className="text-2xl font-bold">{statsData?.accuracy ? `${statsData.accuracy.toFixed(0)}%` : "0%"}</p>
+                            <p className="text-sm text-muted-foreground">Average Recall Score</p>
+                            <p className="text-2xl font-bold">{statsData?.average_recall_score ? `${statsData.average_recall_score.toFixed(1)}` : "0"}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -699,7 +845,7 @@ export function StudySetDetail() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Completion Rate</span>
+                          <span className="text-muted-foreground">Reviewed Rate</span>
                           <span className="font-medium">{progressData?.completion_rate ? `${progressData.completion_rate.toFixed(1)}%` : "0%"}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
@@ -797,15 +943,15 @@ export function StudySetDetail() {
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4" />
                   <Label className="text-sm font-medium">Filter by status:</Label>
-                  <Select defaultValue="all">
+                  <Select value={cardFilter} onValueChange={setCardFilter}>
                     <SelectTrigger className="w-[180px] h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Cards</SelectItem>
-                      <SelectItem value="mastered">Mastered</SelectItem>
-                      <SelectItem value="learning">Learning</SelectItem>
-                      <SelectItem value="not-learned">Not Learned</SelectItem>
+                      <SelectItem value="all">All Cards ({termsData?.data?.length || 0})</SelectItem>
+                      <SelectItem value="mastered">Mastered ({statsData?.mastered_terms || 0})</SelectItem>
+                      <SelectItem value="learning">Reviewing ({statsData?.reviewing_terms || 0})</SelectItem>
+                      <SelectItem value="not-learned">Not Studied ({statsData?.never_studied || 0})</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1178,65 +1324,64 @@ export function StudySetDetail() {
             </TabsContent>
 
             {/* Test Tab */}
-            <TabsContent value="test" className="flex-1 overflow-auto p-6 mt-0">
-              <div className="max-w-3xl mx-auto space-y-6">
-                <div className="text-center">
-                  <h3 className="text-2xl font-semibold mb-2">Test Mode</h3>
-                  <p className="text-muted-foreground">Choose a test type to assess your knowledge</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/test?type=multiple-choice`)}>
-                    <CardContent className="p-6">
-                      <div className="flex flex-col items-center text-center gap-4">
-                        <div className="p-4 bg-green-100 rounded-full">
-                          <ClipboardCheck className="w-8 h-8 text-green-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-lg mb-2">Multiple Choice</h4>
-                          <p className="text-sm text-muted-foreground">Select the correct answer from 4 options</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/test?type=true-false`)}>
-                    <CardContent className="p-6">
-                      <div className="flex flex-col items-center text-center gap-4">
-                        <div className="p-4 bg-orange-100 rounded-full">
-                          <Check className="w-8 h-8 text-orange-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-lg mb-2">True / False</h4>
-                          <p className="text-sm text-muted-foreground">Determine if statements are true or false</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/test?type=mixed`)}>
-                    <CardContent className="p-6">
-                      <div className="flex flex-col items-center text-center gap-4">
-                        <div className="p-4 bg-indigo-100 rounded-full">
-                          <Sparkles className="w-8 h-8 text-indigo-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-lg mb-2">Mixed</h4>
-                          <p className="text-sm text-muted-foreground">Combination of different question types</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {(!termsData?.data || termsData.data.length === 0) && (
-                  <div className="text-center text-muted-foreground py-8">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No flashcards available for testing</p>
-                    <p className="text-sm mt-2">Add flashcards first to take tests</p>
+            <TabsContent value="test" className="flex-1 overflow-hidden flex flex-col mt-0">
+              {loadingTests ? (
+                <div className="flex-1 flex items-center justify-center p-6">
+                  <Skeleton className="h-8 w-48 mb-4" />
+                  <div className="space-y-4 w-full max-w-2xl">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-32 w-full" />
+                    ))}
                   </div>
-                )}
-              </div>
+                </div>
+              ) : tests.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-6">
+                  <FileText className="w-16 h-16 mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No tests yet</p>
+                  <p className="text-sm text-center max-w-md">
+                    {isOwner
+                      ? "Create your first test to start testing your knowledge"
+                      : "No tests have been created for this study set"}
+                  </p>
+                  {isOwner && (
+                    <Button className="mt-4" onClick={() => setCreateTestDialogOpen(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Test
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="p-6 border-b flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Tests</h3>
+                    {isOwner && (
+                      <Button size="sm" onClick={() => setCreateTestDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Test
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex-1 overflow-auto p-6">
+                    <div className="space-y-4 max-w-4xl">
+                      {tests.map((test) => (
+                        <TestCard
+                          key={test.test_id}
+                          test={test}
+                          studysetId={studysetId!}
+                          isOwner={isOwner}
+                          isMember={!isOwner}
+                          userId={user?.user_id}
+                          onAttemptTest={handleAttemptTest}
+                          onViewResult={handleViewResult}
+                          onRequestReattempt={handleRequestReattempt}
+                          onDeleteTest={setDeleteTestId}
+                          formatDate={formatDate}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -1391,6 +1536,69 @@ export function StudySetDetail() {
           </DialogFooter>
         </DialogContent>
         </Dialog>
+
+        {/* Create Test Dialog */}
+        <CreateTestDialog
+          open={createTestDialogOpen}
+          onOpenChange={setCreateTestDialogOpen}
+          studysetId={studysetId!}
+          onTestCreated={handleTestCreated}
+        />
+
+        {/* Test Result Dialog */}
+        {attemptResult && (
+          <TestResultDialog
+            open={viewResultDialogOpen}
+            onOpenChange={setViewResultDialogOpen}
+            result={{
+              test_id: attemptResult.test_id,
+              test_title: "",
+              score: attemptResult.correct_answers,
+              max_score: attemptResult.total_questions,
+              percentage: attemptResult.total_questions > 0
+                ? Math.round((attemptResult.correct_answers / attemptResult.total_questions) * 100)
+                : 0,
+              completed_at: attemptResult.completed_at || new Date().toISOString(),
+              questions: attemptResult.questions.map((q, idx) => ({
+                id: q.question_id,
+                type: q.question_type.toLowerCase() as "true_false" | "multiple_choice" | "essay",
+                question: q.question_text,
+                user_answer: attemptResult.answers.find(a => a.question_id === q.question_id)?.user_answer || "",
+                correct_answer: q.correct_answer,
+                is_correct: attemptResult.answers.find(a => a.question_id === q.question_id)?.is_correct || false,
+              })),
+            }}
+          />
+        )}
+
+        {/* Delete Test Confirmation Dialog */}
+        <AlertDialog open={!!deleteTestId} onOpenChange={() => setDeleteTestId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this test? This action cannot be undone and will delete all related questions and results.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingTest}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteTest}
+                disabled={deletingTest}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deletingTest ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
       
       {/* Right Chatbot Sidebar */}

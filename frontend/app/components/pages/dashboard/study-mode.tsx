@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router";
 import { motion } from "motion/react";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -21,6 +21,8 @@ import { Skeleton } from "~/components/ui/skeleton";
 export function StudyMode() {
   const { studysetId } = useParams<{ studysetId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isRandomMode = searchParams.get("mode") === "random";
 
   // Queries
   const {
@@ -38,8 +40,28 @@ export function StudyMode() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const terms = termsData?.data || [];
+  // Shuffle terms if random mode
+  const terms = useMemo(() => {
+    const allTerms = termsData?.data || [];
+    if (isRandomMode && allTerms.length > 0) {
+      // Create a shuffled copy
+      const shuffled = [...allTerms];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+    return allTerms;
+  }, [termsData?.data, isRandomMode]);
+
   const currentTerm = terms[currentIndex];
+
+  // Reset index when terms change
+  useEffect(() => {
+    setCurrentIndex(0);
+    setIsFlipped(false);
+  }, [isRandomMode, terms.length]);
 
   const handleFlip = () => {
     if (isAnimating) return;

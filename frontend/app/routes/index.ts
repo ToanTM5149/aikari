@@ -27,7 +27,6 @@ export default [
     route("dashboard/studysets/:studysetId", "routes/dashboard/studyset-detail.tsx"),
     route("dashboard/studysets/:studysetId/terms/:termId", "routes/dashboard/term-detail.tsx"),
     route("dashboard/studysets/:studysetId/study", "routes/dashboard/study-mode.tsx"),
-    route("dashboard/studysets/:studysetId/test", "routes/dashboard/test-mode.tsx"),
     route("dashboard/studysets/:studysetId/test/:testId", "routes/dashboard/test-attempt.tsx"),
     route("dashboard/studysets/:studysetId/progress", "routes/dashboard/progress.tsx"),
     route("dashboard/categories", "routes/dashboard/categories.tsx"),

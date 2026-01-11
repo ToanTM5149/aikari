@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { useAppDispatch, useAppSelector } from '~/redux/store/hooks';
 import {
   useLazyGetNextTermQuery,
@@ -47,6 +47,7 @@ export function FlashcardLearningPage(props: FlashcardLearningPageProps = {}) {
   const { studysetId } = useParams<{ studysetId: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const [searchParams] = useSearchParams();
 
   // Redux state
   const sessionState = useAppSelector((state: RootState) => state.session);
@@ -74,6 +75,16 @@ export function FlashcardLearningPage(props: FlashcardLearningPageProps = {}) {
     reviews: [],
   });
 
+  // Shuffle array utility
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const handleStartSession = useCallback(async () => {
     if (!studysetId) return;
 
@@ -93,13 +104,17 @@ export function FlashcardLearningPage(props: FlashcardLearningPageProps = {}) {
         })
       );
 
+      // Check if random mode is enabled
+      const isRandomMode = searchParams.get('mode') === 'random';
+      const terms = isRandomMode ? shuffleArray(response.terms) : response.terms;
+
       // Save all terms for this session
-      setSessionTerms(response.terms);
+      setSessionTerms(terms);
       setCurrentTermIndex(0);
     } catch (error) {
       console.error('Failed to start session:', error);
     }
-  }, [studysetId, startSession, dispatch]);
+  }, [studysetId, startSession, dispatch, searchParams]);
 
   const handleStartSessionForDueCards = useCallback(async () => {
     if (!initialTerms || initialTerms.length === 0) return;

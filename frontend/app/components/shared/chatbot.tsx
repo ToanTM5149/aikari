@@ -107,7 +107,7 @@ export function Chatbot({
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
         role: "assistant",
-        content: `❌ Lỗi: ${error?.data?.detail || error?.message || "Có lỗi xảy ra"}`,
+        content: `Error: ${error?.data?.detail || error?.message || "An error occurred"}`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
