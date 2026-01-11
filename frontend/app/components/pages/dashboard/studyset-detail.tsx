@@ -43,6 +43,10 @@ import {
   useDeleteStudySetMutation,
 } from "~/redux/features/studyset";
 import {
+  useGetStudysetProgressQuery,
+  useGetStudysetStatsQuery,
+} from "~/redux/features/learning";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -101,6 +105,17 @@ export function StudySetDetail() {
     isLoading: loadingTerms,
     error: termsError,
   } = useGetTermsQuery({ studysetId: studysetId! }, { skip: !studysetId });
+
+  // Progress and Stats
+  const {
+    data: progressData,
+    isLoading: loadingProgress,
+  } = useGetStudysetProgressQuery(studysetId!, { skip: !studysetId });
+
+  const {
+    data: statsData,
+    isLoading: loadingStats,
+  } = useGetStudysetStatsQuery(studysetId!, { skip: !studysetId });
 
   // Mutations
   const [createTerm, { isLoading: creating }] = useCreateTermMutation();
@@ -527,50 +542,11 @@ export function StudySetDetail() {
                 {getValidCardCount()} Cards
               </Badge>
 
-              {!isEditing && (
-                <>
-                  <Select
-                    onValueChange={(value) => {
-                      if (value === "study") {
-                        navigate(`/dashboard/studysets/${studysetId}/study`);
-                      } else if (value === "test") {
-                        navigate(`/dashboard/studysets/${studysetId}/test`);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-[140px] h-8" disabled={!termsData?.data || termsData.data.length === 0}>
-                      <SelectValue placeholder="Mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="study">
-                        <div className="flex items-center gap-2">
-                          <BookOpen className="w-4 h-4" />
-                          <span>Learn</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="test">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4" />
-                          <span>Test</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/dashboard/studysets/${studysetId}/progress`)}
-                  >
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Progress
-                  </Button>
-                  {isOwner && (
-                    <Button size="sm" onClick={initializeEditMode}>
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Add flashcard
-                    </Button>
-                  )}
-                </>
+              {!isEditing && isOwner && (
+                <Button size="sm" onClick={initializeEditMode}>
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Add flashcard
+                </Button>
               )}
 
               {isEditing && (
@@ -638,21 +614,214 @@ export function StudySetDetail() {
           </div>
         </CardHeader>
 
-        <CardContent
-          id="terms-container"
-          className="flex-1 overflow-auto p-6"
-        >
-          <AnimatePresence mode="wait">
-            {isEditing ? (
-              // Edit Mode
-              <motion.div
-                key="edit"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4"
-              >
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <Tabs defaultValue="statistics" className="h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-4 rounded-none border-b">
+              <TabsTrigger value="statistics" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Statistics
+              </TabsTrigger>
+              <TabsTrigger value="cards" className="gap-2">
+                <Target className="w-4 h-4" />
+                Cards
+              </TabsTrigger>
+              <TabsTrigger value="learn" className="gap-2">
+                <BookOpen className="w-4 h-4" />
+                Learn
+              </TabsTrigger>
+              <TabsTrigger value="test" className="gap-2">
+                <ClipboardCheck className="w-4 h-4" />
+                Test
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Statistics Tab */}
+            <TabsContent value="statistics" className="flex-1 overflow-auto p-6 mt-0">
+              {loadingProgress || loadingStats ? (
+                <div className="space-y-6">
+                  <Skeleton className="h-8 w-48" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Skeleton className="h-24" />
+                    <Skeleton className="h-24" />
+                    <Skeleton className="h-24" />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold">Learning Statistics</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <Check className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Mastered Cards</p>
+                            <p className="text-2xl font-bold">{statsData?.mastered_terms || 0}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <BookOpen className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Studied Cards</p>
+                            <p className="text-2xl font-bold">{statsData?.studied_terms || 0} / {statsData?.total_terms || 0}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-purple-100 rounded-lg">
+                            <BarChart3 className="w-5 h-5 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Accuracy</p>
+                            <p className="text-2xl font-bold">{statsData?.accuracy ? `${statsData.accuracy.toFixed(0)}%` : "0%"}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Progress Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Progress Overview</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Completion Rate</span>
+                          <span className="font-medium">{progressData?.completion_rate ? `${progressData.completion_rate.toFixed(1)}%` : "0%"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Study Streak</span>
+                          <span className="font-medium">{progressData?.streak_days || 0} days</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Average Recall Score</span>
+                          <span className="font-medium">{statsData?.average_recall_score ? statsData.average_recall_score.toFixed(1) : "0"} / 5</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Total Study Time</span>
+                          <span className="font-medium">{statsData?.total_study_time ? `${(statsData.total_study_time / 60).toFixed(0)} min` : "0 min"}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Card Status</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            <span className="text-muted-foreground">Mastered</span>
+                          </div>
+                          <span className="font-medium">{statsData?.mastered_terms || 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <span className="text-muted-foreground">Reviewing</span>
+                          </div>
+                          <span className="font-medium">{statsData?.reviewing_terms || 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                            <span className="text-muted-foreground">Forgotten</span>
+                          </div>
+                          <span className="font-medium">{statsData?.forgotten_terms || 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                            <span className="text-muted-foreground">Not Studied</span>
+                          </div>
+                          <span className="font-medium">{statsData?.never_studied || 0}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Weak Terms */}
+                  {statsData?.weak_terms && statsData.weak_terms.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Terms Needing Review</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {statsData.weak_terms.slice(0, 5).map((term) => (
+                            <div key={term.term_id} className="p-3 border rounded-lg">
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="font-medium text-sm">{term.term_text}</p>
+                                <Badge variant="destructive" className="text-xs">
+                                  Score: {term.recall_score}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Reviewed {term.times_reviewed} times
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {!statsData?.studied_terms && (
+                    <div className="text-center text-muted-foreground py-8">
+                      <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p>No statistics yet</p>
+                      <p className="text-sm mt-2">Start learning to see your progress!</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Cards Tab */}
+            <TabsContent value="cards" className="flex-1 overflow-hidden flex flex-col mt-0">
+              <div className="p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  <Label className="text-sm font-medium">Filter by status:</Label>
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-[180px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Cards</SelectItem>
+                      <SelectItem value="mastered">Mastered</SelectItem>
+                      <SelectItem value="learning">Learning</SelectItem>
+                      <SelectItem value="not-learned">Not Learned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div id="terms-container" className="flex-1 overflow-auto p-6">
+                <AnimatePresence mode="wait">
+                  {isEditing ? (
+                    // Edit Mode
+                    <motion.div
+                      key="edit"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-4"
+                    >
                 {editingTerms.map((term, index) => (
                   <motion.div
                     key={term.id || `new-${index}`}
@@ -954,9 +1123,122 @@ export function StudySetDetail() {
                     </div>
                   </div>
                 )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              </div>
+            </TabsContent>
+
+            {/* Learn Tab */}
+            <TabsContent value="learn" className="flex-1 overflow-auto p-6 mt-0">
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div className="text-center">
+                  <h3 className="text-2xl font-semibold mb-2">Learn Mode</h3>
+                  <p className="text-muted-foreground">Choose how you want to study the flashcards</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/study`)}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col items-center text-center gap-4">
+                        <div className="p-4 bg-blue-100 rounded-full">
+                          <Play className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-lg mb-2">Sequential Order</h4>
+                          <p className="text-sm text-muted-foreground">Study cards in their original order from first to last</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/study?mode=random`)}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col items-center text-center gap-4">
+                        <div className="p-4 bg-purple-100 rounded-full">
+                          <Sparkles className="w-8 h-8 text-purple-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-lg mb-2">Random Order</h4>
+                          <p className="text-sm text-muted-foreground">Study cards in randomized order for better retention</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {(!termsData?.data || termsData.data.length === 0) && (
+                  <div className="text-center text-muted-foreground py-8">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No flashcards available to study</p>
+                    <p className="text-sm mt-2">Add flashcards first to start learning</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Test Tab */}
+            <TabsContent value="test" className="flex-1 overflow-auto p-6 mt-0">
+              <div className="max-w-3xl mx-auto space-y-6">
+                <div className="text-center">
+                  <h3 className="text-2xl font-semibold mb-2">Test Mode</h3>
+                  <p className="text-muted-foreground">Choose a test type to assess your knowledge</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/test?type=multiple-choice`)}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col items-center text-center gap-4">
+                        <div className="p-4 bg-green-100 rounded-full">
+                          <ClipboardCheck className="w-8 h-8 text-green-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-lg mb-2">Multiple Choice</h4>
+                          <p className="text-sm text-muted-foreground">Select the correct answer from 4 options</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/test?type=true-false`)}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col items-center text-center gap-4">
+                        <div className="p-4 bg-orange-100 rounded-full">
+                          <Check className="w-8 h-8 text-orange-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-lg mb-2">True / False</h4>
+                          <p className="text-sm text-muted-foreground">Determine if statements are true or false</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/test?type=mixed`)}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col items-center text-center gap-4">
+                        <div className="p-4 bg-indigo-100 rounded-full">
+                          <Sparkles className="w-8 h-8 text-indigo-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-lg mb-2">Mixed</h4>
+                          <p className="text-sm text-muted-foreground">Combination of different question types</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {(!termsData?.data || termsData.data.length === 0) && (
+                  <div className="text-center text-muted-foreground py-8">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No flashcards available for testing</p>
+                    <p className="text-sm mt-2">Add flashcards first to take tests</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
         </Card>
 

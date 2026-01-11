@@ -489,11 +489,17 @@ export function ClassDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="studysets" className="w-full">
-          <TabsList className={`grid w-full ${canManage ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full ${canManage ? 'grid-cols-5' : 'grid-cols-3'}`}>
             <TabsTrigger value="studysets">
               <BookOpen className="w-4 h-4 mr-2" />
               Study Sets
             </TabsTrigger>
+            {canManage && (
+              <TabsTrigger value="statistics">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Statistics
+              </TabsTrigger>
+            )}
             <TabsTrigger value="activity">
               Activity
             </TabsTrigger>
@@ -508,6 +514,115 @@ export function ClassDetail() {
               </TabsTrigger>
             )}
           </TabsList>
+
+          {/* Statistics Tab - Teacher only */}
+          {canManage && (
+            <TabsContent value="statistics">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Student Statistics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <Users className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Total Students</p>
+                              <p className="text-2xl font-bold">{members.filter(m => m.role === 'MEMBER').length}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 rounded-lg">
+                              <BookOpen className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Study Sets</p>
+                              <p className="text-2xl font-bold">{studySetsData?.data?.length || 0}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-100 rounded-lg">
+                              <BarChart3 className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Avg. Progress</p>
+                              <p className="text-2xl font-bold">0%</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Student Progress</h3>
+                      {members.filter(m => m.role === 'MEMBER').length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                          <p>No students in this class yet</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {members
+                            .filter(m => m.role === 'MEMBER')
+                            .map((member) => (
+                              <Card key={member.user_id}>
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3 flex-1">
+                                      <Avatar>
+                                        <AvatarFallback>
+                                          {member.user?.username?.[0]?.toUpperCase() || "U"}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1">
+                                        <p className="font-medium">{member.user?.username || "Unknown"}</p>
+                                        <p className="text-sm text-muted-foreground">{member.user?.email || ""}</p>
+
+                                        <div className="mt-3 space-y-2">
+                                          <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Study Sets Completed</span>
+                                            <span className="font-medium">0 / {studySetsData?.data?.length || 0}</span>
+                                          </div>
+                                          <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Cards Mastered</span>
+                                            <span className="font-medium">0</span>
+                                          </div>
+                                          <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Cards Reviewed</span>
+                                            <span className="font-medium">0</span>
+                                          </div>
+                                          <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Tests Taken</span>
+                                            <span className="font-medium">0</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Members Tab */}
           <TabsContent value="members">
