@@ -118,10 +118,6 @@ def refresh_token(session: SessionDep, request: Request) -> Token:
   if not user_id or not jti:
     raise HTTPException(status_code=401, detail="Invalid refresh token")
   
-  # Kiểm tra xem refresh token có bị revoke không
-  if security.is_token_blacklisted(session, jti):
-    raise HTTPException(status_code=401, detail="Token has been revoked")
-  
   # Kiểm tra refresh token trong database
   from sqlmodel import select
   statement = select(RefreshToken).where(RefreshToken.jti == jti)
@@ -158,7 +154,7 @@ def logout(
   Best practice:
   1. Client gọi API logout
   2. Server đọc refresh token từ cookie
-  3. Server revoke refresh token đó và thêm vào blacklist
+  3. Server revoke refresh token đó (set revoked = True)
   4. Server clear refresh token cookie
   5. Client xóa access token ở memory
   """
@@ -179,24 +175,8 @@ def logout(
   if user_id and refresh_jti:
     # Verify token thuộc về current user
     if str(current_user.user_id) == user_id:
-      # Revoke refresh token trong database
-      success = security.revoke_refresh_token(session, refresh_jti)
-      
-      if success:
-        # Thêm refresh token vào blacklist
-        from sqlmodel import select
-        statement = select(RefreshToken).where(RefreshToken.jti == refresh_jti)
-        refresh_token_record = session.exec(statement).first()
-        
-        if refresh_token_record:
-          security.add_token_to_blacklist(
-            session=session,
-            jti=refresh_jti,
-            token_type="refresh",
-            user_id=user_id,
-            expires_at=refresh_token_record.expires_at,
-            reason="logout"
-          )
+      # Revoke refresh token trong database (set revoked = True)
+      security.revoke_refresh_token(session, refresh_jti)
   
   # Clear refresh token cookie
   delete_params = {"key": "refresh_token", "path": "/"}
@@ -220,33 +200,11 @@ def logout_all_devices(
   - User nghi ngờ tài khoản bị xâm nhập
   - User muốn đăng xuất khỏi tất cả thiết bị
   """
-  # Revoke tất cả refresh tokens
+  # Revoke tất cả refresh tokens (set revoked = True cho tất cả)
   count = security.revoke_all_user_refresh_tokens(
     session, 
     str(current_user.user_id)
   )
-  
-  # Thêm tất cả vào blacklist
-  from sqlmodel import select
-  from datetime import datetime, timezone
-  
-  statement = select(RefreshToken).where(
-    RefreshToken.user_id == current_user.user_id,
-    RefreshToken.revoked == True
-  )
-  revoked_tokens = session.exec(statement).all()
-  
-  for token in revoked_tokens:
-    # Chỉ thêm vào blacklist nếu chưa có
-    if not security.is_token_blacklisted(session, token.jti):
-      security.add_token_to_blacklist(
-        session=session,
-        jti=token.jti,
-        token_type="refresh",
-        user_id=str(current_user.user_id),
-        expires_at=token.expires_at,
-        reason="logout_all"
-      )
   
   return Message(message=f"Logged out from {count} device(s)")
 

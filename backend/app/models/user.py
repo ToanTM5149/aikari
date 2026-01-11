@@ -45,5 +45,6 @@ class User(SQLModel, table=True):
     )
     study_activities: list["StudyActivity"] = Relationship(back_populates="user")
     progress_summaries: list["ProgressSummary"] = Relationship(back_populates="user")
+    learning_sessions: list["LearningSession"] = Relationship(back_populates="user")
 
 

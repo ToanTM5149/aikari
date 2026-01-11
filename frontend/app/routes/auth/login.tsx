@@ -9,15 +9,10 @@ export default function LoginRoute() {
   const navigate = useNavigate()
 
   const handleLogin = (data?: any) => {
-    console.log("Login data:", data)
-    
-    // Role-based redirect after login
     const userRole = data?.userType?.toUpperCase()
     if (userRole === 'ADMIN') {
-      // Admin chỉ có 3 sections: Statistics, User Management, Token Management
       navigate("/statistics")
     } else {
-      // Student/Teacher redirect đến dashboard/home
       navigate("/dashboard")
     }
   }

@@ -158,6 +158,8 @@ class DueCardInfo(BaseModel):
     term_id: uuid.UUID
     studyset_id: uuid.UUID
     studyset_name: str
+    category_id: uuid.UUID | None = None
+    category_name: str | None = None
     term_text: str
     definition: str
     example: str | None = None

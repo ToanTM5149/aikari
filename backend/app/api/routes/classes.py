@@ -30,6 +30,73 @@ from app.services.analytics_service import AnalyticsService
 router = APIRouter()
 
 
+def enrich_classes_bulk(session: Session, classes: list[Class]) -> list[ClassPublic]:
+    """
+    OPTIMIZATION: Bulk enrich classes with member_count and studyset_count
+    to avoid N+1 query problem.
+
+    Instead of querying for each class in a loop, this function:
+    1. Fetches all member counts in one query
+    2. Fetches all studyset counts in one query
+    3. Maps the results back to each class
+
+    This reduces 2*N queries to just 2 queries total.
+    """
+    if not classes:
+        return []
+
+    from app.models.enums import MembershipStatus
+
+    class_ids = [cls.class_id for cls in classes]
+
+    # Query 1: Get member counts for all classes in one query
+    member_counts_statement = (
+        select(
+            ClassMember.class_id,
+            func.count(ClassMember.user_id).label('member_count')
+        )
+        .where(
+            ClassMember.class_id.in_(class_ids),
+            ClassMember.status == MembershipStatus.ACTIVE
+        )
+        .group_by(ClassMember.class_id)
+    )
+    member_counts_result = session.exec(member_counts_statement).all()
+    member_counts_map = {row.class_id: row.member_count for row in member_counts_result}
+
+    # Query 2: Get studyset counts for all classes in one query
+    studyset_counts_statement = (
+        select(
+            ClassStudySet.class_id,
+            func.count(ClassStudySet.studyset_id).label('studyset_count')
+        )
+        .where(ClassStudySet.class_id.in_(class_ids))
+        .group_by(ClassStudySet.class_id)
+    )
+    studyset_counts_result = session.exec(studyset_counts_statement).all()
+    studyset_counts_map = {row.class_id: row.studyset_count for row in studyset_counts_result}
+
+    # Build enriched classes using pre-fetched data
+    enriched_classes = []
+    for cls in classes:
+        enriched_class = ClassPublic(
+            class_id=cls.class_id,
+            class_name=cls.class_name,
+            description=cls.description,
+            is_public=cls.is_public,
+            class_code=cls.class_code,
+            created_by=cls.created_by,
+            owner_user_id=cls.owner_user_id,
+            created_at=cls.created_at,
+            updated_at=cls.updated_at,
+            member_count=member_counts_map.get(cls.class_id, 0),
+            studyset_count=studyset_counts_map.get(cls.class_id, 0),
+        )
+        enriched_classes.append(enriched_class)
+
+    return enriched_classes
+
+
 @router.get("/", response_model=ClassesPublic)
 def read_classes(
     current_user: CurrentUser,
@@ -76,45 +143,14 @@ def read_classes(
         )
         total_count_statement = total_count_statement.where(search_filter)
     total_count = session.exec(total_count_statement).one() or 0
-    
+
     # Get paginated classes - order by created_at DESC so newest classes appear first
     statement = base_query.order_by(Class.created_at.desc()).offset(skip).limit(limit)
     classes = list(session.exec(statement).all())
-    
-    # Enrich classes with member_count and studyset_count
-    enriched_classes = []
-    for cls in classes:
-        # Count active members
-        member_count_statement = (
-            select(func.count(ClassMember.user_id))
-            .where(ClassMember.class_id == cls.class_id)
-            .where(ClassMember.status == MembershipStatus.ACTIVE)
-        )
-        member_count = session.exec(member_count_statement).one() or 0
-        
-        # Count studysets
-        studyset_count_statement = (
-            select(func.count(ClassStudySet.studyset_id))
-            .where(ClassStudySet.class_id == cls.class_id)
-        )
-        studyset_count = session.exec(studyset_count_statement).one() or 0
-        
-        # Create enriched class
-        enriched_class = ClassPublic(
-            class_id=cls.class_id,
-            class_name=cls.class_name,
-            description=cls.description,
-            is_public=cls.is_public,
-            class_code=cls.class_code,
-            created_by=cls.created_by,
-            owner_user_id=cls.owner_user_id,
-            created_at=cls.created_at,
-            updated_at=cls.updated_at,
-            member_count=member_count,
-            studyset_count=studyset_count,
-        )
-        enriched_classes.append(enriched_class)
-    
+
+    # OPTIMIZED: Use bulk enrichment to avoid N+1 queries
+    enriched_classes = enrich_classes_bulk(session, classes)
+
     return ClassesPublic(data=enriched_classes, count=total_count)
 
 
@@ -142,41 +178,10 @@ def read_owned_classes(
     classes = crud.get_classes_by_owner(
         session=session, owner_id=current_user.user_id, skip=skip, limit=limit
     )
-    
-    # Enrich classes with member_count and studyset_count
-    enriched_classes = []
-    for cls in classes:
-        # Count active members
-        member_count_statement = (
-            select(func.count(ClassMember.user_id))
-            .where(ClassMember.class_id == cls.class_id)
-            .where(ClassMember.status == MembershipStatus.ACTIVE)
-        )
-        member_count = session.exec(member_count_statement).one() or 0
-        
-        # Count studysets
-        studyset_count_statement = (
-            select(func.count(ClassStudySet.studyset_id))
-            .where(ClassStudySet.class_id == cls.class_id)
-        )
-        studyset_count = session.exec(studyset_count_statement).one() or 0
-        
-        # Create enriched class
-        enriched_class = ClassPublic(
-            class_id=cls.class_id,
-            class_name=cls.class_name,
-            description=cls.description,
-            is_public=cls.is_public,
-            class_code=cls.class_code,
-            created_by=cls.created_by,
-            owner_user_id=cls.owner_user_id,
-            created_at=cls.created_at,
-            updated_at=cls.updated_at,
-            member_count=member_count,
-            studyset_count=studyset_count,
-        )
-        enriched_classes.append(enriched_class)
-    
+
+    # OPTIMIZED: Use bulk enrichment to avoid N+1 queries
+    enriched_classes = enrich_classes_bulk(session, classes)
+
     return ClassesPublic(data=enriched_classes, count=total_count)
 
 
@@ -215,45 +220,14 @@ def read_public_classes(
         )
         total_count_statement = total_count_statement.where(search_filter)
     total_count = session.exec(total_count_statement).one() or 0
-    
+
     # Get paginated classes - order by created_at DESC so newest classes appear first
     statement = base_query.order_by(Class.created_at.desc()).offset(skip).limit(limit)
     classes = list(session.exec(statement).all())
-    
-    # Enrich classes with member_count and studyset_count
-    enriched_classes = []
-    for cls in classes:
-        # Count active members
-        member_count_statement = (
-            select(func.count(ClassMember.user_id))
-            .where(ClassMember.class_id == cls.class_id)
-            .where(ClassMember.status == MembershipStatus.ACTIVE)
-        )
-        member_count = session.exec(member_count_statement).one() or 0
-        
-        # Count studysets
-        studyset_count_statement = (
-            select(func.count(ClassStudySet.studyset_id))
-            .where(ClassStudySet.class_id == cls.class_id)
-        )
-        studyset_count = session.exec(studyset_count_statement).one() or 0
-        
-        # Create enriched class
-        enriched_class = ClassPublic(
-            class_id=cls.class_id,
-            class_name=cls.class_name,
-            description=cls.description,
-            is_public=cls.is_public,
-            class_code=cls.class_code,
-            created_by=cls.created_by,
-            owner_user_id=cls.owner_user_id,
-            created_at=cls.created_at,
-            updated_at=cls.updated_at,
-            member_count=member_count,
-            studyset_count=studyset_count,
-        )
-        enriched_classes.append(enriched_class)
-    
+
+    # OPTIMIZED: Use bulk enrichment to avoid N+1 queries
+    enriched_classes = enrich_classes_bulk(session, classes)
+
     return ClassesPublic(data=enriched_classes, count=total_count)
 
 
@@ -288,41 +262,10 @@ def search_classes(
     )
     
     classes = list(session.exec(statement).all())
-    
-    # Enrich classes with member_count and studyset_count
-    enriched_classes = []
-    for cls in classes:
-        # Count active members
-        member_count_statement = (
-            select(func.count(ClassMember.user_id))
-            .where(ClassMember.class_id == cls.class_id)
-            .where(ClassMember.status == MembershipStatus.ACTIVE)
-        )
-        member_count = session.exec(member_count_statement).one() or 0
-        
-        # Count studysets
-        studyset_count_statement = (
-            select(func.count(ClassStudySet.studyset_id))
-            .where(ClassStudySet.class_id == cls.class_id)
-        )
-        studyset_count = session.exec(studyset_count_statement).one() or 0
-        
-        # Create enriched class
-        enriched_class = ClassPublic(
-            class_id=cls.class_id,
-            class_name=cls.class_name,
-            description=cls.description,
-            is_public=cls.is_public,
-            class_code=cls.class_code,
-            created_by=cls.created_by,
-            owner_user_id=cls.owner_user_id,
-            created_at=cls.created_at,
-            updated_at=cls.updated_at,
-            member_count=member_count,
-            studyset_count=studyset_count,
-        )
-        enriched_classes.append(enriched_class)
-    
+
+    # OPTIMIZED: Use bulk enrichment to avoid N+1 queries
+    enriched_classes = enrich_classes_bulk(session, classes)
+
     return ClassesPublic(data=enriched_classes, count=len(enriched_classes))
 
 
@@ -346,39 +289,10 @@ def read_class(
     if not membership and not class_obj.is_public:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    # Enrich class with member_count and studyset_count
-    from app.models.enums import MembershipStatus
-    # Count active members
-    member_count_statement = (
-        select(func.count(ClassMember.user_id))
-        .where(ClassMember.class_id == class_obj.class_id)
-        .where(ClassMember.status == MembershipStatus.ACTIVE)
-    )
-    member_count = session.exec(member_count_statement).one() or 0
-    
-    # Count studysets
-    studyset_count_statement = (
-        select(func.count(ClassStudySet.studyset_id))
-        .where(ClassStudySet.class_id == class_obj.class_id)
-    )
-    studyset_count = session.exec(studyset_count_statement).one() or 0
-    
-    # Create enriched class
-    enriched_class = ClassPublic(
-        class_id=class_obj.class_id,
-        class_name=class_obj.class_name,
-        description=class_obj.description,
-        is_public=class_obj.is_public,
-        class_code=class_obj.class_code,
-        created_by=class_obj.created_by,
-        owner_user_id=class_obj.owner_user_id,
-        created_at=class_obj.created_at,
-        updated_at=class_obj.updated_at,
-        member_count=member_count,
-        studyset_count=studyset_count,
-    )
-    
-    return enriched_class
+    # OPTIMIZED: Use bulk enrichment helper even for single class
+    enriched_classes = enrich_classes_bulk(session, [class_obj])
+
+    return enriched_classes[0]
 
 
 @router.post("/", response_model=ClassPublic)
@@ -833,54 +747,88 @@ def get_class_studysets(
     current_user: CurrentUser,
     session: SessionDep,
 ) -> Any:
-    """Get all study sets in a class."""
+    """
+    Get all study sets in a class.
+
+    OPTIMIZED: Uses bulk queries to avoid N+1 problem
+    """
     membership = crud.get_user_class_membership(
         session=session, class_id=class_id, user_id=current_user.user_id
     )
     if not membership or membership.status != MembershipStatus.ACTIVE:
         raise HTTPException(status_code=403, detail="Not a member of this class")
-    
+
     statement = (
         select(ClassStudySet)
         .where(ClassStudySet.class_id == class_id)
         .options(selectinload(ClassStudySet.studyset))
     )
     class_studysets = session.exec(statement).all()
-    
-    # Enrich each studyset with term_count, last_activity_at, and progress (same as studysets endpoint)
+
+    if not class_studysets:
+        return {"data": [], "count": 0}
+
+    # Extract studysets from class_studysets
+    studysets = [cs.studyset for cs in class_studysets]
+    studyset_ids = [s.studyset_id for s in studysets]
+
+    # OPTIMIZATION: Bulk fetch all data in 3 queries instead of N queries
     from app.models import Term, StudyActivity, ProgressSummary
     from app.schemas import StudySetPublic
-    
+
+    # Query 1: Get term counts for all studysets in one query
+    term_counts_statement = (
+        select(
+            Term.studyset_id,
+            func.count(Term.term_id).label('term_count')
+        )
+        .where(Term.studyset_id.in_(studyset_ids))
+        .group_by(Term.studyset_id)
+    )
+    term_counts_result = session.exec(term_counts_statement).all()
+    term_counts_map = {row.studyset_id: row.term_count for row in term_counts_result}
+
+    # Query 2: Get last activity for all studysets in one query (using window function)
+    last_activity_subquery = (
+        select(
+            StudyActivity.studyset_id,
+            StudyActivity.created_at,
+            func.row_number().over(
+                partition_by=StudyActivity.studyset_id,
+                order_by=StudyActivity.created_at.desc()
+            ).label('rn')
+        )
+        .where(
+            StudyActivity.studyset_id.in_(studyset_ids),
+            StudyActivity.user_id == current_user.user_id
+        )
+        .subquery()
+    )
+
+    last_activities_statement = (
+        select(
+            last_activity_subquery.c.studyset_id,
+            last_activity_subquery.c.created_at
+        )
+        .where(last_activity_subquery.c.rn == 1)
+    )
+    last_activities_result = session.exec(last_activities_statement).all()
+    last_activities_map = {row.studyset_id: row.created_at for row in last_activities_result}
+
+    # Query 3: Get progress for all studysets in one query
+    progress_statement = (
+        select(ProgressSummary)
+        .where(
+            ProgressSummary.studyset_id.in_(studyset_ids),
+            ProgressSummary.user_id == current_user.user_id
+        )
+    )
+    progress_summaries = session.exec(progress_statement).all()
+    progress_map = {p.studyset_id: p.completion_rate for p in progress_summaries}
+
+    # Build enriched results using pre-fetched data
     enriched_sets = []
-    for cs in class_studysets:
-        studyset = cs.studyset
-        
-        # Count terms
-        term_count_statement = select(func.count(Term.term_id)).where(
-            Term.studyset_id == studyset.studyset_id
-        )
-        term_count = session.exec(term_count_statement).one() or 0
-        
-        # Get last activity time
-        last_activity_statement = (
-            select(StudyActivity.created_at)
-            .where(StudyActivity.studyset_id == studyset.studyset_id)
-            .where(StudyActivity.user_id == current_user.user_id)
-            .order_by(StudyActivity.created_at.desc())
-            .limit(1)
-        )
-        last_activity = session.exec(last_activity_statement).first()
-        
-        # Get progress (completion_rate)
-        progress_statement = (
-            select(ProgressSummary)
-            .where(ProgressSummary.studyset_id == studyset.studyset_id)
-            .where(ProgressSummary.user_id == current_user.user_id)
-        )
-        progress_summary = session.exec(progress_statement).first()
-        progress = progress_summary.completion_rate if progress_summary else 0.0
-        
-        # Create enriched studyset
+    for studyset in studysets:
         enriched_set = StudySetPublic(
             studyset_id=studyset.studyset_id,
             title=studyset.title,
@@ -891,13 +839,13 @@ def get_class_studysets(
             owner_id=studyset.owner_id,
             created_at=studyset.created_at,
             updated_at=studyset.updated_at,
-            attributes=studyset.attributes,
-            term_count=term_count,
-            last_activity_at=last_activity,
-            progress=progress
+            attributes=None,  # Attribute table has been removed
+            term_count=term_counts_map.get(studyset.studyset_id, 0),
+            last_activity_at=last_activities_map.get(studyset.studyset_id),
+            progress=progress_map.get(studyset.studyset_id, 0.0)
         )
         enriched_sets.append(enriched_set)
-    
+
     return {"data": enriched_sets, "count": len(enriched_sets)}
 
 

@@ -73,63 +73,6 @@ def verify_token(token: str, token_type: str = "access") -> tuple[str | None, st
         return None, None
 
 
-def is_token_blacklisted(session: Session, jti: str) -> bool:
-    """
-    Kiểm tra xem token có trong blacklist không
-    Xử lý connection errors gracefully - nếu không thể kết nối DB, 
-    coi như token không bị blacklist (fail open cho availability)
-    """
-    import logging
-    from sqlalchemy.exc import OperationalError, DisconnectionError
-    
-    logger = logging.getLogger(__name__)
-    from app.models.token_blacklist import TokenBlacklist
-    
-    try:
-        statement = select(TokenBlacklist).where(TokenBlacklist.jti == jti)
-        result = session.exec(statement).first()
-        return result is not None
-    except (OperationalError, DisconnectionError) as e:
-        # Nếu có lỗi connection, log và coi như token không bị blacklist
-        # (fail open để không block user khi DB có vấn đề)
-        logger.warning(
-            f"Database connection error while checking token blacklist for jti={jti}: {str(e)}. "
-            "Treating token as not blacklisted (fail open)."
-        )
-        return False
-    except Exception as e:
-        # Các lỗi khác cũng log và fail open
-        logger.error(
-            f"Unexpected error while checking token blacklist for jti={jti}: {str(e)}. "
-            "Treating token as not blacklisted (fail open)."
-        )
-        return False
-
-
-def add_token_to_blacklist(
-    session: Session,
-    jti: str,
-    token_type: str,
-    user_id: str,
-    expires_at: datetime,
-    reason: str | None = None
-) -> None:
-    """
-    Thêm token vào blacklist
-    """
-    from app.models.token_blacklist import TokenBlacklist
-    
-    blacklist_entry = TokenBlacklist(
-        jti=jti,
-        token_type=token_type,
-        user_id=uuid.UUID(user_id),
-        expires_at=expires_at,
-        reason=reason
-    )
-    session.add(blacklist_entry)
-    session.commit()
-
-
 def revoke_refresh_token(session: Session, jti: str) -> bool:
     """
     Revoke một refresh token

@@ -21,6 +21,7 @@ export default [
   layout("routes/_layouts/authenticated-layout.tsx", [
     route("dashboard", "routes/dashboard/home.tsx"),
     route("dashboard/quick-review", "routes/dashboard/quick-review.tsx"),
+    route("dashboard/due-cards", "routes/dashboard/due-cards.tsx"),
     route("dashboard/admin", "routes/dashboard/admin.tsx"),
     route("dashboard/studysets", "routes/dashboard/studysets.tsx"),
     route("dashboard/studysets/:studysetId", "routes/dashboard/studyset-detail.tsx"),

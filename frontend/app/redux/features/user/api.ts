@@ -7,8 +7,7 @@
 
 import { baseApi } from '../../store/api/baseApi';
 import type { User } from '../shared/types';
-import type { UserProfile } from './types';
-import { setUserProfile, setLoading, setError } from './slice';
+import { setLoading, setError } from './slice';
 
 /**
  * User API Endpoints
@@ -50,32 +49,9 @@ export const userApi = baseApi.injectEndpoints({
     }),
     
     /**
-     * Get User Profile
-     * 
-     * Lấy thông tin profile của user
-     */
-    getUserProfile: builder.query<UserProfile, string>({
-      query: (userId) => `/users/${userId}/profile`,
-      providesTags: (result, error, userId) => [{ type: 'User', id: userId }],
-      async onQueryStarted(userId, { dispatch, queryFulfilled }) {
-        dispatch(setLoading(true));
-        dispatch(setError(null));
-        
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(setUserProfile(data));
-        } catch (error: any) {
-          dispatch(setError(error?.data?.detail || 'Failed to fetch profile'));
-        } finally {
-          dispatch(setLoading(false));
-        }
-      },
-    }),
-    
-    /**
      * Update User
      * 
-     * Cập nhật thông tin user
+     * Cập nhật thông tin user (admin only)
      */
     updateUser: builder.mutation<User, { id: string; data: Partial<User> }>({
       query: ({ id, data }) => ({
@@ -102,39 +78,9 @@ export const userApi = baseApi.injectEndpoints({
     }),
     
     /**
-     * Update User Profile
-     * 
-     * Cập nhật thông tin profile của user
-     */
-    updateUserProfile: builder.mutation<UserProfile, { userId: string; data: Partial<UserProfile> }>({
-      query: ({ userId, data }) => ({
-        url: `/users/${userId}/profile`,
-        method: 'PUT',
-        body: data,
-      }),
-      invalidatesTags: (result, error, { userId }) => [
-        { type: 'User', id: userId },
-        'User',
-      ],
-      async onQueryStarted(_, { dispatch, queryFulfilled }) {
-        dispatch(setLoading(true));
-        dispatch(setError(null));
-        
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(setUserProfile(data));
-        } catch (error: any) {
-          dispatch(setError(error?.data?.detail || 'Failed to update profile'));
-        } finally {
-          dispatch(setLoading(false));
-        }
-      },
-    }),
-    
-    /**
      * Delete User
      * 
-     * Xóa user
+     * Xóa user (admin only)
      */
     deleteUser: builder.mutation<void, string>({
       query: (id) => ({
@@ -154,9 +100,7 @@ export const userApi = baseApi.injectEndpoints({
 export const {
   useGetCurrentUserQuery,
   useGetUserByIdQuery,
-  useGetUserProfileQuery,
   useUpdateUserMutation,
-  useUpdateUserProfileMutation,
   useDeleteUserMutation,
 } = userApi;
 

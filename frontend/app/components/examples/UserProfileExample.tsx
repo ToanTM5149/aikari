@@ -9,23 +9,15 @@
 
 import { useCurrentUser } from '~/redux/features/user';
 import { useAppSelector } from '~/redux/store/hooks';
-import { selectUserProfile, selectUserLoading } from '~/redux/features/user';
-import { useGetUserProfileQuery } from '~/redux/features/user';
+import { selectUserLoading } from '~/redux/features/user';
 import { Button } from '~/components/ui/button';
 import { Card } from '~/components/ui/card';
 
 export function UserProfileExample() {
   const currentUser = useCurrentUser();
-  const profile = useAppSelector(selectUserProfile);
   const loading = useAppSelector(selectUserLoading);
-  
-  // Fetch user profile khi component mount
-  const { isLoading: isFetchingProfile } = useGetUserProfileQuery(
-    currentUser?.id || '',
-    { skip: !currentUser?.id }
-  );
 
-  if (loading || isFetchingProfile) {
+  if (loading) {
     return <div>Loading profile...</div>;
   }
 
@@ -45,24 +37,15 @@ export function UserProfileExample() {
           <span className="font-semibold">Name:</span> {currentUser.full_name}
         </div>
         <div>
+          <span className="font-semibold">Username:</span> {currentUser.username}
+        </div>
+        <div>
+          <span className="font-semibold">Role:</span> {currentUser.role}
+        </div>
+        <div>
           <span className="font-semibold">Status:</span>{' '}
           {currentUser.is_active ? 'Active' : 'Inactive'}
         </div>
-        
-        {profile && (
-          <>
-            {profile.bio && (
-              <div>
-                <span className="font-semibold">Bio:</span> {profile.bio}
-              </div>
-            )}
-            {profile.phone && (
-              <div>
-                <span className="font-semibold">Phone:</span> {profile.phone}
-              </div>
-            )}
-          </>
-        )}
       </div>
       
       <Button className="mt-4">Edit Profile</Button>

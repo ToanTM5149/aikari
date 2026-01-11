@@ -19,7 +19,6 @@ from app.models import (
     TestAnswer,
     ReattemptRequest,
     ClassStudySet,
-    Attribute,
     AIGeneratedContents,
     ChatConversation,
 )
@@ -409,14 +408,7 @@ def delete_studyset(*, session: Session, studyset_id: uuid.UUID) -> None:
   for term in terms:
     session.delete(term)
   
-  # 7. Delete Attribute entries (has FK to StudySet)
-  attributes = session.exec(
-    select(Attribute).where(Attribute.studyset_id == studyset_id)
-  ).all()
-  for attr in attributes:
-    session.delete(attr)
-  
-  # 8. Delete AIGeneratedContents entries (has FK to StudySet)
+  # 7. Delete AIGeneratedContents entries (has FK to StudySet)
   ai_contents = session.exec(
     select(AIGeneratedContents).where(AIGeneratedContents.studyset_id == studyset_id)
   ).all()

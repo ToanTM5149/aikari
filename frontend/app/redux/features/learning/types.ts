@@ -102,6 +102,8 @@ export interface DueCardInfo {
   term_id: string;
   studyset_id: string;
   studyset_name: string;
+  category_id?: string | null;
+  category_name?: string | null;
   term_text: string;
   definition: string;
   example?: string;

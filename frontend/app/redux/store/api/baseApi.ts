@@ -132,6 +132,7 @@ export const baseApi = createApi({
     'Test',
     'Attempt',
     'ReattemptRequest',
+    'Session',
     // Admin tags
     'AdminDashboard',
     'SystemOverview',

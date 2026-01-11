@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "motion/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { Button } from "~/components/ui/button"
@@ -29,6 +29,63 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { useUpdateMeMutation, useUpdatePasswordMutation } from "~/redux/features/auth/api"
+import { useGetCurrentUserQuery } from "~/redux/features/user/api"
+
+// Move InfoRow outside component to prevent re-creation on every render
+interface InfoRowProps {
+  icon: any
+  label: string
+  value?: string
+  fieldName?: string
+  isEditMode?: boolean
+  formData?: Record<string, string>
+  onInputChange?: (fieldName: string, value: string) => void
+}
+
+const InfoRow = ({ icon: Icon, label, value, fieldName, isEditMode, formData, onInputChange }: InfoRowProps) => {
+  if (isEditMode && fieldName && formData && onInputChange) {
+    const isDateField = fieldName === "date_of_birth"
+    const inputValue = formData[fieldName] || ""
+    // For date input, format value as YYYY-MM-DD
+    const displayValue = isDateField && inputValue 
+      ? inputValue.includes('T') 
+        ? inputValue.split('T')[0] 
+        : inputValue.split(' ')[0]
+      : inputValue
+    
+    return (
+      <div className="flex items-start gap-4 py-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1 space-y-1">
+          <Label htmlFor={fieldName} className="text-sm text-muted-foreground">
+            {label}
+          </Label>
+          <Input
+            id={fieldName}
+            type={isDateField ? "date" : "text"}
+            value={displayValue}
+            onChange={(e) => onInputChange(fieldName, e.target.value)}
+            placeholder={isDateField ? "Select date" : `Enter ${label.toLowerCase()}`}
+          />
+        </div>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="flex items-start gap-4 py-3">
+      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="flex-1">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-foreground">{value || "Not provided"}</p>
+      </div>
+    </div>
+  )
+}
 
 interface ProfilePageProps {
   userData: {
@@ -71,23 +128,35 @@ export function ProfilePage({ userData }: ProfilePageProps) {
     address: userData.address || "",
     city: userData.city || "",
     country: userData.state || "", // Using state as country for now
+    zip_code: userData.zipCode || "",
+    date_of_birth: userData.dateOfBirth || "",
+    gender: userData.sex || "",
+    school_name: userData.schoolName || "",
   })
   
   // RTK Query mutations
   const [updateMe, { isLoading: isUpdating }] = useUpdateMeMutation()
   const [updatePassword, { isLoading: isUpdatingPassword }] = useUpdatePasswordMutation()
+  const { refetch: refetchUser } = useGetCurrentUserQuery()
   
   // Sync formData with userData when userData changes (after successful update)
+  // Only sync when NOT in edit mode to avoid resetting user input
   useEffect(() => {
-    setFormData({
-      full_name: userData.fullName || "",
-      email: userData.email || "",
-      phone_numbers: userData.phone || "",
-      address: userData.address || "",
-      city: userData.city || "",
-      country: userData.state || "",
-    })
-  }, [userData.fullName, userData.email, userData.phone, userData.address, userData.city, userData.state])
+    if (!isEditMode) {
+      setFormData({
+        full_name: userData.fullName || "",
+        email: userData.email || "",
+        phone_numbers: userData.phone || "",
+        address: userData.address || "",
+        city: userData.city || "",
+        country: userData.state || "",
+        zip_code: userData.zipCode || "",
+        date_of_birth: userData.dateOfBirth || "",
+        gender: userData.sex || "",
+        school_name: userData.schoolName || "",
+      })
+    }
+  }, [userData.fullName, userData.email, userData.phone, userData.address, userData.city, userData.state, userData.zipCode, userData.dateOfBirth, userData.sex, userData.schoolName, isEditMode])
 
   const getInitials = (name: string) => {
     return name
@@ -139,6 +208,10 @@ export function ProfilePage({ userData }: ProfilePageProps) {
         address: userData.address || "",
         city: userData.city || "",
         country: userData.state || "",
+        zip_code: userData.zipCode || "",
+        date_of_birth: userData.dateOfBirth || "",
+        gender: userData.sex || "",
+        school_name: userData.schoolName || "",
       })
     }
     setIsEditMode(!isEditMode)
@@ -146,7 +219,7 @@ export function ProfilePage({ userData }: ProfilePageProps) {
   
   const handleSaveProfile = async () => {
     try {
-      // Only send non-empty fields
+      // Prepare update data with direct fields
       const updateData: any = {}
       if (formData.full_name) updateData.full_name = formData.full_name
       if (formData.email) updateData.email = formData.email
@@ -155,54 +228,36 @@ export function ProfilePage({ userData }: ProfilePageProps) {
       if (formData.city) updateData.city = formData.city
       if (formData.country) updateData.country = formData.country
       
+      // Store additional fields in preferences JSONB
+      const preferences: any = {}
+      if (formData.zip_code) preferences.zip_code = formData.zip_code
+      if (formData.date_of_birth) preferences.date_of_birth = formData.date_of_birth
+      if (formData.gender) preferences.gender = formData.gender
+      if (formData.school_name) preferences.school_name = formData.school_name
+      
+      // Only add preferences if there are any
+      if (Object.keys(preferences).length > 0) {
+        updateData.preferences = preferences
+      }
+      
       await updateMe(updateData).unwrap()
       
       toast.success("Profile updated successfully!")
       setIsEditMode(false)
+      
+      // Refresh user data by refetching
+      await refetchUser()
+      
+      // The useEffect will sync formData when userData updates
     } catch (error: any) {
       toast.error(error?.data?.detail || "Failed to update profile")
     }
   }
 
-  const InfoRow = ({ icon: Icon, label, value, fieldName }: { 
-    icon: any, 
-    label: string, 
-    value?: string,
-    fieldName?: keyof typeof formData 
-  }) => {
-    if (isEditMode && fieldName) {
-      return (
-        <div className="flex items-start gap-4 py-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
-            <Icon className="w-5 h-5" />
-          </div>
-          <div className="flex-1 space-y-1">
-            <Label htmlFor={fieldName} className="text-sm text-muted-foreground">
-              {label}
-            </Label>
-            <Input
-              id={fieldName}
-              value={formData[fieldName] || ""}
-              onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
-              placeholder={`Enter ${label.toLowerCase()}`}
-            />
-          </div>
-        </div>
-      )
-    }
-    
-    return (
-      <div className="flex items-start gap-4 py-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-foreground">{value || "Not provided"}</p>
-        </div>
-      </div>
-    )
-  }
+  // Memoize handleInputChange to prevent unnecessary re-renders
+  const handleInputChange = useCallback((fieldName: string, value: string) => {
+    setFormData(prev => ({ ...prev, [fieldName]: value }))
+  }, [])
 
   return (
     <div className="h-full overflow-auto">
@@ -302,6 +357,9 @@ export function ProfilePage({ userData }: ProfilePageProps) {
                 label="Full Name" 
                 value={userData.fullName || userData.name}
                 fieldName="full_name"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
               />
               <Separator />
               <InfoRow 
@@ -309,6 +367,9 @@ export function ProfilePage({ userData }: ProfilePageProps) {
                 label="Email Address" 
                 value={userData.email}
                 fieldName="email"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
               />
               <Separator />
               <InfoRow 
@@ -316,18 +377,38 @@ export function ProfilePage({ userData }: ProfilePageProps) {
                 label="Phone Number" 
                 value={userData.phone}
                 fieldName="phone_numbers"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
               />
               <Separator />
               <InfoRow 
                 icon={Calendar} 
                 label="Date of Birth" 
-                value={userData.dateOfBirth ? new Date(userData.dateOfBirth).toLocaleDateString() : undefined} 
+                value={userData.dateOfBirth 
+                  ? (() => {
+                      try {
+                        const date = new Date(userData.dateOfBirth);
+                        return isNaN(date.getTime()) ? userData.dateOfBirth : date.toLocaleDateString();
+                      } catch {
+                        return userData.dateOfBirth;
+                      }
+                    })()
+                  : undefined}
+                fieldName="date_of_birth"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
               />
               <Separator />
               <InfoRow 
                 icon={User} 
                 label="Gender" 
-                value={userData.sex ? userData.sex.charAt(0).toUpperCase() + userData.sex.slice(1).replace(/-/g, ' ') : undefined} 
+                value={userData.sex ? userData.sex.charAt(0).toUpperCase() + userData.sex.slice(1).replace(/-/g, ' ') : undefined}
+                fieldName="gender"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
               />
             </CardContent>
           </Card>
@@ -350,6 +431,9 @@ export function ProfilePage({ userData }: ProfilePageProps) {
                 label="Street Address" 
                 value={userData.address}
                 fieldName="address"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
               />
               <Separator />
               <InfoRow 
@@ -357,6 +441,9 @@ export function ProfilePage({ userData }: ProfilePageProps) {
                 label="City" 
                 value={userData.city}
                 fieldName="city"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
               />
               <Separator />
               <InfoRow 
@@ -364,11 +451,30 @@ export function ProfilePage({ userData }: ProfilePageProps) {
                 label="State/Country" 
                 value={userData.state}
                 fieldName="country"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
               />
               <Separator />
-              <InfoRow icon={MapPin} label="Zip Code" value={userData.zipCode} />
+              <InfoRow 
+                icon={MapPin} 
+                label="Zip Code" 
+                value={userData.zipCode}
+                fieldName="zip_code"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
+              />
               <Separator />
-              <InfoRow icon={User} label="School Name" value={userData.schoolName} />
+              <InfoRow 
+                icon={User} 
+                label="School Name" 
+                value={userData.schoolName}
+                fieldName="school_name"
+                isEditMode={isEditMode}
+                formData={formData}
+                onInputChange={handleInputChange}
+              />
             </CardContent>
           </Card>
         </motion.div>

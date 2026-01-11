@@ -2,13 +2,16 @@
 Learning Service - Spaced Repetition Algorithm (SM-2)
 Handles learning logic, review scheduling, and progress tracking
 """
+import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlmodel import Session, select, func
 
 from app.models import StudyActivity, Term, ProgressSummary, StudySet
+
+logger = logging.getLogger(__name__)
 
 
 class SpacedRepetitionSM2:
@@ -39,6 +42,7 @@ class SpacedRepetitionSM2:
     ) -> tuple[float, int, int, datetime]:
         """
         Calculate next review date based on SM-2 algorithm
+        Uses local timezone (UTC+7) for "today" calculation
         Returns:
             tuple: (new_ef, new_interval, new_repetitions, next_review_date)
         """
@@ -58,7 +62,16 @@ class SpacedRepetitionSM2:
             else:
                 new_interval = int(current_interval * new_ef)
         
-        next_review_date = datetime.utcnow() + timedelta(days=new_interval)
+        # Get "today" in local timezone (UTC+7) for calculation
+        local_tz = timezone(timedelta(hours=7))
+        now_utc = datetime.utcnow()
+        now_local = now_utc.replace(tzinfo=timezone.utc).astimezone(local_tz)
+        
+        # Calculate next_review_date based on local "today"
+        next_review_local = now_local + timedelta(days=new_interval)
+        
+        # Convert back to UTC naive datetime for storage
+        next_review_date = next_review_local.astimezone(timezone.utc).replace(tzinfo=None)
         
         return new_ef, new_interval, new_repetitions, next_review_date
 
@@ -112,7 +125,10 @@ class LearningService:
         new_terms = []
         reviewed_terms = []
         
-        now = datetime.utcnow()
+        # Get "today" in local timezone (UTC+7) for comparison
+        local_tz = timezone(timedelta(hours=7))
+        now_utc = datetime.utcnow()
+        now_local = now_utc.replace(tzinfo=timezone.utc).astimezone(local_tz).replace(tzinfo=None)
         
         for term in all_terms:
             activity = term_activity_map.get(term.term_id)
@@ -120,9 +136,14 @@ class LearningService:
             if not activity:
                 # Never studied
                 new_terms.append(term)
-            elif activity.next_review_date and activity.next_review_date <= now:
-                # Due for review
-                due_terms.append((term, activity))
+            elif activity.next_review_date:
+                # Convert next_review_date (stored as UTC) to local for comparison
+                next_review_utc = activity.next_review_date.replace(tzinfo=timezone.utc)
+                next_review_local = next_review_utc.astimezone(local_tz).replace(tzinfo=None)
+                
+                if next_review_local <= now_local:
+                    # Due for review
+                    due_terms.append((term, activity))
             else:
                 # Already reviewed, not due yet
                 reviewed_terms.append((term, activity))
@@ -193,7 +214,10 @@ class LearningService:
         new_terms = []
         reviewed_terms = []
         
-        now = datetime.utcnow()
+        # Get "today" in local timezone (UTC+7) for comparison
+        local_tz = timezone(timedelta(hours=7))
+        now_utc = datetime.utcnow()
+        now_local = now_utc.replace(tzinfo=timezone.utc).astimezone(local_tz).replace(tzinfo=None)
         
         for term in all_terms:
             activity = term_activity_map.get(term.term_id)
@@ -201,9 +225,14 @@ class LearningService:
             if not activity:
                 # Never studied - high priority
                 new_terms.append(term)
-            elif activity.next_review_date and activity.next_review_date <= now:
-                # Due for review - highest priority
-                due_terms.append((term, activity))
+            elif activity.next_review_date:
+                # Convert next_review_date (stored as UTC) to local for comparison
+                next_review_utc = activity.next_review_date.replace(tzinfo=timezone.utc)
+                next_review_local = next_review_utc.astimezone(local_tz).replace(tzinfo=None)
+                
+                if next_review_local <= now_local:
+                    # Due for review - highest priority
+                    due_terms.append((term, activity))
             else:
                 # Already reviewed, not due yet - lowest priority
                 reviewed_terms.append((term, activity))
@@ -471,87 +500,155 @@ class LearningService:
     ) -> dict[str, Any]:
         """
         Get all due cards across all studysets for a user
-        
+
+        OPTIMIZED: Uses SQL-level filtering and bulk data loading
+
         Args:
             user_id: User ID
             include_future: If True, include cards due in the next 7 days
-        
+
         Returns:
             Dictionary with due cards information
         """
-        now = datetime.utcnow()
-        today_end = now.replace(hour=23, minute=59, second=59)
-        week_end = now + timedelta(days=7)
-        
-        # Get all study activities for this user
-        activities_statement = (
-            select(StudyActivity)
+        # Get "today" in local timezone (UTC+7) for comparison
+        local_tz = timezone(timedelta(hours=7))
+        now_utc = datetime.utcnow()
+        now_local = now_utc.replace(tzinfo=timezone.utc).astimezone(local_tz).replace(tzinfo=None)
+
+        today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = now_local.replace(hour=23, minute=59, second=59, microsecond=999999)
+        week_end_local = now_local + timedelta(days=7)
+        week_end = week_end_local.astimezone(timezone.utc).replace(tzinfo=None)
+
+        # OPTIMIZATION 1: Use window function to get latest activity per term in ONE query
+        latest_activities_subquery = (
+            select(
+                StudyActivity.user_id,
+                StudyActivity.term_id,
+                StudyActivity.studyset_id,
+                StudyActivity.next_review_date,
+                StudyActivity.ef,
+                StudyActivity.interval,
+                StudyActivity.created_at,
+                func.row_number().over(
+                    partition_by=StudyActivity.term_id,
+                    order_by=StudyActivity.next_review_date.desc(),
+                ).label('rn')
+            )
             .where(
                 StudyActivity.user_id == user_id,
                 StudyActivity.next_review_date.isnot(None)
             )
+            .subquery()
         )
-        all_activities = session.exec(activities_statement).all()
-        
-        # Filter to latest activity per term
-        term_latest_activity: dict[uuid.UUID, StudyActivity] = {}
-        for activity in all_activities:
-            if activity.term_id not in term_latest_activity:
-                term_latest_activity[activity.term_id] = activity
-            else:
-                if activity.created_at > term_latest_activity[activity.term_id].created_at:
-                    term_latest_activity[activity.term_id] = activity
-        
-        # Filter due cards
+
+        # Get only the latest activity per term
+        activities_statement = (
+            select(
+                latest_activities_subquery.c.term_id,
+                latest_activities_subquery.c.studyset_id,
+                latest_activities_subquery.c.next_review_date,
+                latest_activities_subquery.c.ef,
+                latest_activities_subquery.c.interval,
+                latest_activities_subquery.c.created_at
+            )
+            .where(latest_activities_subquery.c.rn == 1)
+        )
+
+        # OPTIMIZATION 2: Apply date filter at SQL level
+        if not include_future:
+            # Only get cards due today or tomorrow
+            tomorrow_end_local = (today_end + timedelta(days=1)).replace(tzinfo=timezone.utc).astimezone(timezone.utc).replace(tzinfo=None)
+            activities_statement = activities_statement.where(
+                latest_activities_subquery.c.next_review_date <= tomorrow_end_local
+            )
+        else:
+            # Get cards due in next 7 days
+            activities_statement = activities_statement.where(
+                latest_activities_subquery.c.next_review_date <= week_end
+            )
+
+        latest_activities = session.exec(activities_statement).all()
+
+        if not latest_activities:
+            return {
+                "total_due": 0,
+                "due_today": 0,
+                "due_this_week": 0,
+                "cards": [],
+                "studysets_affected": []
+            }
+
+        # OPTIMIZATION 3: Bulk load terms and studysets
+        term_ids = [a.term_id for a in latest_activities]
+        studyset_ids = list(set(a.studyset_id for a in latest_activities))
+
+        # Load all terms in one query
+        terms_statement = select(Term).where(Term.term_id.in_(term_ids))
+        terms = session.exec(terms_statement).all()
+        terms_map = {t.term_id: t for t in terms}
+
+        # Load all studysets in one query with eager loading of category
+        from sqlalchemy.orm import selectinload
+        studysets_statement = (
+            select(StudySet)
+            .where(StudySet.studyset_id.in_(studyset_ids))
+            .options(selectinload(StudySet.category))
+        )
+        studysets = session.exec(studysets_statement).all()
+        studysets_map = {s.studyset_id: s for s in studysets}
+
+        # Process activities and build due cards
         due_cards = []
         due_today = 0
         due_this_week = 0
         studysets_affected = set()
-        
-        for activity in term_latest_activity.values():
-            if not activity.next_review_date:
+
+        for activity in latest_activities:
+            term = terms_map.get(activity.term_id)
+            studyset = studysets_map.get(activity.studyset_id)
+
+            if not term or not studyset:
                 continue
-                
-            is_due_now = activity.next_review_date <= now
-            is_due_today = activity.next_review_date <= today_end
+
+            # Date comparison (same logic as before)
+            next_review_utc = activity.next_review_date.replace(tzinfo=timezone.utc)
+            next_review_local = next_review_utc.astimezone(local_tz).replace(tzinfo=None)
+            next_review_date_only = next_review_local.date()
+            today_date = now_local.date()
+            tomorrow_date = today_date + timedelta(days=1)
+
+            is_due_now = next_review_date_only <= today_date or next_review_date_only == tomorrow_date
+            is_due_today = next_review_date_only <= tomorrow_date
             is_due_week = activity.next_review_date <= week_end
-            
-            if is_due_now or (include_future and is_due_week):
-                # Get term details
-                term = session.get(Term, activity.term_id)
-                if not term:
-                    continue
-                
-                # Get studyset details
-                studyset = session.get(StudySet, activity.studyset_id)
-                if not studyset:
-                    continue
-                
-                studysets_affected.add(activity.studyset_id)
-                
-                if is_due_now:
-                    due_cards.append({
-                        "term_id": activity.term_id,
-                        "studyset_id": activity.studyset_id,
-                        "studyset_name": studyset.title,
-                        "term_text": term.term_text,
-                        "definition": term.definition,
-                        "example": term.example,
-                        "image_url": term.image_url,
-                        "next_review_date": activity.next_review_date,
-                        "ef": activity.ef,
-                        "interval": activity.interval,
-                        "last_reviewed": activity.created_at
-                    })
-                
-                if is_due_today:
-                    due_today += 1
-                if is_due_week:
-                    due_this_week += 1
-        
+
+            studysets_affected.add(activity.studyset_id)
+
+            if is_due_now:
+                due_cards.append({
+                    "term_id": activity.term_id,
+                    "studyset_id": activity.studyset_id,
+                    "studyset_name": studyset.title,
+                    "category_id": studyset.category_id,
+                    "category_name": studyset.category.name if studyset.category else None,
+                    "term_text": term.term_text,
+                    "definition": term.definition,
+                    "example": term.example,
+                    "image_url": term.image_url,
+                    "next_review_date": activity.next_review_date,
+                    "ef": activity.ef,
+                    "interval": activity.interval,
+                    "last_reviewed": activity.created_at
+                })
+
+            if is_due_today:
+                due_today += 1
+            if is_due_week:
+                due_this_week += 1
+
         # Sort by next_review_date (oldest first)
         due_cards.sort(key=lambda x: x["next_review_date"])
-        
+
         return {
             "total_due": len(due_cards),
             "due_today": due_today,

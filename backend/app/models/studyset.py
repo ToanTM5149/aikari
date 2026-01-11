@@ -23,7 +23,6 @@ class StudySet(SQLModel, table=True):
     category: "Category" = Relationship(back_populates="study_sets")
     terms: list["Term"] = Relationship(back_populates="study_set")
     tests: list["Test"] = Relationship(back_populates="study_set")
-    attributes: list["Attribute"] = Relationship(back_populates="study_set")
     ai_generated_contents: list["AIGeneratedContents"] = Relationship(back_populates="study_set")
     study_activities: list["StudyActivity"] = Relationship(back_populates="study_set")
     progress_summaries: list["ProgressSummary"] = Relationship(back_populates="study_set")

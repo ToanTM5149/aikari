@@ -6,6 +6,12 @@ import sys
 import os
 from pathlib import Path
 
+# Fix encoding for Windows
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 # Add parent directory to path to import app modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -14,9 +20,10 @@ from app.core.db import engine
 from app.models import (
     User, StudySet, Term, Class, ClassMember, ClassStudySet, 
     UserRole, ClassRole, MembershipStatus,
-    TestAttempt, ReattemptRequest, Test,
-    ProgressSummary, StudyActivity, AIGeneratedContents, Attribute,
-    ChatConversation, Category
+    TestAttempt, ReattemptRequest, Test, TestQuestion, TestAnswer,
+    ProgressSummary, StudyActivity, AIGeneratedContents,
+    ChatConversation, ChatMessage, Category,
+    LearningSession, SessionReview
 )
 from app.core.security import get_password_hash
 import uuid
@@ -101,7 +108,7 @@ STUDYSET_DATA = [
             ("Subjuntivo", "Subjunctive mood in Spanish, expressing uncertainty or subjectivity", "Subjuntivo is used to express desires, emotions, or possibilities. For example: 'Espero que vengas' (I hope you come) - 'vengas' is subjuntivo, not indicativo. It's triggered by expressions of doubt, emotion, or influence.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
             ("Pretérito Perfecto", "Present perfect tense, expressing completed actions", "Pretérito perfecto is used for actions in the recent past or those related to the present. For example: 'He comido' (I have eaten) - uses 'haber' + past participle. It's formed with the present tense of 'haber' plus the past participle.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
             ("Reflexivo", "Reflexive verb, where the action affects the subject itself", "Reflexive verbs end with 'se' in the infinitive form. Examples: 'levantarse' (to get up), 'ducharse' (to shower). 'Me levanto a las 7' (I get up at 7) - 'me' is the reflexive pronoun. These verbs indicate the subject performs and receives the action.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
-            ("Gustar", "Special verb meaning 'to like', with inverted structure", "Gustar has a special structure: 'Me gusta el café' (I like coffee) - literally means 'Coffee pleases me'. The grammatical subject is 'el café', not 'yo'. It's conjugated based on what is liked, not who likes it.", "https://images.unsplash.com/photo-1511920170033-83939c283aa6?w=400&h=400&fit=crop"),
+            ("Gustar", "Special verb meaning 'to like', with inverted structure", "Gustar has a special structure: 'Me gusta el café' (I like coffee) - literally means 'Coffee pleases me'. The grammatical subject is 'el café', not 'yo'. It's conjugated based on what is liked, not who likes it.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
             ("Por vs Para", "Two prepositions with different uses", "'Por' is used for reason, approximate time, exchange. 'Para' is used for purpose, destination, deadline. 'Estudio por placer' (I study for pleasure) vs 'Estudio para ser médico' (I study to become a doctor). Understanding this distinction is crucial for Spanish fluency.", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=400&fit=crop"),
         ]
     },
@@ -167,29 +174,60 @@ CLASS_DATA = [
 
 
 def get_existing_teacher(session: Session) -> User | None:
-    """Get existing teacher user from database"""
-    statement = select(User).where(User.role == UserRole.TEACHER)
+    """Get existing teacher user 'toan' from database"""
+    statement = select(User).where(User.username == "toan")
     teacher = session.exec(statement).first()
     
     if teacher:
         print(f"✓ Found existing teacher: {teacher.username} ({teacher.email})")
         return teacher
     
-    print("✗ No teacher found in database")
+    print("✗ No teacher 'toan' found in database")
     return None
 
 
 def get_existing_student(session: Session) -> User | None:
-    """Get existing student user from database"""
-    statement = select(User).where(User.role == UserRole.STUDENT)
+    """Get existing student user 'Christone' from database"""
+    statement = select(User).where(User.username == "Christone")
     student = session.exec(statement).first()
     
     if student:
         print(f"✓ Found existing student: {student.username} ({student.email})")
         return student
     
-    print("✗ No student found in database")
+    print("✗ No student 'Christone' found in database")
     return None
+
+
+def delete_demo_users(session: Session):
+    """Delete demo users (teacher_demo and student_demo)"""
+    print("\n🗑️  Deleting demo users...")
+    
+    demo_usernames = ["teacher_demo", "student_demo"]
+    deleted_count = 0
+    
+    for username in demo_usernames:
+        statement = select(User).where(User.username == username)
+        user = session.exec(statement).first()
+        
+        if user:
+            # First, we need to delete all related data for this user
+            # This is handled by cleanup_all_data, but we need to delete the user itself
+            # However, we should delete user-related data first
+            
+            # Delete user's data (will be handled by cleanup, but we delete user here)
+            session.delete(user)
+            session.commit()
+            deleted_count += 1
+            print(f"  ✓ Deleted demo user: {username}")
+        else:
+            print(f"  - Demo user not found: {username}")
+    
+    if deleted_count > 0:
+        print(f"  ✓ Deleted {deleted_count} demo user(s)")
+    else:
+        print("  - No demo users to delete")
+    print()
 
 
 def seed_categories(session: Session, teacher: User) -> dict[str, Category]:
@@ -229,168 +267,150 @@ def seed_categories(session: Session, teacher: User) -> dict[str, Category]:
     return categories
 
 
-def cleanup_old_seed_data(session: Session, teacher: User):
-    """Delete all previously seeded test data"""
-    print("\n🗑️  Cleaning up old seed data...")
+def cleanup_all_data(session: Session):
+    """
+    Delete all data from all tables EXCEPT User and refresh_token table
+    Deletes in correct order to avoid foreign key constraint violations
+    """
+    print("\n🗑️  Cleaning up all data (keeping User and refresh_token table)...")
     
-    # Delete classes with TEST codes and their relationships
-    test_classes = session.exec(
-        select(Class).where(Class.class_code.startswith("TEST"))
-    ).all()
+    # Counters for reporting
+    counts = {}
     
-    deleted_reattempts = 0
-    deleted_attempts = 0
-    deleted_class_studysets = 0
-    deleted_class_members = 0
-    
-    for class_obj in test_classes:
-        class_id = class_obj.class_id
-        
-        # 1. Delete ReattemptRequest entries first (has FK to both TestAttempt and Class)
-        reattempts = session.exec(
-            select(ReattemptRequest).where(ReattemptRequest.class_id == class_id)
-        ).all()
-        for reattempt in reattempts:
-            session.delete(reattempt)
-            deleted_reattempts += 1
-        
-        # 2. Delete TestAttempt entries (has FK to Class)
-        attempts = session.exec(
-            select(TestAttempt).where(TestAttempt.class_id == class_id)
-        ).all()
-        for attempt in attempts:
-            session.delete(attempt)
-            deleted_attempts += 1
-        
-        # 3. Delete ClassStudySet entries
-        class_studysets = session.exec(
-            select(ClassStudySet).where(ClassStudySet.class_id == class_id)
-        ).all()
-        for css in class_studysets:
-            session.delete(css)
-            deleted_class_studysets += 1
-        
-        # 4. Delete ClassMember entries
-        class_members = session.exec(
-            select(ClassMember).where(ClassMember.class_id == class_id)
-        ).all()
-        for cm in class_members:
-            session.delete(cm)
-            deleted_class_members += 1
-        
-        # 5. Delete the class
-        session.delete(class_obj)
-    
+    # 1. Delete SessionReview (depends on LearningSession, Term)
+    session_reviews = session.exec(select(SessionReview)).all()
+    for review in session_reviews:
+        session.delete(review)
+    counts['SessionReview'] = len(session_reviews)
     session.commit()
-    print(f"  ✓ Deleted {len(test_classes)} test classes")
-    if deleted_reattempts > 0:
-        print(f"  ✓ Deleted {deleted_reattempts} reattempt requests")
-    if deleted_attempts > 0:
-        print(f"  ✓ Deleted {deleted_attempts} test attempts")
-    if deleted_class_studysets > 0:
-        print(f"  ✓ Deleted {deleted_class_studysets} class-studyset links")
-    if deleted_class_members > 0:
-        print(f"  ✓ Deleted {deleted_class_members} class members")
     
-    # Get all studysets owned by teacher
-    teacher_studysets = session.exec(
-        select(StudySet).where(StudySet.owner_id == teacher.user_id)
-    ).all()
-    
-    # Delete related data and studysets
-    deleted_terms = 0
-    deleted_class_studysets = 0
-    deleted_progress = 0
-    deleted_activities = 0
-    deleted_tests = 0
-    deleted_ai_contents = 0
-    deleted_attributes = 0
-    deleted_conversations = 0
-    
-    for studyset in teacher_studysets:
-        studyset_id = studyset.studyset_id
-        
-        # 1. Delete ChatConversation entries first (has NOT NULL FK to StudySet, cascade deletes ChatMessage)
-        conversations = session.exec(
-            select(ChatConversation).where(ChatConversation.studyset_id == studyset_id)
-        ).all()
-        for conversation in conversations:
-            session.delete(conversation)
-            deleted_conversations += 1
-        
-        # 2. Delete AIGeneratedContents entries (has NOT NULL FK to StudySet)
-        ai_contents = session.exec(
-            select(AIGeneratedContents).where(AIGeneratedContents.studyset_id == studyset_id)
-        ).all()
-        for ai_content in ai_contents:
-            session.delete(ai_content)
-            deleted_ai_contents += 1
-        
-        # 3. Delete Attribute entries (has NOT NULL FK to StudySet)
-        attributes = session.exec(
-            select(Attribute).where(Attribute.studyset_id == studyset_id)
-        ).all()
-        for attribute in attributes:
-            session.delete(attribute)
-            deleted_attributes += 1
-        
-        # 4. Delete ProgressSummary entries (has NOT NULL FK to StudySet)
-        progress_summaries = session.exec(
-            select(ProgressSummary).where(ProgressSummary.studyset_id == studyset_id)
-        ).all()
-        for progress in progress_summaries:
-            session.delete(progress)
-            deleted_progress += 1
-        
-        # 5. Delete StudyActivity entries (has NOT NULL FK to StudySet)
-        activities = session.exec(
-            select(StudyActivity).where(StudyActivity.studyset_id == studyset_id)
-        ).all()
-        for activity in activities:
-            session.delete(activity)
-            deleted_activities += 1
-        
-        # 6. Delete Test entries (has FK to StudySet, and TestAttempt/TestQuestion cascade)
-        tests = session.exec(
-            select(Test).where(Test.studyset_id == studyset_id)
-        ).all()
-        for test in tests:
-            session.delete(test)
-            deleted_tests += 1
-        
-        # 7. Delete ClassStudySet entries for this studyset
-        class_studyset_entries = session.exec(
-            select(ClassStudySet).where(ClassStudySet.studyset_id == studyset_id)
-        ).all()
-        for entry in class_studyset_entries:
-            session.delete(entry)
-            deleted_class_studysets += 1
-        
-        # 8. Delete all terms in this studyset (has FK to StudySet)
-        terms = session.exec(
-            select(Term).where(Term.studyset_id == studyset_id)
-        ).all()
-        for term in terms:
-            session.delete(term)
-            deleted_terms += 1
-        
-        # 9. Delete the studyset
-        session.delete(studyset)
-    
+    # 2. Delete LearningSession (depends on User, StudySet)
+    learning_sessions = session.exec(select(LearningSession)).all()
+    for ls in learning_sessions:
+        session.delete(ls)
+    counts['LearningSession'] = len(learning_sessions)
     session.commit()
-    print(f"  ✓ Deleted {len(teacher_studysets)} studysets, {deleted_terms} terms, {deleted_class_studysets} class-studyset links")
-    if deleted_conversations > 0:
-        print(f"  ✓ Deleted {deleted_conversations} chat conversations")
-    if deleted_ai_contents > 0:
-        print(f"  ✓ Deleted {deleted_ai_contents} AI generated contents")
-    if deleted_attributes > 0:
-        print(f"  ✓ Deleted {deleted_attributes} attributes")
-    if deleted_progress > 0:
-        print(f"  ✓ Deleted {deleted_progress} progress summaries")
-    if deleted_activities > 0:
-        print(f"  ✓ Deleted {deleted_activities} study activities")
-    if deleted_tests > 0:
-        print(f"  ✓ Deleted {deleted_tests} tests")
+    
+    # 3. Delete ChatMessage (depends on ChatConversation)
+    chat_messages = session.exec(select(ChatMessage)).all()
+    for msg in chat_messages:
+        session.delete(msg)
+    counts['ChatMessage'] = len(chat_messages)
+    session.commit()
+    
+    # 4. Delete ChatConversation (depends on StudySet, User)
+    chat_conversations = session.exec(select(ChatConversation)).all()
+    for conv in chat_conversations:
+        session.delete(conv)
+    counts['ChatConversation'] = len(chat_conversations)
+    session.commit()
+    
+    # 5. Delete TestAnswer (depends on TestAttempt, TestQuestion)
+    test_answers = session.exec(select(TestAnswer)).all()
+    for answer in test_answers:
+        session.delete(answer)
+    counts['TestAnswer'] = len(test_answers)
+    session.commit()
+    
+    # 6. Delete TestQuestion (depends on Test, Term)
+    test_questions = session.exec(select(TestQuestion)).all()
+    for question in test_questions:
+        session.delete(question)
+    counts['TestQuestion'] = len(test_questions)
+    session.commit()
+    
+    # 7. Delete ReattemptRequest (depends on TestAttempt, Class, User)
+    reattempt_requests = session.exec(select(ReattemptRequest)).all()
+    for req in reattempt_requests:
+        session.delete(req)
+    counts['ReattemptRequest'] = len(reattempt_requests)
+    session.commit()
+    
+    # 8. Delete TestAttempt (depends on Test, User, Class)
+    test_attempts = session.exec(select(TestAttempt)).all()
+    for attempt in test_attempts:
+        session.delete(attempt)
+    counts['TestAttempt'] = len(test_attempts)
+    session.commit()
+    
+    # 9. Delete Test (depends on StudySet, User)
+    tests = session.exec(select(Test)).all()
+    for test in tests:
+        session.delete(test)
+    counts['Test'] = len(tests)
+    session.commit()
+    
+    # 10. Delete ClassStudySet (depends on Class, StudySet)
+    class_studysets = session.exec(select(ClassStudySet)).all()
+    for css in class_studysets:
+        session.delete(css)
+    counts['ClassStudySet'] = len(class_studysets)
+    session.commit()
+    
+    # 11. Delete ClassMember (depends on Class, User)
+    class_members = session.exec(select(ClassMember)).all()
+    for cm in class_members:
+        session.delete(cm)
+    counts['ClassMember'] = len(class_members)
+    session.commit()
+    
+    # 12. Delete Class (depends on User)
+    classes = session.exec(select(Class)).all()
+    for cls in classes:
+        session.delete(cls)
+    counts['Class'] = len(classes)
+    session.commit()
+    
+    # 13. Delete StudyActivity (depends on User, StudySet)
+    study_activities = session.exec(select(StudyActivity)).all()
+    for activity in study_activities:
+        session.delete(activity)
+    counts['StudyActivity'] = len(study_activities)
+    session.commit()
+    
+    # 14. Delete ProgressSummary (depends on User, StudySet)
+    progress_summaries = session.exec(select(ProgressSummary)).all()
+    for progress in progress_summaries:
+        session.delete(progress)
+    counts['ProgressSummary'] = len(progress_summaries)
+    session.commit()
+    
+    # 15. Delete AIGeneratedContents (depends on StudySet)
+    ai_contents = session.exec(select(AIGeneratedContents)).all()
+    for content in ai_contents:
+        session.delete(content)
+    counts['AIGeneratedContents'] = len(ai_contents)
+    session.commit()
+    
+    # 16. Delete Term (depends on StudySet)
+    terms = session.exec(select(Term)).all()
+    for term in terms:
+        session.delete(term)
+    counts['Term'] = len(terms)
+    session.commit()
+    
+    # 18. Delete StudySet (depends on User, Category)
+    studysets = session.exec(select(StudySet)).all()
+    for ss in studysets:
+        session.delete(ss)
+    counts['StudySet'] = len(studysets)
+    session.commit()
+    
+    # 19. Delete Category (depends on User)
+    categories = session.exec(select(Category)).all()
+    for cat in categories:
+        session.delete(cat)
+    counts['Category'] = len(categories)
+    session.commit()
+    
+    # Print summary
+    print("  ✓ Deleted data from all tables (except User and refresh_token):")
+    for table_name, count in counts.items():
+        if count > 0:
+            print(f"    - {table_name}: {count} records")
+    
+    # Note: User and refresh_token tables are preserved
+    print("  ✓ Preserved: User, refresh_token")
     print()
 
 
@@ -529,23 +549,27 @@ def main():
     print("=" * 60)
     
     with Session(engine) as session:
-        # Get existing users
+        # Get existing users first (before cleanup)
         print("\n👥 Finding Existing Users...")
         teacher = get_existing_teacher(session)
         student = get_existing_student(session)
         
         if not teacher:
-            print("\n❌ ERROR: No teacher user found in database!")
-            print("Please create a teacher user first or login with a teacher account.")
+            print("\n❌ ERROR: No teacher user 'toan' found in database!")
+            print("Please create a teacher user with username 'toan' first.")
             return
         
         if not student:
-            print("\n⚠️  WARNING: No student user found.")
+            print("\n⚠️  WARNING: No student user 'Christone' found.")
             print("Classes will be created without student members.")
             print("You can add students to classes later.\n")
         
-        # Clean up old seed data
-        cleanup_old_seed_data(session, teacher)
+        # Clean up all data (except User and token tables)
+        # This will delete all data related to demo users too
+        cleanup_all_data(session)
+        
+        # Delete demo users after cleanup (to avoid foreign key issues)
+        delete_demo_users(session)
         
         # Create categories
         categories = seed_categories(session, teacher)

@@ -34,7 +34,6 @@ from app.models import (  # noqa
     Class,
     ClassMember,
     ClassStudySet,
-    Attribute,
     ProgressSummary,
     StudyActivity,
     StudySet,
@@ -44,8 +43,9 @@ from app.models import (  # noqa
     TestAttempt,
     TestAnswer,
     ReattemptRequest,
-    TokenBlacklist,
     RefreshToken,
+    LearningSession,
+    SessionReview,
 )
 
 target_metadata = SQLModel.metadata

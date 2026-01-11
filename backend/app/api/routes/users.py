@@ -92,6 +92,12 @@ def update_user_me(
         status_code=409, detail="User with this email already exists"
       )
   user_data = user_in.model_dump(exclude_unset=True)
+  
+  if "preferences" in user_data and user_data["preferences"]:
+    existing_preferences = current_user.preferences or {}
+    merged_preferences = {**existing_preferences, **user_data["preferences"]}
+    user_data["preferences"] = merged_preferences
+  
   current_user.sqlmodel_update(user_data)
   session.add(current_user)
   session.commit()

@@ -29,7 +29,6 @@ class ContentType(str, Enum):
 
 class GenerateType(str, Enum):
     TEST = "TEST"
-    ATTRIBUTE = "ATTRIBUTE"
     PARAGRAPH = "PARAGRAPH"
 
 

@@ -35,8 +35,10 @@ def read_studysets(
     Retrieve study sets owned by current user with additional metadata.
     Supports search by title and description.
     Supports filter by category_id.
+
+    OPTIMIZED: Uses bulk queries to avoid N+1 problem
     """
-    from sqlmodel import or_
+    from sqlmodel import or_, case
 
     # Build base query with search filter
     base_query = select(StudySet).where(StudySet.owner_id == current_user.user_id)
@@ -68,40 +70,70 @@ def read_studysets(
         total_count_statement = total_count_statement.where(StudySet.category_id == category_id)
 
     total_count = session.exec(total_count_statement).one() or 0
-    
+
     # Get paginated sets - order by created_at DESC so newest studysets appear first
     statement = base_query.order_by(StudySet.created_at.desc()).offset(skip).limit(limit)
     sets = list(session.exec(statement).all())
-    
-    # Enrich each studyset with term_count, last_activity_at, and progress
+
+    if not sets:
+        return {"data": [], "count": 0}
+
+    # OPTIMIZATION: Bulk fetch all data in 3 queries instead of N queries
+    studyset_ids = [s.studyset_id for s in sets]
+
+    # Query 1: Get term counts for all studysets in one query
+    term_counts_statement = (
+        select(
+            Term.studyset_id,
+            func.count(Term.term_id).label('term_count')
+        )
+        .where(Term.studyset_id.in_(studyset_ids))
+        .group_by(Term.studyset_id)
+    )
+    term_counts_result = session.exec(term_counts_statement).all()
+    term_counts_map = {row.studyset_id: row.term_count for row in term_counts_result}
+
+    # Query 2: Get last activity for all studysets in one query (using window function)
+    last_activity_subquery = (
+        select(
+            StudyActivity.studyset_id,
+            StudyActivity.created_at,
+            func.row_number().over(
+                partition_by=StudyActivity.studyset_id,
+                order_by=StudyActivity.created_at.desc()
+            ).label('rn')
+        )
+        .where(
+            StudyActivity.studyset_id.in_(studyset_ids),
+            StudyActivity.user_id == current_user.user_id
+        )
+        .subquery()
+    )
+
+    last_activities_statement = (
+        select(
+            last_activity_subquery.c.studyset_id,
+            last_activity_subquery.c.created_at
+        )
+        .where(last_activity_subquery.c.rn == 1)
+    )
+    last_activities_result = session.exec(last_activities_statement).all()
+    last_activities_map = {row.studyset_id: row.created_at for row in last_activities_result}
+
+    # Query 3: Get progress for all studysets in one query
+    progress_statement = (
+        select(ProgressSummary)
+        .where(
+            ProgressSummary.studyset_id.in_(studyset_ids),
+            ProgressSummary.user_id == current_user.user_id
+        )
+    )
+    progress_summaries = session.exec(progress_statement).all()
+    progress_map = {p.studyset_id: p.completion_rate for p in progress_summaries}
+
+    # Build enriched results using pre-fetched data
     enriched_sets = []
     for studyset in sets:
-        # Count terms
-        term_count_statement = select(func.count(Term.term_id)).where(
-            Term.studyset_id == studyset.studyset_id
-        )
-        term_count = session.exec(term_count_statement).one() or 0
-        
-        # Get last activity time
-        last_activity_statement = (
-            select(StudyActivity.created_at)
-            .where(StudyActivity.studyset_id == studyset.studyset_id)
-            .where(StudyActivity.user_id == current_user.user_id)
-            .order_by(StudyActivity.created_at.desc())
-            .limit(1)
-        )
-        last_activity = session.exec(last_activity_statement).first()
-        
-        # Get progress (completion_rate)
-        progress_statement = (
-            select(ProgressSummary)
-            .where(ProgressSummary.studyset_id == studyset.studyset_id)
-            .where(ProgressSummary.user_id == current_user.user_id)
-        )
-        progress_summary = session.exec(progress_statement).first()
-        progress = progress_summary.completion_rate if progress_summary else 0.0
-        
-        # Create enriched studyset
         enriched_set = StudySetPublic(
             studyset_id=studyset.studyset_id,
             title=studyset.title,
@@ -112,13 +144,13 @@ def read_studysets(
             owner_id=studyset.owner_id,
             created_at=studyset.created_at,
             updated_at=studyset.updated_at,
-            attributes=studyset.attributes,
-            term_count=term_count,
-            last_activity_at=last_activity,
-            progress=progress
+            attributes=None,  # Attribute table has been removed
+            term_count=term_counts_map.get(studyset.studyset_id, 0),
+            last_activity_at=last_activities_map.get(studyset.studyset_id),
+            progress=progress_map.get(studyset.studyset_id, 0.0)
         )
         enriched_sets.append(enriched_set)
-    
+
     return {"data": enriched_sets, "count": total_count}
 
 

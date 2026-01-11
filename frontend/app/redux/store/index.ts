@@ -15,6 +15,7 @@ import type { TypedUseSelectorHook } from 'react-redux';
 import authReducer from '../features/auth/slice';
 import userReducer from '../features/user/slice';
 import learningReducer from '../features/learning/slice';
+import sessionReducer from '../features/session/slice';
 
 // Import RTK Query base API
 import { baseApi } from './api/baseApi';
@@ -25,6 +26,7 @@ import '../features/user/api';
 import '../features/class/api';
 import '../features/category/api';
 import '../features/learning/api';
+import '../features/session/api';
 import '../features/test/api';
 import '../features/chatbot/api';
 
@@ -38,6 +40,7 @@ const rootReducer = combineReducers({
   auth: authReducer,
   user: userReducer,
   learning: learningReducer,
+  session: sessionReducer,
   // RTK Query reducer - tự động quản lý cache, loading states
   [baseApi.reducerPath]: baseApi.reducer,
 });

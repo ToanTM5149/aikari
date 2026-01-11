@@ -5,6 +5,32 @@
  * Sync với backend models
  */
 
+// ==================== USER TYPES ====================
+
+export interface User {
+  user_id: string;
+  username: string;
+  email: string;
+  full_name?: string;
+  role: UserRole;
+  is_active: boolean;
+  is_superuser: boolean;
+  is_verified?: boolean;
+  phone_numbers?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  preferences?: Record<string, any>; // JSONB field for additional data
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  user: User;
+}
+
 // ==================== ENUMS ====================
 
 export enum UserRole {
