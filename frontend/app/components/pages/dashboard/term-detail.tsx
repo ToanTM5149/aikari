@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { formatDateTime } from "~/utils/date";
 
 export function TermDetail() {
   const { studysetId, termId } = useParams<{ studysetId: string; termId: string }>();
@@ -372,29 +373,7 @@ export function TermDetail() {
                                 )}
                                 {metadata.generated_at && (
                                   <span className="text-xs">
-                                    {(() => {
-                                      try {
-                                        // Parse ISO string (UTC với Z) và convert về local timezone
-                                        const dateStr = metadata.generated_at;
-                                        // Đảm bảo có Z nếu không có timezone indicator
-                                        const date = dateStr.endsWith('Z') || dateStr.includes('+') || dateStr.includes('-', 10)
-                                          ? new Date(dateStr)
-                                          : new Date(dateStr + 'Z');
-                                        
-                                        // Format: DD/MM/YYYY HH:mm (local time, 24h format)
-                                        return date.toLocaleString('vi-VN', {
-                                          year: 'numeric',
-                                          month: '2-digit',
-                                          day: '2-digit',
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                          hour12: false
-                                        });
-                                      } catch (e) {
-                                        console.error('Error parsing date:', metadata.generated_at, e);
-                                        return metadata.generated_at;
-                                      }
-                                    })()}
+                                    {formatDateTime(metadata.generated_at)}
                                   </span>
                                 )}
                                 {metadata.key_concepts && 

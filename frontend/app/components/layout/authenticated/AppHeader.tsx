@@ -14,6 +14,7 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { useAppSelector } from "~/redux/store";
 import { selectCurrentUser } from "~/redux/features/auth/slice";
 import { useGetAllDueCardsQuery } from "~/redux/features/learning";
+import { formatDate } from "~/utils/date";
 
 export function AppHeader() {
   const user = useAppSelector(selectCurrentUser);
@@ -26,7 +27,7 @@ export function AppHeader() {
 
   const totalDue = dueCards?.total_due || 0;
 
-  const handleCardClick = (studysetId: string, categoryId?: string) => {
+  const handleCardClick = (studysetId: string, categoryId?: string | null) => {
     // Navigate to due cards review page with filters
     const params = new URLSearchParams();
     params.set('studyset', studysetId);
@@ -124,7 +125,7 @@ export function AppHeader() {
                       </Badge>
                       <div className="flex items-center text-xs text-muted-foreground ml-auto">
                         <Clock className="w-3 h-3 mr-1" />
-                        {new Date(card.next_review_date).toLocaleDateString()}
+                        {formatDate(card.next_review_date)}
                       </div>
                     </div>
                   </DropdownMenuItem>

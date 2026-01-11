@@ -26,6 +26,7 @@ import {
   Clock,
 } from "lucide-react";
 import type { StudySet } from "~/redux/features/studyset/types";
+import { formatLastStudied } from "~/utils/date";
 
 interface StudySetCardProps {
   studySet: StudySet;
@@ -62,21 +63,6 @@ export function StudySetCard({
   };
 
   const isOwner = currentUserId && studySet.owner_id === currentUserId;
-
-  const formatLastStudied = (dateString?: string) => {
-    if (!dateString) return "Not studied yet";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
-  };
 
   // Compact variant (for list view)
   if (variant === "compact") {

@@ -22,6 +22,7 @@ import { useNavigate } from "react-router"
 import { StudySetCard } from "~/components/shared/studyset-card"
 import { useAppSelector } from "~/redux/store"
 import { selectCurrentUser } from "~/redux/features/auth/slice"
+import { formatLastStudiedFull } from "~/utils/date"
 
 interface HomePageProps {
   onStudySetClick: () => void
@@ -63,31 +64,6 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
     // Take first 3 classes
     return classesData.data.slice(0, 3)
   }, [classesData])
-
-  // Helper to format date
-  const formatLastStudied = (dateString?: string | null) => {
-    if (!dateString) return "Not started"
-    // Parse datetime string as UTC if no timezone indicator
-    // Backend returns naive datetime (UTC) without timezone info
-    // Check if string has timezone indicator (Z, +HH:MM, or -HH:MM after position 10)
-    const hasTimezone = dateString.includes('Z') || 
-      (dateString.includes('+') && dateString.length > 19) ||
-      (dateString.lastIndexOf('-') > 10) // Timezone offset like -05:00
-    const date = hasTimezone
-      ? new Date(dateString)
-      : new Date(dateString + 'Z') // Append 'Z' to treat as UTC
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMinutes = Math.floor(diffMs / (1000 * 60))
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffHours / 24)
-    
-    if (diffMinutes < 1) return "Just now"
-    if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-    if (diffDays === 1) return "1 day ago"
-    return `${diffDays} days ago`
-  }
 
   const isLoading = studysetsLoading || classesLoading
 

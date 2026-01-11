@@ -557,10 +557,12 @@ class LearningService:
 
         # OPTIMIZATION 2: Apply date filter at SQL level
         if not include_future:
-            # Only get cards due today or tomorrow
-            tomorrow_end_local = (today_end + timedelta(days=1)).replace(tzinfo=timezone.utc).astimezone(timezone.utc).replace(tzinfo=None)
+            # Only get cards due today or tomorrow (including overdue cards)
+            # Convert tomorrow end (local time) to UTC for comparison
+            tomorrow_end_local = today_end + timedelta(days=1)
+            tomorrow_end_utc = tomorrow_end_local.replace(tzinfo=local_tz).astimezone(timezone.utc).replace(tzinfo=None)
             activities_statement = activities_statement.where(
-                latest_activities_subquery.c.next_review_date <= tomorrow_end_local
+                latest_activities_subquery.c.next_review_date <= tomorrow_end_utc
             )
         else:
             # Get cards due in next 7 days

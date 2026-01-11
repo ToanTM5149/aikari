@@ -44,15 +44,14 @@ class SessionService:
             Tuple of (LearningSession, list of Terms)
         """
         # Get terms first to determine actual total_cards
+        # Simply get ALL terms from studyset, no filtering or sorting
         terms = []
         if studyset_id:
-            from app.services.learning_service import LearningService
-            terms = LearningService.get_terms_for_session(
-                session=session,
-                user_id=user_id,
-                studyset_id=studyset_id,
-                limit=100  # Get all terms
-            )
+            from app.models import Term
+            from sqlmodel import select
+            
+            terms_statement = select(Term).where(Term.studyset_id == studyset_id)
+            terms = list(session.exec(terms_statement).all())
             
             # Use actual terms count if provided total_cards is 0 or less
             if total_cards <= 0:

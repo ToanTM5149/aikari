@@ -7,6 +7,7 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { Badge } from "~/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { Chatbot } from "~/components/shared/chatbot";
 import {
   Plus,
@@ -26,6 +27,10 @@ import {
   ChevronDown,
   Image as ImageIcon,
   Upload,
+  Target,
+  Filter,
+  Play,
+  ClipboardCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {

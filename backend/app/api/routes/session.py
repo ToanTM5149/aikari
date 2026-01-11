@@ -50,19 +50,23 @@ def start_learning_session(
         
         if existing_session:
             # Return existing session info
-            from app.models import StudyActivity
+            from app.models import StudyActivity, SessionReview, Term
             from sqlmodel import select
             
-            # Get terms for existing session
-            from app.services.learning_service import LearningService
-            terms = LearningService.get_terms_for_session(
-                session=db,
-                user_id=current_user.user_id,
-                studyset_id=request.studyset_id,
-                limit=100
-            )
+            # Get ALL terms from studyset (not filtered by activity)
+            # This ensures we return the same terms as when session started
+            terms_statement = select(Term).where(Term.studyset_id == request.studyset_id)
+            all_terms = list(db.exec(terms_statement).all())
             
-            # Get activities for is_new flag
+            # Get reviewed terms in this session to track progress
+            reviewed_statement = (
+                select(SessionReview)
+                .where(SessionReview.session_id == existing_session.session_id)
+            )
+            reviewed_reviews = db.exec(reviewed_statement).all()
+            reviewed_term_ids = {review.term_id for review in reviewed_reviews}
+            
+            # Get activities for is_new flag and previous scores
             activities_statement = (
                 select(StudyActivity)
                 .where(
@@ -80,6 +84,7 @@ def start_learning_session(
                     if activity.created_at > term_activity_map[activity.term_id].created_at:
                         term_activity_map[activity.term_id] = activity
             
+            # Build terms response - include ALL terms from studyset
             terms_response = [
                 {
                     "term_id": str(term.term_id),
@@ -92,23 +97,34 @@ def start_learning_session(
                     "previous_recall_score": term_activity_map[term.term_id].recall_score if term.term_id in term_activity_map else None,
                     "next_review_date": term_activity_map[term.term_id].next_review_date if term.term_id in term_activity_map else None
                 }
-                for term in terms
+                for term in all_terms
             ]
             
-            # Update total_cards in database if it's 0 or different from actual terms count
-            actual_total_cards = len(terms)
-            if existing_session.total_cards != actual_total_cards:
+            # Use the original total_cards from session to maintain consistency
+            # Only update if it was 0 (not set initially)
+            actual_total_cards = len(all_terms)
+            if existing_session.total_cards == 0:
+                # total_cards was not set, update it now
                 existing_session.total_cards = actual_total_cards
                 db.add(existing_session)
                 db.commit()
                 db.refresh(existing_session)
+            
+            # Use original total_cards from session to ensure consistency
+            # This ensures we return the same number of cards as when session started
+            total_cards_to_return = existing_session.total_cards if existing_session.total_cards > 0 else actual_total_cards
+            
+            # If studyset has fewer terms than expected (e.g., terms were deleted),
+            # adjust to return what we have
+            if len(terms_response) < total_cards_to_return:
+                total_cards_to_return = len(terms_response)
             
             response = StartSessionResponse(
                 session_id=existing_session.session_id,
                 studyset_id=existing_session.studyset_id,
                 session_type=existing_session.session_type,
                 started_at=existing_session.started_at,
-                total_cards=actual_total_cards,
+                total_cards=total_cards_to_return,
                 terms=terms_response
             )
             

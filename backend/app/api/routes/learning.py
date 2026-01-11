@@ -52,13 +52,16 @@ def start_learning_session(
     if not check_studyset_access(session, session_data.studyset_id, current_user.user_id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    # Get terms for session
-    terms = LearningService.get_terms_for_session(
-        session=session,
-        user_id=current_user.user_id,
-        studyset_id=session_data.studyset_id,
-        limit=session_data.session_size
-    )
+    # Get ALL terms from studyset - no filtering or sorting
+    # Simply return all terms in the studyset
+    terms_statement = select(Term).where(Term.studyset_id == session_data.studyset_id)
+    all_terms = list(session.exec(terms_statement).all())
+    
+    # Apply limit if specified (for session_size)
+    if session_data.session_size and session_data.session_size > 0:
+        terms = all_terms[:session_data.session_size]
+    else:
+        terms = all_terms
     
     # Count total terms in studyset
     total_terms_statement = select(Term).where(Term.studyset_id == session_data.studyset_id)
