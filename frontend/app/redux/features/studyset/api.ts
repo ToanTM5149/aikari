@@ -92,10 +92,11 @@ export const studySetApi = baseApi.injectEndpoints({
     /**
      * Get Terms in a StudySet
      * GET /studysets/{studyset_id}/terms/
+     * Supports filtering by status: all, mastered, learning, weak, not-learned
      */
     getTerms: builder.query<
       TermsResponse,
-      { studysetId: string; category?: string } & PaginationParams
+      { studysetId: string; status?: string; category?: string } & PaginationParams
     >({
       query: ({ studysetId, ...params }) => ({
         url: `/studysets/${studysetId}/terms/`,

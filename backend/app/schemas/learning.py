@@ -149,6 +149,10 @@ class StudyStats(BaseModel):
     average_recall_score: float
     total_study_time: float
     weak_terms: list[WeakTerm]
+    # Lists of term_ids for each category to enable frontend filtering
+    mastered_term_ids: list[uuid.UUID] = []
+    reviewing_term_ids: list[uuid.UUID] = []
+    never_studied_term_ids: list[uuid.UUID] = []
 
 
 # Due Cards and Notifications

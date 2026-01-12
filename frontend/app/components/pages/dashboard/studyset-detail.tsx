@@ -112,11 +112,20 @@ export function StudySetDetail() {
   // Check if user is owner of this studyset
   const isOwner = studyset?.owner_id === user?.user_id;
   
+  // Local state - moved before queries to avoid initialization error
+  const [cardFilter, setCardFilter] = useState<string>("all");
+  
   const {
     data: termsData,
     isLoading: loadingTerms,
     error: termsError,
-  } = useGetTermsQuery({ studysetId: studysetId! }, { skip: !studysetId });
+  } = useGetTermsQuery(
+    { 
+      studysetId: studysetId!, 
+      status: cardFilter === "all" ? undefined : cardFilter 
+    }, 
+    { skip: !studysetId }
+  );
 
   // Progress and Stats
   const {
@@ -159,9 +168,6 @@ export function StudySetDetail() {
   const [viewResultDialogOpen, setViewResultDialogOpen] = useState(false);
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
   const [deleteTestId, setDeleteTestId] = useState<string | null>(null);
-
-  // Card filter state
-  const [cardFilter, setCardFilter] = useState<string>("all");
 
   // Test queries
   const {
@@ -515,63 +521,8 @@ export function StudySetDetail() {
     return termsData?.data?.length || 0;
   };
 
-  // Filter cards based on status
-  const getFilteredCards = () => {
-    const cards = termsData?.data || [];
-    if (isEditing || cardFilter === "all") {
-      return isEditing ? editingTerms : cards;
-    }
-
-    if (!statsData?.weak_terms) {
-      return cards;
-    }
-
-    // Create a map of term status from statsData
-    const masteredIds = new Set<string>();
-    const reviewingIds = new Set<string>();
-    const forgottenIds = new Set<string>();
-
-    // Get weak terms (forgotten)
-    statsData.weak_terms.forEach(term => {
-      forgottenIds.add(term.term_id);
-    });
-
-    // Calculate mastered and reviewing from the stats
-    // Mastered: EF > 2.5 AND interval > 21 days (based on backend logic)
-    // For now, we'll use a simpler approach based on what we have
-    cards.forEach(card => {
-      const isWeak = forgottenIds.has(card.term_id);
-      const isStudied = statsData.studied_terms && statsData.studied_terms > 0;
-
-      if (!isWeak && isStudied) {
-        // If studied and not weak, could be mastered or reviewing
-        // We'll need to make an assumption here without detailed per-card data
-        if (statsData.mastered_terms && masteredIds.size < statsData.mastered_terms) {
-          masteredIds.add(card.term_id);
-        } else if (statsData.reviewing_terms && reviewingIds.size < statsData.reviewing_terms) {
-          reviewingIds.add(card.term_id);
-        }
-      }
-    });
-
-    switch (cardFilter) {
-      case "mastered":
-        return cards.filter(card => masteredIds.has(card.term_id));
-      case "learning":
-        return cards.filter(card => reviewingIds.has(card.term_id));
-      case "not-learned":
-        // Cards that are not mastered, not reviewing, and not forgotten
-        return cards.filter(card =>
-          !masteredIds.has(card.term_id) &&
-          !reviewingIds.has(card.term_id) &&
-          !forgottenIds.has(card.term_id)
-        );
-      default:
-        return cards;
-    }
-  };
-
-  const displayTerms = getFilteredCards();
+  // Display terms - API already filtered by status
+  const displayTerms = isEditing ? editingTerms : (termsData?.data || []);
 
   // Test handlers
   const handleAttemptTest = (testId: string) => {
@@ -944,13 +895,14 @@ export function StudySetDetail() {
                   <Filter className="w-4 h-4" />
                   <Label className="text-sm font-medium">Filter by status:</Label>
                   <Select value={cardFilter} onValueChange={setCardFilter}>
-                    <SelectTrigger className="w-[180px] h-8">
+                    <SelectTrigger className="w-[200px] h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Cards ({termsData?.data?.length || 0})</SelectItem>
                       <SelectItem value="mastered">Mastered ({statsData?.mastered_terms || 0})</SelectItem>
                       <SelectItem value="learning">Reviewing ({statsData?.reviewing_terms || 0})</SelectItem>
+                      <SelectItem value="weak">Weak Terms ({statsData?.forgotten_terms || 0})</SelectItem>
                       <SelectItem value="not-learned">Not Studied ({statsData?.never_studied || 0})</SelectItem>
                     </SelectContent>
                   </Select>

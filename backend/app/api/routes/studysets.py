@@ -240,9 +240,17 @@ def read_terms(
     session: SessionDep,
     skip: int = 0,
     limit: int = 100,
+    status: str | None = None,
 ) -> Any:
     """
-    Retrieve terms in a study set.
+    Retrieve terms in a study set, optionally filtered by status.
+    
+    Status options:
+    - all: All terms (default)
+    - mastered: Terms with ef > 2.5 and interval > 21
+    - learning: Terms with recall_score >= 3 but not mastered
+    - weak: Terms with recall_score < 3 (forgotten)
+    - not-learned: Terms never studied
     """
     studyset = crud.get_studyset(session=session, studyset_id=studyset_id)
     if not studyset:
@@ -253,7 +261,12 @@ def read_terms(
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     terms = crud.get_terms_by_studyset(
-        session=session, studyset_id=studyset_id, skip=skip, limit=limit
+        session=session, 
+        studyset_id=studyset_id, 
+        user_id=current_user.user_id,
+        status=status,
+        skip=skip, 
+        limit=limit
     )
     
     return {"data": terms, "count": len(terms)}

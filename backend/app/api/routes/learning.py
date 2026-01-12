@@ -355,10 +355,31 @@ def get_studyset_stats(
     studied_terms = len(term_latest_activity)
     never_studied = total_terms - studied_terms
     
-    # Categorize
-    mastered = sum(1 for a in term_latest_activity.values() if a.ef > 2.5 and a.interval > 21)
-    reviewing = sum(1 for a in term_latest_activity.values() if a.recall_score >= 3 and not (a.ef > 2.5 and a.interval > 21))
-    forgotten = sum(1 for a in term_latest_activity.values() if a.recall_score < 3)
+    # Categorize and collect term_ids for each status
+    mastered_ids = []
+    reviewing_ids = []
+    forgotten_ids = []
+    never_studied_ids = []
+    
+    for term in all_terms:
+        activity = term_latest_activity.get(term.term_id)
+        
+        if not activity:
+            # Never studied
+            never_studied_ids.append(term.term_id)
+        elif activity.ef > 2.5 and activity.interval > 21:
+            # Mastered
+            mastered_ids.append(term.term_id)
+        elif activity.recall_score >= 3:
+            # Reviewing (studied but not mastered yet)
+            reviewing_ids.append(term.term_id)
+        else:
+            # Forgotten (recall_score < 3)
+            forgotten_ids.append(term.term_id)
+    
+    mastered = len(mastered_ids)
+    reviewing = len(reviewing_ids)
+    forgotten = len(forgotten_ids)
     
     # Average recall score across all reviews
     avg_recall = sum(a.recall_score for a in activities) / len(activities) if activities else 0.0
@@ -367,7 +388,7 @@ def get_studyset_stats(
     weak_terms_data = [
         (term, term_latest_activity[term.term_id])
         for term in all_terms
-        if term.term_id in term_latest_activity and term_latest_activity[term.term_id].recall_score < 3
+        if term.term_id in forgotten_ids
     ]
     
     weak_terms_list = [
@@ -394,7 +415,10 @@ def get_studyset_stats(
         accuracy=avg_recall,  # Now using average recall score instead of accuracy
         average_recall_score=avg_recall,
         total_study_time=0.0,  # TODO: Track study time
-        weak_terms=weak_terms_list
+        weak_terms=weak_terms_list,
+        mastered_term_ids=mastered_ids,
+        reviewing_term_ids=reviewing_ids,
+        never_studied_term_ids=never_studied_ids
     )
 
 

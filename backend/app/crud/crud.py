@@ -470,13 +470,65 @@ def delete_term(*, session: Session, term_id: uuid.UUID) -> None:
 
 
 def get_terms_by_studyset(
-    *, session: Session, studyset_id: uuid.UUID, skip: int = 0, limit: int = 100
+    *, 
+    session: Session, 
+    studyset_id: uuid.UUID, 
+    user_id: uuid.UUID | None = None,
+    status: str | None = None,
+    skip: int = 0, 
+    limit: int = 100
 ) -> list[Term]:
-  """Get all terms in a study set"""
+  """Get all terms in a study set, optionally filtered by study status"""
   statement = (
     select(Term)
     .where(Term.studyset_id == studyset_id)
-    .offset(skip)
-    .limit(limit)
   )
-  return list(session.exec(statement).all())
+  
+  all_terms = list(session.exec(statement).all())
+  
+  # If no status filter or user_id, return all terms
+  if not status or status == "all" or not user_id:
+    return all_terms[skip:skip+limit] if limit else all_terms[skip:]
+  
+  # Get user's study activities for filtering
+  activities_statement = (
+    select(StudyActivity)
+    .where(
+      StudyActivity.user_id == user_id,
+      StudyActivity.studyset_id == studyset_id
+    )
+  )
+  activities = list(session.exec(activities_statement).all())
+  
+  # Get latest activity per term
+  term_latest_activity: dict[uuid.UUID, StudyActivity] = {}
+  for activity in activities:
+    if activity.term_id not in term_latest_activity:
+      term_latest_activity[activity.term_id] = activity
+    else:
+      if activity.created_at > term_latest_activity[activity.term_id].created_at:
+        term_latest_activity[activity.term_id] = activity
+  
+  # Filter based on status
+  filtered_terms = []
+  for term in all_terms:
+    activity = term_latest_activity.get(term.term_id)
+    
+    if status == "mastered":
+      # Mastered: ef > 2.5 AND interval > 21
+      if activity and activity.ef > 2.5 and activity.interval > 21:
+        filtered_terms.append(term)
+    elif status == "learning":
+      # Reviewing: recall_score >= 3 but not mastered
+      if activity and activity.recall_score >= 3 and not (activity.ef > 2.5 and activity.interval > 21):
+        filtered_terms.append(term)
+    elif status == "weak":
+      # Weak/forgotten: recall_score < 3
+      if activity and activity.recall_score < 3:
+        filtered_terms.append(term)
+    elif status == "not-learned":
+      # Never studied: no activity
+      if not activity:
+        filtered_terms.append(term)
+  
+  return filtered_terms[skip:skip+limit] if limit else filtered_terms[skip:]

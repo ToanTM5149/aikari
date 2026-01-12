@@ -95,6 +95,10 @@ export interface StudyStats {
   average_recall_score: number;
   total_study_time: number;
   weak_terms: WeakTerm[];
+  // Lists of term_ids for each category
+  mastered_term_ids: string[];
+  reviewing_term_ids: string[];
+  never_studied_term_ids: string[];
 }
 
 // Due Cards and Quick Review
