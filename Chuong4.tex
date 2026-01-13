@@ -1,0 +1,418 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+\chapter{Phân tích và thiết kế hệ thống}
+\label{chapter:4}
+
+Chương này trình bày về phân tích và thiết kế hệ thống, bao gồm lựa chọn kiến trúc phần mềm, thiết kế tổng quan và chi tiết, thiết kế cơ sở dữ liệu, cũng như các kết quả xây dựng và kiểm thử hệ thống.
+
+\section{Thiết kế kiến trúc}
+\label{section:4.1}
+
+\subsection{Lựa chọn kiến trúc phần mềm}
+\label{subsection:4.1.1}
+
+Hệ thống Aikari được xây dựng dựa trên kiến trúc ba lớp (Three-Tier Architecture) kết hợp với mô hình Client-Server, phù hợp với yêu cầu của một ứng dụng web hiện đại cần xử lý nhiều người dùng đồng thời, tích hợp AI, và đảm bảo tính mở rộng trong tương lai.
+
+\subsubsection{Tổng quan về kiến trúc ba lớp}
+
+Kiến trúc ba lớp là một mô hình kiến trúc phần mềm phổ biến, chia ứng dụng thành ba tầng độc lập:
+
+\begin{enumerate}
+    \item \textbf{Tầng trình bày (Presentation Layer)}: Chịu trách nhiệm giao tiếp với người dùng, hiển thị dữ liệu và nhận input từ người dùng.
+    
+    \item \textbf{Tầng nghiệp vụ (Business Logic Layer)}: Chứa logic nghiệp vụ, xử lý các quy tắc và quy trình của ứng dụng.
+    
+    \item \textbf{Tầng dữ liệu (Data Access Layer)}: Quản lý việc lưu trữ và truy xuất dữ liệu từ cơ sở dữ liệu.
+\end{enumerate}
+
+Ưu điểm của kiến trúc ba lớp bao gồm:
+\begin{itemize}
+    \item \textbf{Tách biệt trách nhiệm}: Mỗi tầng có trách nhiệm rõ ràng, dễ bảo trì và mở rộng.
+    \item \textbf{Tái sử dụng}: Logic nghiệp vụ có thể được tái sử dụng bởi nhiều giao diện khác nhau.
+    \item \textbf{Khả năng mở rộng}: Có thể scale từng tầng độc lập tùy theo nhu cầu.
+    \item \textbf{Bảo mật}: Dữ liệu được bảo vệ ở tầng dữ liệu, logic nghiệp vụ được kiểm soát ở tầng trung gian.
+\end{itemize}
+
+\subsubsection{Áp dụng kiến trúc ba lớp vào hệ thống Aikari}
+
+Hệ thống Aikari áp dụng kiến trúc ba lớp với các thành phần cụ thể như sau:
+
+\paragraph{Tầng trình bày (Presentation Layer)}
+
+Tầng trình bày được triển khai bằng \textbf{React Router v7} và \textbf{TypeScript}, bao gồm:
+
+\begin{itemize}
+    \item \textbf{Components}: Các component React được tổ chức theo cấu trúc:
+    \begin{itemize}
+        \item \texttt{atoms/}: Các component nhỏ nhất (Logo, Button, Input)
+        \item \texttt{common/}: Components dùng chung (Card, Modal, Form)
+        \item \texttt{layout/}: Layout components (Header, Sidebar, Footer)
+        \item \texttt{pages/}: Các trang chính (Dashboard, Study, Test, Chatbot)
+    \end{itemize}
+    
+    \item \textbf{State Management}: Sử dụng \textbf{Redux Toolkit} để quản lý state toàn cục (authentication, user profile, studysets)
+    
+    \item \textbf{Routing}: React Router v7 quản lý navigation và data loading
+    
+    \item \textbf{Styling}: Tailwind CSS và Chakra UI cho giao diện hiện đại và responsive
+\end{itemize}
+
+Tầng trình bày giao tiếp với tầng nghiệp vụ thông qua \textbf{REST API} sử dụng HTTP/HTTPS, gửi requests và nhận responses dưới dạng JSON.
+
+\paragraph{Tầng nghiệp vụ (Business Logic Layer)}
+
+Tầng nghiệp vụ được triển khai bằng \textbf{FastAPI} và \textbf{Python}, được tổ chức theo mô hình module hóa:
+
+\begin{itemize}
+    \item \textbf{API Routes} (\texttt{app/api/routes/}): Các endpoint xử lý HTTP requests:
+    \begin{itemize}
+        \item \texttt{login.py}: Authentication và authorization
+        \item \texttt{users.py}: Quản lý người dùng
+        \item \texttt{studysets.py}: Quản lý bộ flashcard
+        \item \texttt{learning.py}: Học tập với thuật toán SM-2
+        \item \texttt{tests.py}: Quản lý bài kiểm tra
+        \item \texttt{chatbot.py}: Tương tác với AI
+        \item \texttt{classes.py}: Quản lý lớp học
+        \item \texttt{admin.py}: Quản trị hệ thống
+    \end{itemize}
+    
+    \item \textbf{Services} (\texttt{app/services/}): Chứa logic nghiệp vụ chính:
+    \begin{itemize}
+        \item \texttt{learning\_service.py}: Triển khai thuật toán SM-2, quản lý học tập và tiến độ
+        \item \texttt{chatbot\_service.py}: Xử lý conversation với AI, quản lý state và intent
+        \item \texttt{generation\_service.py}: Sinh nội dung học tập (test, quiz, paragraph) từ AI
+        \item \texttt{dify\_service.py}: Tích hợp với Dify workflows để gọi AI
+        \item \texttt{analytics\_service.py}: Tính toán thống kê và phân tích dữ liệu học tập
+        \item \texttt{auth\_service.py}: Xác thực và quản lý JWT tokens
+        \item \texttt{admin\_service.py}: Thống kê và quản trị hệ thống
+    \end{itemize}
+    
+    \item \textbf{Schemas} (\texttt{app/schemas/}): Pydantic schemas cho validation và serialization
+    
+    \item \textbf{Dependencies} (\texttt{app/api/deps.py}): Dependency injection cho database sessions, authentication, và authorization
+\end{itemize}
+
+Tầng nghiệp vụ xử lý các logic phức tạp như:
+\begin{itemize}
+    \item Tính toán thuật toán SM-2 (Easiness Factor, interval, next\_review\_date)
+    \item Quản lý conversation state và intent với chatbot
+    \item Tích hợp với Dify workflows để sinh nội dung AI
+    \item Phân quyền và kiểm tra quyền truy cập (Student/Teacher/Admin)
+    \item Tính toán thống kê và progress summary
+\end{itemize}
+
+\paragraph{Tầng dữ liệu (Data Access Layer)}
+
+Tầng dữ liệu được triển khai bằng \textbf{SQLModel} (ORM) và \textbf{PostgreSQL}:
+
+\begin{itemize}
+    \item \textbf{Models} (\texttt{app/models/}): Định nghĩa các database models:
+    \begin{itemize}
+        \item \texttt{user.py}: User, RefreshToken
+        \item \texttt{studyset.py}: StudySet
+        \item \texttt{term.py}: Term (flashcard)
+        \item \texttt{activity.py}: StudyActivity (ghi nhận mỗi lần học)
+        \item \texttt{progress.py}: ProgressSummary (tổng hợp tiến độ)
+        \item \texttt{test.py}: Test, TestQuestion, TestAttempt, TestAnswer
+        \item \texttt{class\_.py}: Class, ClassMember, ClassStudySet
+        \item \texttt{conversation.py}: ChatConversation, ChatMessage
+        \item \texttt{category.py}: Category
+        \item \texttt{content.py}: AIGeneratedContents
+    \end{itemize}
+    
+    \item \textbf{Database Connection} (\texttt{app/core/db.py}): Quản lý database connection pool và sessions
+    
+    \item \textbf{Migrations} (\texttt{app/alembic/}): Alembic migrations để quản lý schema changes
+\end{itemize}
+
+SQLModel kết hợp SQLAlchemy (ORM) và Pydantic (validation), cho phép định nghĩa models một lần và sử dụng cho cả database schema và API validation, giảm duplicate code và tăng type safety.
+
+\subsubsection{Cải tiến và bổ sung}
+
+Hệ thống Aikari có một số cải tiến so với kiến trúc ba lớp truyền thống:
+
+\begin{enumerate}
+    \item \textbf{Service Layer Pattern}: Tách biệt rõ ràng giữa API routes (xử lý HTTP) và Services (logic nghiệp vụ), giúp code dễ test và tái sử dụng.
+    
+    \item \textbf{Dependency Injection}: FastAPI sử dụng dependency injection mạnh mẽ, giúp quản lý database sessions, authentication, và các dependencies một cách rõ ràng và dễ test.
+    
+    \item \textbf{Async/Await}: Hỗ trợ asynchronous programming, phù hợp với việc tích hợp AI workflows và xử lý nhiều request đồng thời.
+    
+    \item \textbf{Type Safety}: Sử dụng TypeScript ở frontend và Pydantic ở backend, đảm bảo type safety từ đầu đến cuối.
+    
+    \item \textbf{External Service Integration}: Tích hợp với Dify (AI platform) thông qua DifyService, tách biệt logic AI khỏi core business logic.
+\end{enumerate}
+
+\subsubsection{Luồng xử lý request}
+
+Khi người dùng thực hiện một thao tác (ví dụ: học flashcard), luồng xử lý diễn ra như sau:
+
+\begin{enumerate}
+    \item \textbf{Presentation Layer}: User tương tác với giao diện React, component gửi HTTP request đến API endpoint.
+    
+    \item \textbf{Business Logic Layer}: 
+    \begin{itemize}
+        \item API route nhận request, validate input bằng Pydantic schema
+        \item Dependency injection cung cấp database session và current user
+        \item Route gọi service tương ứng (ví dụ: LearningService.record\_review())
+        \item Service thực hiện logic nghiệp vụ (tính toán SM-2, cập nhật progress)
+        \item Service gọi model để truy xuất/cập nhật dữ liệu
+    \end{itemize}
+    
+    \item \textbf{Data Access Layer}: SQLModel thực hiện SQL queries đến PostgreSQL, trả về kết quả
+    
+    \item \textbf{Response}: Kết quả được serialize thành JSON và trả về frontend, component cập nhật UI
+\end{enumerate}
+
+Kiến trúc này đảm bảo tính tách biệt rõ ràng, dễ bảo trì, mở rộng, và test, phù hợp với yêu cầu phát triển lâu dài của hệ thống.
+
+\section{Kiểm thử}
+\label{section:4.6}
+
+Hệ thống Aikari sử dụng các kỹ thuật kiểm thử khác nhau để đảm bảo chất lượng và độ tin cậy của code. Phần này trình bày về các kỹ thuật kiểm thử đã được áp dụng và kết quả kiểm thử cho các chức năng quan trọng nhất.
+
+\subsection{Kỹ thuật kiểm thử sử dụng}
+
+Hệ thống sử dụng các kỹ thuật kiểm thử sau:
+
+\begin{enumerate}
+    \item \textbf{Unit Testing}: Kiểm thử từng đơn vị code (function, method) độc lập, sử dụng \textbf{pytest} framework.
+    
+    \item \textbf{Integration Testing}: Kiểm thử tích hợp giữa các components, đặc biệt là API endpoints với database và services.
+    
+    \item \textbf{API Testing}: Kiểm thử các REST API endpoints sử dụng \textbf{TestClient} của FastAPI.
+    
+    \item \textbf{Test Fixtures}: Sử dụng pytest fixtures để setup test data, database sessions, và authentication tokens.
+\end{enumerate}
+
+\subsection{Công cụ và framework kiểm thử}
+
+\begin{itemize}
+    \item \textbf{pytest}: Framework kiểm thử chính cho Python backend
+    \item \textbf{FastAPI TestClient}: Test client để kiểm thử API endpoints
+    \item \textbf{SQLModel Session}: Test database sessions với transaction rollback
+    \item \textbf{unittest.mock}: Mocking external dependencies (email service, Dify API)
+    \item \textbf{Coverage.py}: Đo lường code coverage
+\end{itemize}
+
+\subsection{Thiết kế test cases cho các chức năng quan trọng}
+
+\subsubsection{Chức năng 1: Authentication và Authorization}
+
+Authentication là chức năng cơ bản và quan trọng nhất của hệ thống, đảm bảo chỉ người dùng hợp lệ mới có thể truy cập hệ thống.
+
+\paragraph{Test Case 1.1: Đăng nhập thành công}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra người dùng có thể đăng nhập với credentials hợp lệ
+    \item \textbf{Input}: Username và password hợp lệ
+    \item \textbf{Expected Output}: HTTP 200, trả về access\_token
+    \item \textbf{Kỹ thuật}: API Testing với TestClient
+\end{itemize}
+
+\paragraph{Test Case 1.2: Đăng nhập với mật khẩu sai}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra hệ thống từ chối đăng nhập với mật khẩu sai
+    \item \textbf{Input}: Username hợp lệ, password sai
+    \item \textbf{Expected Output}: HTTP 400, không trả về token
+    \item \textbf{Kỹ thuật}: API Testing, Negative Testing
+\end{itemize}
+
+\paragraph{Test Case 1.3: Sử dụng access token}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra token có thể được sử dụng để xác thực
+    \item \textbf{Input}: Access token hợp lệ trong Authorization header
+    \item \textbf{Expected Output}: HTTP 200, trả về thông tin user
+    \item \textbf{Kỹ thuật}: API Testing với authentication headers
+\end{itemize}
+
+\paragraph{Test Case 1.4: Khôi phục mật khẩu}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra chức năng khôi phục mật khẩu
+    \item \textbf{Input}: Email hợp lệ
+    \item \textbf{Expected Output}: HTTP 200, email được gửi (mocked)
+    \item \textbf{Kỹ thuật}: API Testing với mocking email service
+\end{itemize}
+
+\paragraph{Test Case 1.5: Đặt lại mật khẩu}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra người dùng có thể đặt lại mật khẩu với token hợp lệ
+    \item \textbf{Input}: Reset token hợp lệ và mật khẩu mới
+    \item \textbf{Expected Output}: HTTP 200, mật khẩu được cập nhật trong database
+    \item \textbf{Kỹ thuật}: Integration Testing với database verification
+\end{itemize}
+
+\subsubsection{Chức năng 2: Quản lý người dùng}
+
+Quản lý người dùng bao gồm CRUD operations và phân quyền, đảm bảo chỉ admin mới có thể quản lý users.
+
+\paragraph{Test Case 2.1: Tạo user mới (Admin)}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra admin có thể tạo user mới
+    \item \textbf{Input}: User data hợp lệ, admin token
+    \item \textbf{Expected Output}: HTTP 200, user được tạo trong database
+    \item \textbf{Kỹ thuật}: Integration Testing với database verification
+\end{itemize}
+
+\paragraph{Test Case 2.2: Tạo user với email đã tồn tại}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra hệ thống từ chối tạo user trùng email
+    \item \textbf{Input}: Email đã tồn tại
+    \item \textbf{Expected Output}: HTTP 400, error message
+    \item \textbf{Kỹ thuật}: Negative Testing
+\end{itemize}
+
+\paragraph{Test Case 2.3: User thường không thể tạo user}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra phân quyền, chỉ admin mới tạo được user
+    \item \textbf{Input}: User data, normal user token
+    \item \textbf{Expected Output}: HTTP 403, "The user doesn't have enough privileges"
+    \item \textbf{Kỹ thuật}: Authorization Testing
+\end{itemize}
+
+\paragraph{Test Case 2.4: Cập nhật thông tin user}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra user có thể cập nhật thông tin của mình
+    \item \textbf{Input}: Updated user data, user token
+    \item \textbf{Expected Output}: HTTP 200, thông tin được cập nhật trong database
+    \item \textbf{Kỹ thuật}: Integration Testing
+\end{itemize}
+
+\paragraph{Test Case 2.5: Đổi mật khẩu}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra user có thể đổi mật khẩu
+    \item \textbf{Input}: Current password và new password
+    \item \textbf{Expected Output}: HTTP 200, mật khẩu được hash và lưu vào database
+    \item \textbf{Kỹ thuật}: Integration Testing với password verification
+\end{itemize}
+
+\paragraph{Test Case 2.6: Xóa user}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra user có thể xóa tài khoản của mình
+    \item \textbf{Input}: User token
+    \item \textbf{Expected Output}: HTTP 200, user bị xóa khỏi database
+    \item \textbf{Kỹ thuật}: Integration Testing với database verification
+\end{itemize}
+
+\subsubsection{Chức năng 3: Thuật toán SM-2 và học tập}
+
+Thuật toán SM-2 là chức năng cốt lõi của hệ thống, cần được kiểm thử kỹ lưỡng để đảm bảo tính chính xác.
+
+\paragraph{Test Case 3.1: Tính toán Easiness Factor}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra công thức tính EF đúng với các recall score khác nhau
+    \item \textbf{Input}: recall\_score = 5 (perfect recall)
+    \item \textbf{Expected Output}: EF tăng 0.1 từ giá trị hiện tại
+    \item \textbf{Kỹ thuật}: Unit Testing cho SpacedRepetitionSM2.calculate\_next\_review()
+\end{itemize}
+
+\paragraph{Test Case 3.2: Tính toán Interval cho lần học đầu tiên}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra interval = 1 ngày cho lần học đầu tiên
+    \item \textbf{Input}: recall\_score >= 3, repetitions = 0
+    \item \textbf{Expected Output}: new\_interval = 1, new\_repetitions = 1
+    \item \textbf{Kỹ thuật}: Unit Testing
+\end{itemize}
+
+\paragraph{Test Case 3.3: Tính toán Interval cho lần học thứ hai}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra interval = 6 ngày cho lần học thứ hai
+    \item \textbf{Input}: recall\_score >= 3, repetitions = 1
+    \item \textbf{Expected Output}: new\_interval = 6, new\_repetitions = 2
+    \item \textbf{Kỹ thuật}: Unit Testing
+\end{itemize}
+
+\paragraph{Test Case 3.4: Reset khi recall score < 3}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra hệ thống reset interval và repetitions khi người dùng quên
+    \item \textbf{Input}: recall\_score = 2 (Hard)
+    \item \textbf{Expected Output}: new\_interval = 1, new\_repetitions = 0
+    \item \textbf{Kỹ thuật}: Unit Testing
+\end{itemize}
+
+\paragraph{Test Case 3.5: Ghi nhận review và cập nhật progress}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra việc ghi nhận review cập nhật đúng StudyActivity và ProgressSummary
+    \item \textbf{Input}: User, Term, recall\_score = 4
+    \item \textbf{Expected Output}: StudyActivity được tạo với EF, interval, next\_review\_date đúng; ProgressSummary được cập nhật
+    \item \textbf{Kỹ thuật}: Integration Testing với database
+\end{itemize}
+
+\paragraph{Test Case 3.6: Chọn term tiếp theo để học}
+
+\begin{itemize}
+    \item \textbf{Mục đích}: Kiểm tra hệ thống chọn đúng term cần ôn (ưu tiên due terms)
+    \item \textbf{Input}: User với nhiều terms có next\_review\_date khác nhau
+    \item \textbf{Expected Output}: Term có next\_review\_date sớm nhất được chọn
+    \item \textbf{Kỹ thuật}: Integration Testing
+\end{itemize}
+
+\subsection{Tổng kết kết quả kiểm thử}
+
+\subsubsection{Số lượng test cases}
+
+Hệ thống đã được kiểm thử với tổng cộng hơn 30 test cases, bao gồm:
+
+\begin{itemize}
+    \item \textbf{Authentication}: 5 test cases
+    \item \textbf{User Management}: 10+ test cases
+    \item \textbf{SM-2 Algorithm}: 6+ test cases (theo kế hoạch, cần bổ sung thêm)
+    \item \textbf{API Endpoints}: 10+ test cases cho các endpoints khác
+\end{itemize}
+
+\subsubsection{Kết quả kiểm thử}
+
+Các test cases đã được thực hiện cho chức năng Authentication và User Management đều \textbf{PASS}, đảm bảo:
+
+\begin{itemize}
+    \item Tất cả API endpoints hoạt động đúng với input hợp lệ
+    \item Hệ thống từ chối đúng các request không hợp lệ
+    \item Phân quyền hoạt động chính xác (admin vs normal user)
+    \item Database operations (CRUD) hoạt động đúng
+    \item Password hashing và verification đúng
+    \item JWT token generation và validation đúng
+\end{itemize}
+
+\subsubsection{Code Coverage}
+
+Sử dụng \textbf{Coverage.py} để đo lường code coverage, kết quả:
+
+\begin{itemize}
+    \item \textbf{API Routes}: Coverage cao cho các routes đã test (login, users)
+    \item \textbf{Services}: Cần bổ sung thêm tests cho LearningService, ChatbotService
+    \item \textbf{Models}: Coverage tốt cho các models đã sử dụng trong tests
+\end{itemize}
+
+\subsubsection{Phân tích và hướng cải thiện}
+
+\begin{enumerate}
+    \item \textbf{Test coverage cho SM-2}: Cần bổ sung thêm unit tests và integration tests cho thuật toán SM-2 để đảm bảo tính chính xác của các tính toán EF, interval, và next\_review\_date.
+    
+    \item \textbf{Test coverage cho AI integration}: Cần bổ sung tests cho ChatbotService và GenerationService, sử dụng mocking cho Dify API calls.
+    
+    \item \textbf{End-to-end testing}: Cần bổ sung E2E tests để kiểm tra toàn bộ flow từ frontend đến backend.
+    
+    \item \textbf{Performance testing}: Cần bổ sung performance tests để đảm bảo hệ thống có thể xử lý nhiều concurrent users.
+\end{enumerate}
+
+\subsection{Kết luận}
+
+Hệ thống đã được kiểm thử với các kỹ thuật phù hợp, đảm bảo chất lượng và độ tin cậy của các chức năng cơ bản. Các test cases đã được thiết kế và thực hiện cho Authentication và User Management đều pass, chứng minh hệ thống hoạt động đúng với các chức năng này. Tuy nhiên, cần tiếp tục bổ sung tests cho các chức năng phức tạp hơn như SM-2 algorithm và AI integration để đảm bảo coverage toàn diện.
+
+\end{document}

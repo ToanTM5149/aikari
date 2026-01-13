@@ -1,0 +1,429 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+\chapter{Công nghệ sử dụng}
+\label{chapter:3}
+
+Chương này trình bày các công nghệ, nền tảng và thuật toán được sử dụng trong đồ án để giải quyết các vấn đề và yêu cầu đã được phân tích ở Chương 2. Mỗi công nghệ sẽ được giới thiệu kèm theo phân tích về vai trò cụ thể trong hệ thống, các lựa chọn thay thế có thể sử dụng, và lý do lựa chọn công nghệ đó.
+
+\section{Thuật toán Spaced Repetition (SM-2)}
+\label{section:3.1}
+
+\subsection{Tổng quan về Spaced Repetition}
+
+Spaced Repetition (lặp lại ngắt quãng) là một kỹ thuật học tập dựa trên hiệu ứng khoảng cách (spacing effect) trong tâm lý học, cho thấy việc ôn tập thông tin theo các khoảng thời gian tăng dần giúp cải thiện đáng kể khả năng ghi nhớ dài hạn so với việc học tập trung trong một thời gian ngắn. Thuật toán SM-2 (SuperMemo 2) được phát triển bởi Piotr Wozniak vào năm 1987, là một trong những thuật toán spaced repetition phổ biến và hiệu quả nhất, được sử dụng rộng rãi trong các ứng dụng học tập như Anki, Quizlet, và Memrise.
+
+\subsection{Giải quyết vấn đề trong hệ thống}
+
+Như đã phân tích ở Chương 2, một trong những hạn chế chính của các hệ thống flashcard truyền thống là không có thuật toán tự động điều chỉnh khoảng thời gian ôn tập dựa trên khả năng nhớ lại của từng cá nhân. Điều này dẫn đến việc người học phải ôn tập theo lịch cố định không phù hợp với khả năng ghi nhớ thực tế, gây lãng phí thời gian vào những nội dung đã thuộc hoặc bỏ sót những kiến thức cần được củng cố kịp thời (xem Mục \ref{section:1.2}).
+
+Thuật toán SM-2 được tích hợp vào hệ thống để giải quyết vấn đề này thông qua việc tự động tính toán khoảng thời gian ôn tập tối ưu cho từng flashcard dựa trên Easiness Factor (EF) và recall score của người học. Hệ thống sử dụng SM-2 để:
+
+\begin{itemize}
+    \item Tự động điều chỉnh khoảng thời gian ôn tập dựa trên khả năng nhớ lại của từng cá nhân
+    \item Tối ưu hóa quá trình ghi nhớ bằng cách ôn tập đúng thời điểm (khi sắp quên)
+    \item Cá nhân hóa lịch học cho từng flashcard dựa trên hiệu suất học tập
+    \item Đề xuất flashcard cần ôn lại dựa trên next\_review\_date và trạng thái mastered/reviewing/needs work
+\end{itemize}
+
+\subsection{Các thành phần của SM-2}
+
+Thuật toán SM-2 sử dụng các biến số chính sau:
+
+\begin{enumerate}
+    \item \textbf{Easiness Factor (EF)}: Hệ số đánh giá độ dễ của flashcard, khởi tạo ở 2.5, tối thiểu 1.3. EF càng cao, flashcard càng dễ nhớ và khoảng thời gian giữa các lần ôn tập càng dài.
+    
+    \item \textbf{Recall Score (q)}: Điểm đánh giá chất lượng nhớ lại từ 0-5, trong đó:
+    \begin{itemize}
+        \item 0: Hoàn toàn không nhớ (complete blackout)
+        \item 1-2: Nhớ rất kém
+        \item 3: Nhớ được nhưng khó khăn
+        \item 4: Nhớ tốt
+        \item 5: Nhớ hoàn hảo (perfect recall)
+    \end{itemize}
+    
+    \item \textbf{Interval}: Số ngày cho đến lần ôn tập tiếp theo
+    
+    \item \textbf{Repetitions}: Số lần trả lời đúng liên tiếp
+\end{enumerate}
+
+\subsection{Công thức tính toán}
+
+Công thức cập nhật Easiness Factor:
+
+\begin{equation}
+EF' = EF + (0.1 - (5 - q) \times (0.08 + (5 - q) \times 0.02))
+\end{equation}
+
+\begin{equation}
+EF' = \max(EF', 1.3)
+\end{equation}
+
+Tính khoảng thời gian (Interval):
+\begin{itemize}
+    \item Nếu recall\_score < 3: interval = 1 ngày, repetitions = 0 (reset)
+    \item Nếu recall\_score >= 3:
+    \begin{itemize}
+        \item repetitions = repetitions + 1
+        \item Nếu repetitions = 1: interval = 1 ngày
+        \item Nếu repetitions = 2: interval = 6 ngày
+        \item Nếu repetitions >= 3: interval = current\_interval × EF
+    \end{itemize}
+\end{itemize}
+
+\subsection{Các thuật toán thay thế}
+
+Các thuật toán spaced repetition khác có thể được sử dụng thay thế SM-2:
+
+\begin{enumerate}
+    \item \textbf{SM-3, SM-4, SM-5}: Các phiên bản nâng cao của SuperMemo với độ phức tạp cao hơn, yêu cầu nhiều tham số hơn và khó triển khai hơn.
+    
+    \item \textbf{Anki Algorithm}: Thuật toán của Anki với công thức phức tạp hơn, có nhiều tham số cần điều chỉnh.
+    
+    \item \textbf{FSRS (Free Spaced Repetition Scheduler)}: Thuật toán hiện đại sử dụng machine learning, yêu cầu nhiều dữ liệu huấn luyện và tài nguyên tính toán.
+    
+    \item \textbf{Leitner System}: Hệ thống đơn giản với các hộp cố định, không linh hoạt và kém hiệu quả hơn SM-2.
+\end{enumerate}
+
+\subsection{Lý do lựa chọn SM-2}
+
+SM-2 được lựa chọn vì các lý do sau:
+
+\begin{enumerate}
+    \item \textbf{Đơn giản và hiệu quả}: SM-2 có công thức đơn giản, dễ triển khai và hiệu quả đã được chứng minh qua nhiều thập kỷ sử dụng.
+    
+    \item \textbf{Ít tham số}: Chỉ cần 4 biến số (EF, recall\_score, interval, repetitions), dễ quản lý và lưu trữ trong database.
+    
+    \item \textbf{Phù hợp với yêu cầu}: Đáp ứng đầy đủ yêu cầu tự động điều chỉnh khoảng thời gian ôn tập dựa trên khả năng nhớ lại của người học.
+    
+    \item \textbf{Tài liệu phong phú}: Có nhiều tài liệu và implementation mẫu, dễ dàng tham khảo và triển khai.
+    
+    \item \textbf{Hiệu suất tốt}: Không yêu cầu tài nguyên tính toán lớn, phù hợp với hệ thống web real-time.
+\end{enumerate}
+
+\section{FastAPI và Python cho Backend}
+\label{section:3.2}
+
+\subsection{Tổng quan về FastAPI}
+
+FastAPI là một web framework hiện đại được xây dựng trên Python, được phát triển bởi Sebastián Ramírez và ra mắt vào năm 2018. FastAPI được thiết kế với mục tiêu cung cấp hiệu suất cao tương đương với Node.js và Go, đồng thời tận dụng các tính năng mạnh mẽ của Python như type hints và async/await.
+
+\subsection{Giải quyết vấn đề trong hệ thống}
+
+Như đã trình bày ở Mục \ref{section:1.4}, hệ thống yêu cầu một backend module hóa, đảm bảo sự ổn định, bảo mật và khả năng mở rộng. FastAPI được lựa chọn để xây dựng backend API với các tính năng:
+
+\begin{itemize}
+    \item \textbf{Hiệu suất cao}: FastAPI sử dụng Starlette và Pydantic, đạt hiệu suất tương đương với Node.js và Go, đáp ứng yêu cầu xử lý nhiều request đồng thời từ frontend và tích hợp AI.
+    
+    \item \textbf{Type safety}: Tích hợp sẵn type hints và Pydantic validation, giảm lỗi runtime và tăng chất lượng code.
+    
+    \item \textbf{API Documentation tự động}: Tự động sinh Swagger/OpenAPI documentation tại \texttt{/docs}, giúp frontend developer dễ dàng tích hợp và test API.
+    
+    \item \textbf{Async/Await}: Hỗ trợ asynchronous programming, phù hợp với việc tích hợp Dify workflows và xử lý nhiều request đồng thời.
+    
+    \item \textbf{Dependency Injection}: Hệ thống dependency injection mạnh mẽ, giúp quản lý database sessions, authentication, và các services một cách rõ ràng.
+\end{itemize}
+
+\subsection{Các framework thay thế}
+
+Các framework backend khác có thể được sử dụng:
+
+\begin{enumerate}
+    \item \textbf{Django}: Framework full-stack của Python, nặng và phức tạp hơn, phù hợp cho các ứng dụng lớn nhưng không cần thiết cho API đơn giản.
+    
+    \item \textbf{Flask}: Framework nhẹ và linh hoạt, nhưng thiếu nhiều tính năng built-in như validation, documentation tự động, và async support tốt.
+    
+    \item \textbf{Node.js với Express}: Hiệu suất tốt và ecosystem phong phú, nhưng yêu cầu JavaScript/TypeScript, không phù hợp với team có kinh nghiệm Python.
+    
+    \item \textbf{Go với Gin/Echo}: Hiệu suất rất cao, nhưng syntax phức tạp hơn và ecosystem nhỏ hơn Python.
+    
+    \item \textbf{Spring Boot (Java)}: Framework enterprise mạnh mẽ, nhưng nặng và phức tạp, không phù hợp cho dự án nhỏ đến trung bình.
+\end{enumerate}
+
+\subsection{Lý do lựa chọn FastAPI}
+
+FastAPI được lựa chọn vì:
+
+\begin{enumerate}
+    \item \textbf{Hiệu suất và đơn giản}: Cân bằng tốt giữa hiệu suất cao và sự đơn giản trong phát triển, phù hợp với yêu cầu của dự án.
+    
+    \item \textbf{Type safety và validation}: Pydantic validation tự động giúp giảm lỗi và tăng chất lượng code, đặc biệt quan trọng khi tích hợp với frontend TypeScript.
+    
+    \item \textbf{Documentation tự động}: Swagger UI tự động giúp tiết kiệm thời gian viết tài liệu và test API.
+    
+    \item \textbf{Async support}: Hỗ trợ async/await tốt, phù hợp với việc tích hợp Dify workflows và xử lý nhiều request đồng thời.
+    
+    \item \textbf{Ecosystem Python}: Tận dụng được thư viện Python phong phú cho AI, data processing, và các tính năng khác.
+    
+    \item \textbf{Phù hợp với SQLModel}: FastAPI tích hợp tốt với SQLModel (ORM của Python), giúp quản lý database dễ dàng.
+\end{enumerate}
+
+\section{React Router v7 và TypeScript cho Frontend}
+\label{section:3.3}
+
+\subsection{Tổng quan về React Router v7}
+
+React Router v7 (trước đây là Remix) là một full-stack web framework được xây dựng trên React, tập trung vào việc tối ưu hóa trải nghiệm người dùng thông qua server-side rendering, data loading, và form handling. React Router v7 kết hợp routing, data loading, và mutations vào một framework thống nhất.
+
+\subsection{Giải quyết vấn đề trong hệ thống}
+
+Như đã trình bày ở Mục \ref{section:1.4}, hệ thống yêu cầu frontend hiện đại, thân thiện với người dùng và dễ bảo trì. React Router v7 được lựa chọn để xây dựng frontend với các tính năng:
+
+\begin{itemize}
+    \item \textbf{Trải nghiệm người dùng tốt}: Server-side rendering và progressive enhancement giúp trang web load nhanh và mượt mà, đáp ứng yêu cầu về tính dễ dùng.
+    
+    \item \textbf{Type safety với TypeScript}: TypeScript giúp phát hiện lỗi sớm, tăng chất lượng code và giảm thời gian debug, đặc biệt quan trọng khi tích hợp với backend FastAPI.
+    
+    \item \textbf{Routing và data loading tích hợp}: React Router v7 tích hợp routing và data loading, giúp quản lý state và navigation dễ dàng hơn.
+    
+    \item \textbf{Form handling mạnh mẽ}: Hỗ trợ form handling và validation tốt, phù hợp với các tính năng tạo flashcard, làm test, và quản lý lớp học.
+    
+    \item \textbf{Component-based architecture}: Kiến trúc component giúp code dễ bảo trì và mở rộng, phù hợp với yêu cầu phát triển lâu dài.
+\end{itemize}
+
+\subsection{Các framework thay thế}
+
+Các framework frontend khác có thể được sử dụng:
+
+\begin{enumerate}
+    \item \textbf{Next.js}: Framework React phổ biến với SSR và SSG, nhưng phức tạp hơn và yêu cầu Node.js server.
+    
+    \item \textbf{Vue.js với Nuxt}: Framework tương tự Next.js cho Vue, nhưng ecosystem nhỏ hơn React.
+    
+    \item \textbf{Angular}: Framework enterprise mạnh mẽ, nhưng nặng và có learning curve cao.
+    
+    \item \textbf{Svelte/SvelteKit}: Framework nhẹ và hiệu suất cao, nhưng ecosystem nhỏ hơn và ít tài liệu hơn.
+    
+    \item \textbf{React thuần với Create React App}: Đơn giản nhưng thiếu nhiều tính năng built-in như routing, data loading, và SSR.
+\end{enumerate}
+
+\subsection{Lý do lựa chọn React Router v7}
+
+React Router v7 được lựa chọn vì:
+
+\begin{enumerate}
+    \item \textbf{Full-stack framework}: Tích hợp routing, data loading, và form handling, giảm boilerplate code và tăng năng suất phát triển.
+    
+    \item \textbf{TypeScript support tốt}: Hỗ trợ TypeScript tốt, phù hợp với yêu cầu type safety và tích hợp với backend FastAPI.
+    
+    \item \textbf{Progressive enhancement}: Hỗ trợ SSR và progressive enhancement, giúp trang web load nhanh và SEO tốt.
+    
+    \item \textbf{Developer experience}: Developer experience tốt với hot reload, error handling, và debugging tools.
+    
+    \item \textbf{Ecosystem React}: Tận dụng được ecosystem React phong phú với nhiều thư viện và component library như Chakra UI, Radix UI.
+    
+    \item \textbf{Phù hợp với yêu cầu}: Đáp ứng đầy đủ yêu cầu về frontend hiện đại, thân thiện với người dùng và dễ bảo trì.
+\end{enumerate}
+
+\section{PostgreSQL và SQLModel}
+\label{section:3.4}
+
+\subsection{Tổng quan về PostgreSQL và SQLModel}
+
+PostgreSQL là một hệ quản trị cơ sở dữ liệu quan hệ mã nguồn mở, mạnh mẽ và đáng tin cậy, được sử dụng rộng rãi trong các ứng dụng enterprise. PostgreSQL hỗ trợ ACID transactions, foreign keys, triggers, views, và stored procedures.
+
+SQLModel là một thư viện Python được phát triển bởi tác giả của FastAPI (Sebastián Ramírez), kết hợp SQLAlchemy (ORM) và Pydantic (validation) vào một công cụ duy nhất. SQLModel cho phép định nghĩa models một lần và sử dụng cho cả database schema và API validation.
+
+\subsection{Giải quyết vấn đề trong hệ thống}
+
+Hệ thống yêu cầu quản lý dữ liệu phức tạp bao gồm users, studysets, terms, study activities, tests, classes, và các quan hệ giữa chúng. PostgreSQL và SQLModel được lựa chọn để:
+
+\begin{itemize}
+    \item \textbf{Quản lý dữ liệu phức tạp}: PostgreSQL hỗ trợ foreign keys, constraints, và transactions, đảm bảo tính toàn vẹn dữ liệu cho các quan hệ phức tạp giữa users, studysets, terms, và activities.
+    
+    \item \textbf{ACID transactions}: Đảm bảo tính nhất quán dữ liệu khi thực hiện các thao tác phức tạp như ghi nhận review và cập nhật progress summary cùng lúc.
+    
+    \item \textbf{Type safety với SQLModel}: SQLModel kết hợp SQLAlchemy và Pydantic, cho phép định nghĩa models một lần và sử dụng cho cả database schema và API validation, giảm duplicate code và tăng type safety.
+    
+    \item \textbf{Migrations với Alembic}: Alembic (migration tool của SQLAlchemy) giúp quản lý schema changes một cách có hệ thống, phù hợp với yêu cầu phát triển lâu dài.
+    
+    \item \textbf{Performance}: PostgreSQL có hiệu suất tốt cho các query phức tạp như tính toán progress summary, lấy terms cần review, và thống kê học tập.
+\end{itemize}
+
+\subsection{Các công nghệ thay thế}
+
+Các công nghệ database và ORM khác có thể được sử dụng:
+
+\begin{enumerate}
+    \item \textbf{MySQL}: Database quan hệ phổ biến, nhưng thiếu một số tính năng nâng cao của PostgreSQL như JSON support tốt hơn và full-text search.
+    
+    \item \textbf{MongoDB}: NoSQL database linh hoạt, nhưng không phù hợp với dữ liệu có quan hệ phức tạp như hệ thống này.
+    
+    \item \textbf{SQLite}: Database nhẹ, phù hợp cho development, nhưng không phù hợp cho production với nhiều concurrent users.
+    
+    \item \textbf{Prisma (Node.js)}: ORM hiện đại cho TypeScript, nhưng yêu cầu Node.js ecosystem.
+    
+    \item \textbf{Django ORM}: ORM của Django, nhưng gắn liền với Django framework.
+\end{enumerate}
+
+\subsection{Lý do lựa chọn PostgreSQL và SQLModel}
+
+PostgreSQL và SQLModel được lựa chọn vì:
+
+\begin{enumerate}
+    \item \textbf{Phù hợp với FastAPI}: SQLModel được phát triển bởi tác giả FastAPI, tích hợp tốt với FastAPI và Pydantic.
+    
+    \item \textbf{Type safety}: SQLModel kết hợp SQLAlchemy và Pydantic, cho phép type checking và validation tự động, giảm lỗi runtime.
+    
+    \item \textbf{Giảm duplicate code}: Định nghĩa models một lần, sử dụng cho cả database schema và API validation.
+    
+    \item \textbf{PostgreSQL mạnh mẽ}: PostgreSQL là database mạnh mẽ, đáng tin cậy, và có nhiều tính năng nâng cao phù hợp với yêu cầu của hệ thống.
+    
+    \item \textbf{Migrations dễ dàng}: Alembic giúp quản lý schema changes một cách có hệ thống, phù hợp với yêu cầu phát triển lâu dài.
+    
+    \item \textbf{Community và tài liệu}: Cả PostgreSQL và SQLModel đều có community lớn và tài liệu phong phú.
+\end{enumerate}
+
+\section{Dify và tích hợp AI}
+\label{section:3.5}
+
+\subsection{Tổng quan về Dify}
+
+Dify là một nền tảng LLM (Large Language Model) ứng dụng mã nguồn mở, cho phép xây dựng và triển khai các ứng dụng AI với workflows, chatbots, và các tính năng AI khác. Dify hỗ trợ nhiều LLM providers như OpenAI, Anthropic, và các model mã nguồn mở như Llama, Mistral.
+
+\subsection{Giải quyết vấn đề trong hệ thống}
+
+Như đã phân tích ở Mục \ref{section:1.2}, một trong những hạn chế của các hệ thống flashcard truyền thống là người học không thể đặt câu hỏi hoặc nhận giải thích ngay lập tức khi gặp khó khăn, và hệ thống không thể tự động sinh bài test, quiz hoặc đoạn văn minh họa phù hợp với nội dung flashcard đang học.
+
+Dify được tích hợp vào hệ thống để giải quyết các vấn đề này thông qua:
+
+\begin{itemize}
+    \item \textbf{Trợ lý ảo AI (AI Tutor)}: Dify Chat App được sử dụng để tạo chatbot có khả năng trả lời câu hỏi của người học trong quá trình học, cung cấp giải thích tức thì và hỗ trợ học tập theo ngữ cảnh.
+    
+    \item \textbf{Sinh nội dung học tập}: Dify Workflow App được sử dụng để sinh bài test, quiz và đoạn văn minh họa tự động dựa trên nội dung flashcard đang học, giúp người học củng cố và mở rộng kiến thức.
+    
+    \item \textbf{Tự host và kiểm soát}: Dify cho phép tự host workflows, giúp kiểm soát logic xử lý, chi phí và hiệu năng một cách tối ưu, phù hợp với yêu cầu về tính bảo mật và kiểm soát dữ liệu.
+    
+    \item \textbf{Tích hợp dễ dàng}: Dify cung cấp REST API đơn giản, dễ dàng tích hợp vào backend FastAPI thông qua DifyService.
+\end{itemize}
+
+\subsection{Các nền tảng AI thay thế}
+
+Các nền tảng và công nghệ AI khác có thể được sử dụng:
+
+\begin{enumerate}
+    \item \textbf{OpenAI API trực tiếp}: Sử dụng OpenAI API trực tiếp, đơn giản nhưng thiếu khả năng tùy biến workflows và chi phí cao hơn.
+    
+    \item \textbf{Anthropic Claude API}: API của Anthropic, tương tự OpenAI nhưng có các model khác nhau.
+    
+    \item \textbf{LangChain/LangGraph}: Framework để xây dựng ứng dụng LLM, linh hoạt nhưng yêu cầu nhiều code hơn và phức tạp hơn.
+    
+    \item \textbf{Custom LLM deployment}: Tự triển khai và host LLM models, kiểm soát hoàn toàn nhưng yêu cầu tài nguyên lớn và kiến thức chuyên sâu.
+    
+    \item \textbf{Google Vertex AI}: Nền tảng AI của Google, mạnh mẽ nhưng phức tạp và có thể đắt đỏ.
+\end{enumerate}
+
+\subsection{Lý do lựa chọn Dify}
+
+Dify được lựa chọn vì:
+
+\begin{enumerate}
+    \item \textbf{Workflow-based}: Dify sử dụng workflow-based approach, cho phép xây dựng logic phức tạp một cách trực quan mà không cần viết nhiều code.
+    
+    \item \textbf{Tự host được}: Cho phép tự host workflows, giúp kiểm soát logic xử lý, chi phí và hiệu năng, phù hợp với yêu cầu về tính bảo mật.
+    
+    \item \textbf{Hỗ trợ nhiều LLM}: Hỗ trợ nhiều LLM providers và models, linh hoạt trong việc lựa chọn model phù hợp với nhu cầu và ngân sách.
+    
+    \item \textbf{REST API đơn giản}: Cung cấp REST API đơn giản, dễ dàng tích hợp vào backend FastAPI.
+    
+    \item \textbf{Mã nguồn mở}: Mã nguồn mở, cho phép tùy biến và mở rộng theo nhu cầu.
+    
+    \item \textbf{Phù hợp với yêu cầu}: Đáp ứng đầy đủ yêu cầu về trợ lý ảo AI, sinh nội dung học tập, và kiểm soát chi phí.
+\end{enumerate}
+
+\section{JWT Authentication và OAuth2}
+\label{section:3.6}
+
+\subsection{Tổng quan về JWT và OAuth2}
+
+JWT (JSON Web Token) là một chuẩn mở (RFC 7519) định nghĩa cách truyền thông tin an toàn giữa các parties dưới dạng JSON object. JWT được sử dụng rộng rãi cho authentication và authorization trong các ứng dụng web hiện đại.
+
+OAuth2 là một framework authorization cho phép các ứng dụng third-party truy cập tài nguyên của người dùng mà không cần chia sẻ credentials. OAuth2 được sử dụng rộng rãi cho social login và API authorization.
+
+\subsection{Giải quyết vấn đề trong hệ thống}
+
+Hệ thống yêu cầu xác thực và phân quyền cho ba vai trò người dùng: Student, Teacher, và Admin. JWT và OAuth2 được sử dụng để:
+
+\begin{itemize}
+    \item \textbf{Xác thực người dùng}: JWT tokens được sử dụng để xác thực người dùng sau khi đăng nhập, thay thế cho session-based authentication truyền thống.
+    
+    \item \textbf{Stateless authentication}: JWT là stateless, không cần lưu trữ session trên server, giúp hệ thống dễ scale và đơn giản hóa kiến trúc.
+    
+    \item \textbf{Phân quyền}: JWT payload chứa thông tin về role của người dùng (Student/Teacher/Admin), cho phép backend kiểm tra quyền truy cập một cách hiệu quả.
+    
+    \item \textbf{Bảo mật}: JWT được ký bằng secret key, đảm bảo tính toàn vẹn và xác thực của token.
+    
+    \item \textbf{OAuth2 cho social login}: OAuth2 có thể được sử dụng trong tương lai để hỗ trợ đăng nhập qua Google, Facebook, hoặc các provider khác.
+\end{itemize}
+
+\subsection{Các phương pháp authentication thay thế}
+
+Các phương pháp authentication khác có thể được sử dụng:
+
+\begin{enumerate}
+    \item \textbf{Session-based authentication}: Sử dụng server-side sessions, đơn giản nhưng yêu cầu lưu trữ session và khó scale.
+    
+    \item \textbf{Cookie-based authentication}: Tương tự session-based, nhưng dựa vào cookies, có thể gặp vấn đề với CORS và security.
+    
+    \item \textbf{API Keys}: Đơn giản nhưng không phù hợp cho user authentication, chỉ phù hợp cho service-to-service.
+    
+    \item \textbf{SAML}: Protocol enterprise mạnh mẽ, nhưng phức tạp và không cần thiết cho ứng dụng này.
+    
+    \item \textbf{OpenID Connect}: Protocol mở rộng của OAuth2, phù hợp cho enterprise nhưng phức tạp hơn JWT đơn giản.
+\end{enumerate}
+
+\subsection{Lý do lựa chọn JWT}
+
+JWT được lựa chọn vì:
+
+\begin{enumerate}
+    \item \textbf{Stateless}: Không cần lưu trữ session trên server, giúp hệ thống dễ scale và đơn giản hóa kiến trúc.
+    
+    \item \textbf{Hiệu suất}: JWT được verify trên mỗi request mà không cần query database, giúp tăng hiệu suất.
+    
+    \item \textbf{Phù hợp với REST API}: JWT là chuẩn phổ biến cho REST API, dễ dàng tích hợp với frontend và các client khác.
+    
+    \item \textbf{Bảo mật}: JWT được ký bằng secret key, đảm bảo tính toàn vẹn và xác thực, có thể thêm expiration time để tăng bảo mật.
+    
+    \item \textbf{Đơn giản}: Dễ triển khai và maintain, phù hợp với yêu cầu của dự án.
+    
+    \item \textbf{Hỗ trợ OAuth2}: Có thể mở rộng với OAuth2 trong tương lai nếu cần social login.
+\end{enumerate}
+
+\section{Các công nghệ hỗ trợ khác}
+\label{section:3.7}
+
+\subsection{Redux cho State Management}
+
+Redux được sử dụng trong frontend để quản lý state toàn cục, đặc biệt cho authentication state, user profile, và các dữ liệu được sử dụng ở nhiều components. Redux giúp quản lý state một cách có tổ chức và dễ debug, phù hợp với yêu cầu về tính dễ bảo trì.
+
+\subsection{Tailwind CSS và Chakra UI cho Styling}
+
+Tailwind CSS là một utility-first CSS framework giúp xây dựng giao diện nhanh chóng và nhất quán. Chakra UI là một component library được xây dựng trên React và Emotion, cung cấp các components đẹp và accessible. Sự kết hợp của Tailwind CSS và Chakra UI giúp xây dựng giao diện hiện đại, thân thiện với người dùng, đáp ứng yêu cầu về tính dễ dùng.
+
+\subsection{Alembic cho Database Migrations}
+
+Alembic là migration tool của SQLAlchemy, được sử dụng để quản lý các thay đổi schema database một cách có hệ thống. Alembic giúp version control cho database schema, đảm bảo tính nhất quán giữa các môi trường development, staging, và production, phù hợp với yêu cầu phát triển lâu dài.
+
+\subsection{Vite cho Build Tool}
+
+Vite là một build tool hiện đại cho frontend, được sử dụng bởi React Router v7. Vite cung cấp hot module replacement (HMR) nhanh chóng và build time ngắn, giúp tăng năng suất phát triển.
+
+\section{Tổng kết}
+\label{section:3.8}
+
+Chương này đã trình bày các công nghệ, nền tảng và thuật toán chính được sử dụng trong đồ án, bao gồm:
+
+\begin{itemize}
+    \item Thuật toán SM-2 cho spaced repetition, giải quyết vấn đề tối ưu hóa quá trình ghi nhớ
+    \item FastAPI và Python cho backend, đảm bảo hiệu suất cao và type safety
+    \item React Router v7 và TypeScript cho frontend, cung cấp trải nghiệm người dùng tốt
+    \item PostgreSQL và SQLModel cho quản lý dữ liệu, đảm bảo tính toàn vẹn và type safety
+    \item Dify cho tích hợp AI, cung cấp trợ lý ảo và sinh nội dung học tập
+    \item JWT cho authentication, đảm bảo bảo mật và stateless
+    \item Các công nghệ hỗ trợ như Redux, Tailwind CSS, Chakra UI, Alembic, và Vite
+\end{itemize}
+
+Mỗi công nghệ đã được phân tích về vai trò cụ thể trong hệ thống, các lựa chọn thay thế, và lý do lựa chọn. Tất cả các công nghệ này đều phù hợp với yêu cầu và mục tiêu của đồ án đã được trình bày ở Chương 1 và Chương 2, tạo nền tảng vững chắc cho việc phân tích và thiết kế hệ thống ở Chương 4.
+
+\end{document}

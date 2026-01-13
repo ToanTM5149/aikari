@@ -1,0 +1,168 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage[utf8]{inputenc} 
+\usepackage{array} 
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{makecell} % Để điều chỉnh dòng trong ô
+
+\begin{document}
+
+\section{Khảo sát hiện trạng}
+\label{section:2.1}
+Hiện nay, khác với nhiều quốc gia đã ứng dụng rộng rãi công nghệ giáo dục số trong hoạt động dạy và học, tại Việt Nam việc sử dụng các công cụ hỗ trợ học tập thông minh vẫn còn mang tính rời rạc và chưa đồng bộ. Phần lớn các công cụ flashcard đang được sử dụng phổ biến hiện nay chủ yếu phục vụ mục đích ghi nhớ từ vựng hoặc kiến thức ngắn hạn, với nội dung và cách tổ chức học tập tương đối cố định, chưa thực sự linh hoạt theo nhu cầu và thói quen học tập của người học.
+
+Bên cạnh đó, một số nền tảng flashcard và học tập trực tuyến đã cho phép người dùng tự tạo nội dung, chia sẻ bộ thẻ học và theo dõi tiến độ học tập. Tuy nhiên, các hệ thống này nhìn chung vẫn thiếu sự hỗ trợ học tập thông minh mang tính ngữ cảnh; việc tương tác giữa người học và hệ thống còn hạn chế, chủ yếu dừng lại ở mức hiển thị nội dung và ghi nhận kết quả ôn tập, chưa hỗ trợ hiệu quả trong việc giải thích, gợi ý hoặc hỗ trợ người học ngay trong quá trình học.
+
+Từ góc độ người dùng, qua quan sát thực tế và trao đổi với người học cho thấy nhiều người gặp khó khăn trong việc duy trì thói quen ôn tập khi sử dụng flashcard, do thiếu sự hướng dẫn và phản hồi kịp thời trong quá trình học. Đối với giáo viên, các công cụ hiện có chưa hỗ trợ hiệu quả trong việc theo dõi tiến độ học tập của học viên một cách trực quan và có hệ thống, gây khó khăn trong công tác quản lý và hỗ trợ học tập.
+
+So sánh giữa các công cụ flashcard hiện có và nhu cầu thực tế cho thấy vẫn tồn tại khoảng cách nhất định: các hệ thống hiện nay chủ yếu tập trung vào việc trình bày nội dung và ghi nhận kết quả, trong khi người học và giáo viên đều có nhu cầu về một công cụ hỗ trợ học tập có tổ chức hơn, giúp người học tập trung vào các nội dung chưa nắm vững và hỗ trợ giáo viên theo dõi quá trình học tập một cách thuận tiện.
+
+\section{Tổng quan chức năng}
+Sơ đồ use case tổng quan được xây dựng nhằm mô tả các chức năng nghiệp vụ chính của hệ thống đối với từng nhóm người dùng. Các chức năng chi tiết và các chức năng hỗ trợ bằng AI được trình bày ở các sơ đồ use case mức chi tiết nhằm đảm bảo tính rõ ràng và tránh quá tải thông tin trong sơ đồ tổng quan.
+\subsection{Biểu đồ use case tổng quát}
+\label{subsection:2.2.1}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Hinhve/UC/tổng quan.png}
+    \caption{Biểu đồ use case tổng quát của hệ thống}
+    \label{fig:usecase}
+\end{figure}
+
+Biểu đồ \ref{fig:usecase} mô tả tổng quan các chức năng chính của hệ thống quản lý học tập flashcard kết hợp trợ lý ảo, bao gồm bốn tác nhân chính tương tác với hệ thống, cụ thể như sau:
+
+\begin{itemize}
+    \item \textbf{User}: Là người dùng cơ bản của hệ thống khi chưa đăng nhập. Các chức năng chính của nhóm người dùng này bao gồm:
+    \begin{itemize}
+        \item Đăng ký tài khoản
+        \item Đăng nhập vào hệ thống
+    \end{itemize}
+    
+    \item \textbf{Student}: Đây là người dùng cơ bản của hệ thống. Là một học sinh, sinh viên, student kế thừa các chức năng của user, và có thêm nhiều chức năng khác. Các chức năng đó bao gồm:
+    \begin{itemize}
+        \item Quản lý thông tin cá nhân: xem và cập nhật thông tin người dùng.
+        \item Quản lý flashcard: tạo mới, chỉnh sửa, xóa các bộ flashcard cá nhân.
+        \item Quản lý category: tổ chức và quản lý các danh mục học tập.
+        \item Học flashcard: sử dụng flashcard để học tập theo nhiều chế độ (học trực tiếp hoặc trộn thứ tự). Ngoài ra có thể tương tác với AI để hội thoại hoặc sinh văn bản ngữ cảnh.
+        \item Làm kiểm tra: thực hiện các bài kiểm tra được tạo bởi giáo viên.
+        \item Quản lý lịch sử kiểm tra: xem lại kết quả và lịch sử các bài kiểm tra đã làm.
+        \item Tham gia vào lớp học: tìm kiếm và đăng ký tham gia các lớp học.
+        \item  Xem tiến độ học tập: theo dõi quá trình học, số flashcard đã học, tỉ lệ nhớ/quên và thời gian học.
+    \end{itemize}
+
+    \item \textbf{Teacher}: Đây là người dùng cơ bản của hệ thống, là một giáo viên, Teacher có thể kế thừa tất cả các chức năng từ Student và chịu trách nhiệm quản lý nội dung và các hoạt động học tập:
+    \begin{itemize}
+        \item Quản lý bài kiểm tra: tạo mới, cập nhật, xóa và quản lý các bài kiểm tra cho lớp học, có thể sử dụng trợ lý ảo để tạo test cho student.
+        \item Quản lý nội dung học tập: tạo, cập nhật và tổ chức các tài liệu và nội dung học tập.
+        \item Quản lý lớp học: tạo lớp học, quản lý danh sách học sinh, và các hoạt động trong lớp học.
+        \item Xem thống kê lớp học: xem các báo cáo và số liệu thống kê về hiệu suất của lớp học, tiến độ học tập của học sinh.
+    \end{itemize}
+\end{itemize}
+Biểu đồ use case tổng quát trên giúp hình dung rõ mối quan hệ giữa người dùng và các chức năng chính trong hệ thống quản lý học tập/flashcard, từ đó làm nền tảng cho việc thiết kế chức năng chi tiết và giao diện người dùng.
+
+\subsection{Biểu đồ use case phân rã Quản lý flashcard}
+\label{subsection:2.2.2}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_QuanLyFlashcard.png}
+    \caption{Biểu đồ use case phân rã: Quản lý flashcard}
+    \label{fig:usecase_quanlyflashcard}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_quanlyflashcard}} mô tả cách học sinh thực hiện các thao tác quản lý flashcard trên hệ thống. Thông qua Use Case chính là "Quản lý flashcard", học sinh có thể tạo, chỉnh sửa, xóa bộ flashcard và các flashcard cá nhân, đồng thời quản lý chúng theo category và thực hiện các thao tác sao chép, import/export. Các chức năng này cho phép học sinh tổ chức hiệu quả nội dung học tập của mình, đảm bảo tính linh hoạt và dễ dàng trong việc quản lý tài liệu học tập.
+
+\subsection{Biểu đồ use case phân rã Học flashcard}
+\label{subsection:2.2.3}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_HocFlashcard.png}
+    \caption{Biểu đồ use case phân rã: Học flashcard}
+    \label{fig:usecase_hocflashcard}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_hocflashcard}} mô tả cách học sinh thực hiện quá trình học tập với flashcard trên hệ thống. Thông qua Use Case chính là "Học flashcard", học sinh có thể bắt đầu phiên học, học theo nhiều chế độ khác nhau (lặp lại, kiểm tra nhanh, ngẫu nhiên), đánh giá mức độ nhớ, và tương tác với AI để được hỗ trợ học tập. Các chức năng này cho phép học sinh học tập hiệu quả với nhiều phương thức khác nhau, tận dụng công nghệ AI để nâng cao trải nghiệm học tập và củng cố kiến thức.
+
+\subsection{Biểu đồ use case phân rã Làm kiểm tra}
+\label{subsection:2.2.4}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_LamKiemTra.png}
+    \caption{Biểu đồ use case phân rã: Làm kiểm tra}
+    \label{fig:usecase_lamkiemtra}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_lamkiemtra}} mô tả cách học sinh thực hiện các thao tác làm bài kiểm tra trên hệ thống. Thông qua Use Case chính là "Làm kiểm tra", học sinh có thể xem danh sách bài kiểm tra, bắt đầu làm bài, trả lời các loại câu hỏi khác nhau (trắc nghiệm, điền từ), nộp bài và xem kết quả. Các chức năng này cho phép học sinh đánh giá kiến thức một cách toàn diện, theo dõi tiến độ học tập và cải thiện hiệu quả học tập thông qua việc làm lại bài kiểm tra khi được phép.
+
+\subsection{Biểu đồ use case phân rã Quản lý lớp học}
+\label{subsection:2.2.5}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_QuanLyLopHoc.png}
+    \caption{Biểu đồ use case phân rã: Quản lý lớp học}
+    \label{fig:usecase_quanlylophoc}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_quanlylophoc}} mô tả cách giáo viên thực hiện các thao tác quản lý lớp học trên hệ thống. Thông qua Use Case chính là "Quản lý lớp học", giáo viên có thể tạo, chỉnh sửa, xóa lớp học, quản lý thành viên (mời, chấp nhận, từ chối, xóa), quản lý nội dung học tập và tạo mã tham gia lớp. Các chức năng này cho phép giáo viên kiểm soát hiệu quả hoạt động của lớp học, quản lý học sinh và nội dung giảng dạy một cách có tổ chức, đảm bảo môi trường học tập tốt nhất cho học sinh.
+
+\subsection{Biểu đồ use case phân rã Quản lý bài kiểm tra}
+\label{subsection:2.2.6}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_QuanLyBaiKiemTra.png}
+    \caption{Biểu đồ use case phân rã: Quản lý bài kiểm tra}
+    \label{fig:usecase_quanlybaikiemtra}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_quanlybaikiemtra}} mô tả cách giáo viên thực hiện các thao tác quản lý bài kiểm tra trên hệ thống. Thông qua Use Case chính là "Quản lý bài kiểm tra", giáo viên có thể tạo, chỉnh sửa, xóa bài kiểm tra, cấu hình các thông số (loại câu hỏi, số lượng, thời gian, hiển thị đáp án), xem kết quả làm bài của học sinh và xử lý yêu cầu làm lại bài. Các chức năng này cho phép giáo viên tạo và quản lý bài kiểm tra một cách linh hoạt, đánh giá chính xác năng lực học sinh và hỗ trợ học sinh cải thiện kết quả học tập.
+
+\subsection{Biểu đồ use case phân rã Tham gia vào lớp học}
+\label{subsection:2.2.7}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_ThamGiaVaoLopHoc.png}
+    \caption{Biểu đồ use case phân rã: Tham gia vào lớp học}
+    \label{fig:usecase_thamgialophoc}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_thamgialophoc}} mô tả cách học sinh tham gia và tương tác với lớp học trên hệ thống. Thông qua Use Case chính là "Tham gia vào lớp học", học sinh có thể tìm kiếm lớp học công khai, tham gia bằng mã lớp, gửi yêu cầu tham gia, xem danh sách và chi tiết lớp học, rời khỏi lớp học, và xem các tài nguyên học tập trong lớp. Các chức năng này cho phép học sinh dễ dàng tham gia vào các lớp học phù hợp, tiếp cận nội dung học tập và bài kiểm tra một cách thuận tiện.
+
+\subsection{Biểu đồ use case phân rã Quản lý người dùng}
+\label{subsection:2.2.8}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_QuanLyNguoiDung.png}
+    \caption{Biểu đồ use case phân rã: Quản lý người dùng}
+    \label{fig:usecase_quanlynguoidung}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_quanlynguoidung}} mô tả cách quản trị viên thực hiện các thao tác quản trị người dùng trên hệ thống. Thông qua Use Case chính là "Quản lý người dùng", Admin có thể xem danh sách, tạo mới, chỉnh sửa và xóa người dùng, thay đổi vai trò, khóa/mở khóa tài khoản, xem chi tiết hoạt động, tìm kiếm và lọc người dùng. Các chức năng này cho phép quản trị viên kiểm soát hiệu quả cơ sở dữ liệu người dùng, đảm bảo tính chính xác, bảo mật và cập nhật thông tin kịp thời.
+
+
+\subsection{Quy trình nghiệp vụ}
+\label{subsection:2.2.9}
+Nếu sản phẩm/hệ thống cần xây dựng có quy trình nghiệp vụ quan trọng/đáng chú ý, sinh viên cần mô tả và vẽ biểu đồ hoạt động minh họa quy trình nghiệp vụ đó. Sinh viên lưu ý đây không phải là luồng sự kiện của từng use case, mà là luồng hoạt động kết hợp nhiều use case để thực hiện một nghiệp vụ nào đó.
+
+Ví dụ, một hệ thống quản lý thư viện có quy trình nghiệp vụ mượn trả với mô tả sơ bộ như sau: Sinh viên làm thẻ mượn, sau đó sinh viên đăng ký mượn sách, thủ thư cho mượn, và cuối cùng sinh viên trả lại sách cho thư viện. Một hệ thống có thể có một vài quy trình nghiệp vụ quan trọng như vậy.
+\section{Đặc tả chức năng}
+\label{section:2.3}
+Sinh viên lựa chọn từ 4 đến 7 use case quan trọng nhất của đồ án để đặc tả chi tiết. Mỗi đặc tả bao gồm ít nhất các thông tin sau: (i) Tên use case, (ii) Luồng sự kiện (chính và phát sinh), (iii) Tiền điều kiện, và (iv) Hậu điều kiện. Sinh viên chỉ vẽ bổ sung biểu đồ hoạt động khi đặc tả use case phức tạp.
+\subsection{Đặc tả use case A}
+\hfill
+\subsection{Đặc tả use case B}
+\hfill
+
+\section{Yêu cầu phi chức năng}
+\label{section:2.4}
+Trong phần này, sinh viên đưa ra các yêu cầu khác nếu có, bao gồm các yêu cầu phi chức năng như hiệu năng, độ tin cậy, tính dễ dùng, tính dễ bảo trì, hoặc các yêu cầu về mặt kỹ thuật như về CSDL, công nghệ sử dụng, v.v.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
