@@ -32,14 +32,10 @@ Sơ đồ use case tổng quan được xây dựng nhằm mô tả các chức 
 Biểu đồ \ref{fig:usecase} mô tả tổng quan các chức năng chính của hệ thống quản lý học tập flashcard kết hợp trợ lý ảo, bao gồm bốn tác nhân chính tương tác với hệ thống, cụ thể như sau:
 
 \begin{itemize}
-    \item \textbf{User}: Là người dùng cơ bản của hệ thống khi chưa đăng nhập. Các chức năng chính của nhóm người dùng này bao gồm:
-    \begin{itemize}
-        \item Đăng ký tài khoản
-        \item Đăng nhập vào hệ thống
-    \end{itemize}
     
-    \item \textbf{Student}: Đây là người dùng cơ bản của hệ thống. Là một học sinh, sinh viên, student kế thừa các chức năng của user, và có thêm nhiều chức năng khác. Các chức năng đó bao gồm:
+    \item \textbf{Student}: Đây là người dùng cơ bản của hệ thống. Student có các chức năng:
     \begin{itemize}
+        \item Đăng ký/đăng nhập: student có thể tạo tài khoản và dùng tài khoản đó đăng nhập vào hệ thống
         \item Quản lý thông tin cá nhân: xem và cập nhật thông tin người dùng.
         \item Quản lý flashcard: tạo mới, chỉnh sửa, xóa các bộ flashcard cá nhân.
         \item Quản lý category: tổ chức và quản lý các danh mục học tập.
@@ -94,10 +90,22 @@ Biểu đồ use case tổng quát trên giúp hình dung rõ mối quan hệ gi
     \label{fig:usecase_lamkiemtra}
 \end{figure}
 
-\textbf{Biểu đồ \ref{fig:usecase_lamkiemtra}} mô tả cách học sinh thực hiện các thao tác làm bài kiểm tra trên hệ thống. Thông qua Use Case chính là "Làm kiểm tra", học sinh có thể xem danh sách bài kiểm tra, bắt đầu làm bài, trả lời các loại câu hỏi khác nhau (trắc nghiệm, điền từ), nộp bài và xem kết quả. Các chức năng này cho phép học sinh đánh giá kiến thức một cách toàn diện, theo dõi tiến độ học tập và cải thiện hiệu quả học tập thông qua việc làm lại bài kiểm tra khi được phép.
+\textbf{Biểu đồ \ref{fig:usecase_lamkiemtra}} mô tả cách học sinh thực hiện các thao tác làm bài kiểm tra trên hệ thống. Thông qua Use Case chính là "Làm kiểm tra", học sinh có thể xem danh sách bài kiểm tra, bắt đầu làm bài, trả lời các loại câu hỏi khác nhau (trắc nghiệm, điền từ, tự luận), nộp bài và xem kết quả. Các chức năng này cho phép học sinh đánh giá kiến thức một cách toàn diện, theo dõi tiến độ học tập và cải thiện hiệu quả học tập thông qua việc làm lại bài kiểm tra khi được phép.
+
+\subsection{Biểu đồ use case phân rã Quản lý lịch sử kiểm tra}
+\label{subsection:2.2.5}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_QuanLyLichSuKiemTra.png}
+    \caption{Biểu đồ use case phân rã: Quản lý lịch sử kiểm tra}
+    \label{fig:usecase_quanlylichsukiemtra}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_quanlylichsukiemtra}} mô tả cách học sinh quản lý và xem lại lịch sử kiểm tra trên hệ thống. Thông qua Use Case chính là "Quản lý lịch sử kiểm tra", học sinh có thể xem danh sách và chi tiết kết quả các bài kiểm tra đã làm, lọc lịch sử theo nhiều tiêu chí khác nhau, và xuất báo cáo kết quả. Các chức năng này cho phép học sinh theo dõi tiến độ học tập một cách chi tiết, phân tích hiệu suất học tập và đưa ra các quyết định cải thiện phù hợp.
 
 \subsection{Biểu đồ use case phân rã Quản lý lớp học}
-\label{subsection:2.2.5}
+\label{subsection:2.2.6}
 
 \begin{figure}[H]
     \centering
@@ -109,7 +117,7 @@ Biểu đồ use case tổng quát trên giúp hình dung rõ mối quan hệ gi
 \textbf{Biểu đồ \ref{fig:usecase_quanlylophoc}} mô tả cách giáo viên thực hiện các thao tác quản lý lớp học trên hệ thống. Thông qua Use Case chính là "Quản lý lớp học", giáo viên có thể tạo, chỉnh sửa, xóa lớp học, quản lý thành viên (mời, chấp nhận, từ chối, xóa), quản lý nội dung học tập và tạo mã tham gia lớp. Các chức năng này cho phép giáo viên kiểm soát hiệu quả hoạt động của lớp học, quản lý học sinh và nội dung giảng dạy một cách có tổ chức, đảm bảo môi trường học tập tốt nhất cho học sinh.
 
 \subsection{Biểu đồ use case phân rã Quản lý bài kiểm tra}
-\label{subsection:2.2.6}
+\label{subsection:2.2.7}
 
 \begin{figure}[H]
     \centering
@@ -120,8 +128,32 @@ Biểu đồ use case tổng quát trên giúp hình dung rõ mối quan hệ gi
 
 \textbf{Biểu đồ \ref{fig:usecase_quanlybaikiemtra}} mô tả cách giáo viên thực hiện các thao tác quản lý bài kiểm tra trên hệ thống. Thông qua Use Case chính là "Quản lý bài kiểm tra", giáo viên có thể tạo, chỉnh sửa, xóa bài kiểm tra, cấu hình các thông số (loại câu hỏi, số lượng, thời gian, hiển thị đáp án), xem kết quả làm bài của học sinh và xử lý yêu cầu làm lại bài. Các chức năng này cho phép giáo viên tạo và quản lý bài kiểm tra một cách linh hoạt, đánh giá chính xác năng lực học sinh và hỗ trợ học sinh cải thiện kết quả học tập.
 
+\subsection{Biểu đồ use case phân rã Quản lý nội dung học tập}
+\label{subsection:2.2.8}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_QuanLyNoiDungHocTap.png}
+    \caption{Biểu đồ use case phân rã: Quản lý nội dung học tập}
+    \label{fig:usecase_quanlynoidunghoctap}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_quanlynoidunghoctap}} mô tả cách giáo viên thực hiện các thao tác quản lý nội dung học tập trên hệ thống. Thông qua Use Case chính là "Quản lý nội dung học tập", giáo viên có thể tạo, chỉnh sửa, xóa bộ flashcard và tài liệu học tập, gán hoặc hủy gán nội dung cho lớp học, và phân loại nội dung theo chủ đề. Các chức năng này cho phép giáo viên tổ chức và quản lý tài nguyên học tập một cách hiệu quả, đảm bảo học sinh có đầy đủ tài liệu cần thiết cho việc học tập.
+
+\subsection{Biểu đồ use case phân rã Xem thống kê lớp học}
+\label{subsection:2.2.9}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_XemThongKeLopHoc.png}
+    \caption{Biểu đồ use case phân rã: Xem thống kê lớp học}
+    \label{fig:usecase_xemthongkelophoc}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_xemthongkelophoc}} mô tả cách giáo viên xem và phân tích thống kê lớp học trên hệ thống. Thông qua Use Case chính là "Xem thống kê lớp học", giáo viên có thể xem thống kê tổng quan, tiến độ học tập của từng học sinh, tỉ lệ nhớ/quên, số flashcard đã hoàn thành, mức độ tiến bộ theo thời gian và kết quả bài kiểm tra. Các chức năng này cho phép giáo viên theo dõi và đánh giá hiệu quả học tập của lớp học một cách chi tiết, từ đó đưa ra các biện pháp hỗ trợ và cải thiện phù hợp cho học sinh.
+
 \subsection{Biểu đồ use case phân rã Tham gia vào lớp học}
-\label{subsection:2.2.7}
+\label{subsection:2.2.10}
 
 \begin{figure}[H]
     \centering
@@ -132,8 +164,32 @@ Biểu đồ use case tổng quát trên giúp hình dung rõ mối quan hệ gi
 
 \textbf{Biểu đồ \ref{fig:usecase_thamgialophoc}} mô tả cách học sinh tham gia và tương tác với lớp học trên hệ thống. Thông qua Use Case chính là "Tham gia vào lớp học", học sinh có thể tìm kiếm lớp học công khai, tham gia bằng mã lớp, gửi yêu cầu tham gia, xem danh sách và chi tiết lớp học, rời khỏi lớp học, và xem các tài nguyên học tập trong lớp. Các chức năng này cho phép học sinh dễ dàng tham gia vào các lớp học phù hợp, tiếp cận nội dung học tập và bài kiểm tra một cách thuận tiện.
 
+\subsection{Biểu đồ use case phân rã Xem tiến độ học tập}
+\label{subsection:2.2.11}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_XemTienDoHocTap.png}
+    \caption{Biểu đồ use case phân rã: Xem tiến độ học tập}
+    \label{fig:usecase_xemtiendohoctap}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_xemtiendohoctap}} mô tả cách học sinh xem và theo dõi tiến độ học tập trên hệ thống. Thông qua Use Case chính là "Xem tiến độ học tập", học sinh có thể xem tổng quan tiến độ, số flashcard đã học, tỉ lệ nhớ/quên, thời gian học tập, tiến độ theo từng bộ flashcard, biểu đồ tiến độ theo thời gian và danh sách flashcard cần ôn lại. Các chức năng này cho phép học sinh tự đánh giá hiệu quả học tập của mình, xác định các điểm cần cải thiện và lập kế hoạch học tập phù hợp.
+
+\subsection{Biểu đồ use case phân rã Quản lý category}
+\label{subsection:2.2.12}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_QuanLyCategory.png}
+    \caption{Biểu đồ use case phân rã: Quản lý category}
+    \label{fig:usecase_quanlycategory}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_quanlycategory}} mô tả cách học sinh quản lý danh mục (category) để phân loại flashcard trên hệ thống. Thông qua Use Case chính là "Quản lý category", học sinh có thể tạo, chỉnh sửa, xóa category, gán hoặc xóa flashcard khỏi category, xem danh sách flashcard theo category và sắp xếp category. Các chức năng này cho phép học sinh tổ chức flashcard một cách có hệ thống, dễ dàng tìm kiếm và quản lý nội dung học tập theo các chủ đề khác nhau.
+
 \subsection{Biểu đồ use case phân rã Quản lý người dùng}
-\label{subsection:2.2.8}
+\label{subsection:2.2.13}
 
 \begin{figure}[H]
     \centering
@@ -144,23 +200,212 @@ Biểu đồ use case tổng quát trên giúp hình dung rõ mối quan hệ gi
 
 \textbf{Biểu đồ \ref{fig:usecase_quanlynguoidung}} mô tả cách quản trị viên thực hiện các thao tác quản trị người dùng trên hệ thống. Thông qua Use Case chính là "Quản lý người dùng", Admin có thể xem danh sách, tạo mới, chỉnh sửa và xóa người dùng, thay đổi vai trò, khóa/mở khóa tài khoản, xem chi tiết hoạt động, tìm kiếm và lọc người dùng. Các chức năng này cho phép quản trị viên kiểm soát hiệu quả cơ sở dữ liệu người dùng, đảm bảo tính chính xác, bảo mật và cập nhật thông tin kịp thời.
 
+\subsection{Biểu đồ use case phân rã Xem thống kê toàn hệ thống}
+\label{subsection:2.2.14}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_XemThongKeToanHeThong.png}
+    \caption{Biểu đồ use case phân rã: Xem thống kê toàn hệ thống}
+    \label{fig:usecase_xemthongketoanhethong}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_xemthongketoanhethong}} mô tả cách quản trị viên xem và phân tích thống kê toàn hệ thống. Thông qua Use Case chính là "Xem thống kê toàn hệ thống", Admin có thể xem tổng quan hệ thống, thống kê số lượng người dùng, hoạt động học tập, hiệu suất sử dụng hệ thống, thống kê theo vai trò, theo khoảng thời gian, thống kê lớp học và flashcard. Các chức năng này cho phép quản trị viên theo dõi và đánh giá hiệu quả hoạt động của toàn bộ hệ thống, từ đó đưa ra các quyết định quản lý và cải thiện hệ thống phù hợp.
+
+\subsection{Biểu đồ use case phân rã Quản lý thông tin cá nhân}
+\label{subsection:2.2.15}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Hinhve/UC/UseCase_QuanLyThongTinCaNhan.png}
+    \caption{Biểu đồ use case phân rã: Quản lý thông tin cá nhân}
+    \label{fig:usecase_quanlythongtincanhan}
+\end{figure}
+
+\textbf{Biểu đồ \ref{fig:usecase_quanlythongtincanhan}} mô tả cách người dùng (học sinh và giáo viên) quản lý thông tin cá nhân trên hệ thống. Thông qua Use Case chính là "Quản lý thông tin người dùng", người dùng có thể xem, cập nhật thông tin cá nhân, thay đổi mật khẩu, thông tin liên hệ và xem lịch sử hoạt động cá nhân. Các chức năng này cho phép người dùng duy trì thông tin tài khoản chính xác và cập nhật, đảm bảo tính bảo mật và theo dõi hoạt động học tập của bản thân.
+
 
 \subsection{Quy trình nghiệp vụ}
-\label{subsection:2.2.9}
-Nếu sản phẩm/hệ thống cần xây dựng có quy trình nghiệp vụ quan trọng/đáng chú ý, sinh viên cần mô tả và vẽ biểu đồ hoạt động minh họa quy trình nghiệp vụ đó. Sinh viên lưu ý đây không phải là luồng sự kiện của từng use case, mà là luồng hoạt động kết hợp nhiều use case để thực hiện một nghiệp vụ nào đó.
+\label{subsection:2.2.16}
 
-Ví dụ, một hệ thống quản lý thư viện có quy trình nghiệp vụ mượn trả với mô tả sơ bộ như sau: Sinh viên làm thẻ mượn, sau đó sinh viên đăng ký mượn sách, thủ thư cho mượn, và cuối cùng sinh viên trả lại sách cho thư viện. Một hệ thống có thể có một vài quy trình nghiệp vụ quan trọng như vậy.
+Hệ thống có ba quy trình nghiệp vụ chính kết hợp nhiều use case để hoàn thành một nghiệp vụ hoàn chỉnh. Các quy trình này thể hiện luồng hoạt động thực tế của người dùng khi sử dụng hệ thống.
+
+\subsubsection{Quy trình 1: Chu trình học tập với Spaced Repetition}
+
+Đây là quy trình nghiệp vụ cốt lõi của hệ thống, kết hợp các use case UC01 (Học flashcard), UC02 (Quản lý flashcard), và UC06 (Quản lý category) để tạo thành một chu trình học tập hoàn chỉnh với thuật toán spaced repetition SM-2.
+
+\textbf{Mô tả quy trình:}
+\begin{enumerate}
+    \item \textbf{Tạo nội dung học tập}: Người dùng tạo hoặc import bộ flashcard (UC02), phân loại theo category (UC06) để tổ chức kiến thức một cách có hệ thống.
+    \item \textbf{Bắt đầu phiên học}: Người dùng chọn bộ flashcard và bắt đầu phiên học (UC01). Hệ thống sử dụng thuật toán SM-2 để chọn các flashcard cần ôn tập theo thứ tự ưu tiên:
+    \begin{itemize}
+        \item \textbf{Due terms} (Đến hạn ôn tập): Các flashcard có \texttt{next\_review\_date <= now}
+        \item \textbf{New terms} (Chưa học): Các flashcard chưa từng được học
+        \item \textbf{Reviewed terms} (Đã học): Các flashcard đã học nhưng chưa đến hạn, ưu tiên theo EF thấp nhất
+    \end{itemize}
+    \item \textbf{Học và đánh giá}: Với mỗi flashcard, người dùng xem câu hỏi, suy nghĩ câu trả lời, lật thẻ để xem đáp án, và đánh giá mức độ nhớ theo thang điểm 0-5 (recall\_score).
+    \item \textbf{Tính toán SM-2}: Hệ thống tự động tính toán các thông số mới dựa trên recall\_score:
+    \begin{itemize}
+        \item \textbf{Easiness Factor (EF)}: Điều chỉnh theo công thức $EF' = EF + (0.1 - (5-q) \times (0.08 + (5-q) \times 0.02))$
+        \item \textbf{Interval}: Nếu $q < 3$ (quên), reset về 1 ngày. Nếu $q \geq 3$ (nhớ), tăng interval theo quy tắc: lần 1 = 1 ngày, lần 2 = 6 ngày, lần 3+ = $interval \times EF$
+        \item \textbf{Repetitions}: Đếm số lần nhớ liên tiếp, reset về 0 khi quên
+        \item \textbf{Next Review Date}: Tính ngày ôn tập tiếp theo = hôm nay + interval
+    \end{itemize}
+    \item \textbf{Lưu kết quả}: Hệ thống lưu \texttt{StudyActivity} với các thông số EF, interval, repetitions, next\_review\_date, recall\_score vào cơ sở dữ liệu.
+    \item \textbf{Cập nhật tiến độ}: Hệ thống cập nhật \texttt{ProgressSummary} với các chỉ số: mastered\_terms (EF cao, interval dài), reviewing\_terms (đang học), forgotten\_terms (vừa quên), completion\_rate, và next\_due\_date.
+    \item \textbf{Lặp lại hàng ngày}: Người dùng quay lại mỗi ngày để học các flashcard đến hạn, tạo thành một chu trình học tập liên tục với hiệu quả tối ưu nhờ spaced repetition.
+\end{enumerate}
+
+\textbf{Điểm đặc biệt:} Quy trình này tự động điều chỉnh lịch ôn tập cho từng flashcard dựa trên khả năng cá nhân của người học, giúp tối ưu thời gian học và tăng hiệu quả ghi nhớ dài hạn.
+
+\subsubsection{Quy trình 2: Quản lý lớp học và kiểm tra}
+
+Đây là quy trình nghiệp vụ quan trọng cho giáo viên, kết hợp các use case UC04 (Quản lý lớp học), UC05 (Quản lý bài kiểm tra), UC03 (Làm kiểm tra), và UC02 (Quản lý flashcard) để tạo thành một quy trình dạy học hoàn chỉnh.
+
+\textbf{Mô tả quy trình:}
+\begin{enumerate}
+    \item \textbf{Giáo viên tạo lớp học}: Giáo viên tạo lớp học mới (UC04), hệ thống tự động sinh class\_code duy nhất. Giáo viên có thể đặt lớp là public (cho phép học sinh tìm kiếm) hoặc private (chỉ mời).
+    \item \textbf{Mời học sinh tham gia}: Giáo viên mời học sinh bằng cách:
+    \begin{itemize}
+        \item Gửi lời mời trực tiếp (status = INVITED), học sinh nhận và accept lời mời
+        \item Hoặc học sinh tự tìm kiếm lớp public và gửi yêu cầu tham gia (status = PENDING), giáo viên duyệt và approve
+    \end{itemize}
+    \item \textbf{Gán nội dung học tập}: Giáo viên tạo hoặc chọn các bộ flashcard (UC02), sau đó gán chúng vào lớp học (UC04). Học sinh trong lớp có thể xem và học các flashcard này.
+    \item \textbf{Tạo bài kiểm tra}: Giáo viên tạo bài kiểm tra từ các flashcard đã gán (UC05). Hệ thống tự động sinh câu hỏi từ các term trong bộ flashcard với nhiều loại câu hỏi (MULTIPLE\_CHOICE, TRUE\_FALSE, ESSAY). Giáo viên cấu hình số câu, thời gian, hiển thị đáp án.
+    \item \textbf{Học sinh làm bài}: Học sinh trong lớp truy cập bài kiểm tra (UC03):
+    \begin{itemize}
+        \item Hệ thống kiểm tra quyền: nếu học sinh đã làm xong bài và không có \texttt{ReattemptRequest} được approve, từ chối làm lại
+        \item Tạo \texttt{TestAttempt} với class\_id để theo dõi
+        \item Học sinh trả lời các câu hỏi trong thời gian quy định
+        \item Nộp bài, hệ thống tự động chấm điểm (trừ câu ESSAY)
+    \end{itemize}
+    \item \textbf{Xem kết quả}: Học sinh xem điểm số, câu trả lời đúng/sai. Giáo viên xem danh sách \texttt{TestAttempt} của tất cả học sinh trong lớp, phân tích thống kê.
+    \item \textbf{Yêu cầu làm lại}: Nếu học sinh muốn làm lại bài (ví dụ để cải thiện điểm):
+    \begin{itemize}
+        \item Học sinh tạo \texttt{ReattemptRequest} với status = PENDING
+        \item Giáo viên xem danh sách yêu cầu, quyết định APPROVED hoặc REJECTED
+        \item Nếu APPROVED, học sinh có thể làm lại bài, \texttt{TestAttempt} cũ bị xóa
+    \end{itemize}
+    \item \textbf{Theo dõi tiến độ}: Giáo viên xem thống kê lớp học (UC04), bao gồm điểm số trung bình, tỉ lệ hoàn thành, tiến độ học flashcard của từng học sinh.
+\end{enumerate}
+
+\textbf{Điểm đặc biệt:} Quy trình này kết hợp việc quản lý lớp học, gán nội dung, và đánh giá kết quả một cách liền mạch, đồng thời có cơ chế kiểm soát làm lại bài thông qua \texttt{ReattemptRequest} để đảm bảo tính công bằng.
+
+\subsubsection{Quy trình 3: Tạo nội dung với AI Chatbot}
+
+Đây là quy trình nghiệp vụ kết hợp AI, bao gồm UC07 (Tương tác với AI Chatbot), UC02 (Quản lý flashcard), và UC05 (Quản lý bài kiểm tra) để hỗ trợ người dùng tạo nội dung học tập một cách thông minh.
+
+\textbf{Mô tả quy trình:}
+\begin{enumerate}
+    \item \textbf{Bắt đầu hội thoại}: Người dùng mở AI Chatbot trong một bộ flashcard cụ thể. Hệ thống tạo hoặc load \texttt{ChatConversation} với state = INITIAL.
+    \item \textbf{Chọn intent}: Chatbot hiển thị 3 lựa chọn chính:
+    \begin{itemize}
+        \item \textbf{Generate Test}: Tạo bài kiểm tra tự động bằng AI (chỉ Teacher)
+        \item \textbf{Generate Paragraph}: Sinh văn bản ngữ cảnh để giải thích một flashcard
+        \item \textbf{Ask Question}: Đặt câu hỏi học thuật liên quan đến nội dung
+    \end{itemize}
+    \item \textbf{Thu thập thông tin} (nếu chọn Generate Test):
+    \begin{itemize}
+        \item Chatbot hỏi số lượng câu hỏi, state = COLLECTING\_TEST\_PARAMS
+        \item Chatbot hỏi loại câu hỏi (trắc nghiệm, đúng/sai, tự luận, hoặc trộn)
+        \item Chatbot hỏi thời gian làm bài (phút hoặc giây)
+        \item Chatbot lưu các tham số vào \texttt{collected\_params}
+    \end{itemize}
+    \item \textbf{Gọi Dify API}: Hệ thống gửi request đến Dify workflow với:
+    \begin{itemize}
+        \item \texttt{study\_context}: Tất cả term và definition trong bộ flashcard
+        \item \texttt{inputs}: Các tham số đã thu thập
+        \item \texttt{action\_type}: "generate\_test", "generate\_paragraph", hoặc "answer\_question"
+    \end{itemize}
+    \item \textbf{Xử lý kết quả AI}:
+    \begin{itemize}
+        \item \textbf{Generate Test}: Parse JSON response, tạo \texttt{Test} và \texttt{TestQuestion} trong database, đánh dấu \texttt{is\_ai\_generated = True}. Lưu vào \texttt{AIGeneratedContents} để audit.
+        \item \textbf{Generate Paragraph}: Trả về văn bản giải thích chi tiết về flashcard được chọn, giúp người học hiểu sâu hơn.
+        \item \textbf{Ask Question}: Trả về câu trả lời dựa trên ngữ cảnh của bộ flashcard, giúp người học giải đáp thắc mắc.
+    \end{itemize}
+    \item \textbf{Lưu lịch sử}: Tất cả tin nhắn được lưu vào \texttt{ChatMessage} để người dùng có thể xem lại lịch sử hội thoại.
+    \item \textbf{Tiếp tục hoặc kết thúc}: Người dùng có thể tiếp tục hỏi chatbot hoặc kết thúc hội thoại. State được reset về WAITING\_INTENT để sẵn sàng cho lần tương tác tiếp theo.
+\end{enumerate}
+
+\textbf{Điểm đặc biệt:} Quy trình này tích hợp AI một cách mượt mà vào workflow học tập, giúp người dùng tiết kiệm thời gian tạo bài kiểm tra và nâng cao chất lượng nội dung học tập thông qua văn bản ngữ cảnh và câu trả lời thông minh.
 \section{Đặc tả chức năng}
 \label{section:2.3}
 Sinh viên lựa chọn từ 4 đến 7 use case quan trọng nhất của đồ án để đặc tả chi tiết. Mỗi đặc tả bao gồm ít nhất các thông tin sau: (i) Tên use case, (ii) Luồng sự kiện (chính và phát sinh), (iii) Tiền điều kiện, và (iv) Hậu điều kiện. Sinh viên chỉ vẽ bổ sung biểu đồ hoạt động khi đặc tả use case phức tạp.
-\subsection{Đặc tả use case A}
+
+Dựa trên phân tích các chức năng của hệ thống, bảy use case cụ thể được lựa chọn để đặc tả chi tiết bao gồm:
+
+\begin{enumerate}
+    \item \textbf{UC01 - Học flashcard}: Chức năng cốt lõi của hệ thống, học sinh thực hiện phiên học flashcard với thuật toán spaced repetition (SM-2), đánh giá mức độ nhớ và theo dõi tiến độ học tập theo thời gian.
+    \item \textbf{UC02 - Quản lý flashcard}: Chức năng CRUD cơ bản cho phép người dùng tạo, chỉnh sửa, xóa bộ flashcard và các thẻ flashcard cá nhân, bao gồm cả import/export dữ liệu.
+    \item \textbf{UC03 - Làm kiểm tra}: Chức năng cho phép học sinh thực hiện bài kiểm tra với nhiều loại câu hỏi (trắc nghiệm, đúng/sai, tự luận), nộp bài và xem kết quả chi tiết.
+    \item \textbf{UC04 - Quản lý lớp học}: Chức năng CRUD cho phép giáo viên tạo lớp học, quản lý thành viên (mời, chấp nhận, từ chối, xóa), gán nội dung học tập và theo dõi hoạt động của lớp.
+    \item \textbf{UC05 - Quản lý bài kiểm tra}: Chức năng cho phép giáo viên tạo bài kiểm tra (câu hỏi được tạo tự động từ flashcard), xem kết quả làm bài của học sinh và xử lý yêu cầu làm lại bài.
+    \item \textbf{UC06 - Quản lý category}: Chức năng CRUD cho phép người dùng tạo, chỉnh sửa, xóa danh mục và phân loại flashcard theo chủ đề để tổ chức nội dung học tập hiệu quả.
+    \item \textbf{UC07 - Tương tác với AI Chatbot}: Chức năng cho phép người dùng tương tác với trợ lý ảo để được hỗ trợ học tập, giải thích nội dung, sinh văn bản ngữ cảnh và tạo bài kiểm tra tự động bằng AI.
+\end{enumerate}
+
+\subsection{Đặc tả use case: UC01 - Học flashcard}
 \hfill
-\subsection{Đặc tả use case B}
+
+\subsection{Đặc tả use case: UC02 - Quản lý flashcard}
+\hfill
+
+\subsection{Đặc tả use case: UC03 - Làm kiểm tra}
+\hfill
+
+\subsection{Đặc tả use case: UC04 - Quản lý lớp học}
+\hfill
+
+\subsection{Đặc tả use case: UC05 - Quản lý bài kiểm tra}
+\hfill
+
+\subsection{Đặc tả use case: UC06 - Quản lý category}
+\hfill
+
+\subsection{Đặc tả use case: UC07 - Tương tác với AI Chatbot}
 \hfill
 
 \section{Yêu cầu phi chức năng}
 \label{section:2.4}
-Trong phần này, sinh viên đưa ra các yêu cầu khác nếu có, bao gồm các yêu cầu phi chức năng như hiệu năng, độ tin cậy, tính dễ dùng, tính dễ bảo trì, hoặc các yêu cầu về mặt kỹ thuật như về CSDL, công nghệ sử dụng, v.v.
+Hệ thống cần đáp ứng các yêu cầu phi chức năng sau đây để đảm bảo chất lượng và hiệu quả hoạt động:
+
+\subsection{Yêu cầu về hiệu năng}
+\begin{itemize}
+    \item \textbf{Thời gian phản hồi}: Hệ thống phải phản hồi các yêu cầu của người dùng trong vòng 2 giây đối với các thao tác thông thường (xem danh sách, tìm kiếm, hiển thị thông tin).
+    \item \textbf{Xử lý đồng thời}: Hệ thống phải hỗ trợ ít nhất 100 người dùng đồng thời mà không bị giảm hiệu năng đáng kể.
+    \item \textbf{Tối ưu hóa truy vấn}: Các truy vấn cơ sở dữ liệu phải được tối ưu hóa để tránh N+1 query problem, sử dụng eager loading và indexing phù hợp.
+    \item \textbf{Caching}: Hệ thống sử dụng caching cho các dữ liệu thường xuyên được truy cập như danh sách flashcard, thống kê để giảm tải cho cơ sở dữ liệu.
+    \item \textbf{AI Response Time}: Thời gian phản hồi từ dịch vụ AI không quá 10 giây cho việc tạo bài kiểm tra hoặc trả lời câu hỏi.
+\end{itemize}
+
+\subsection{Yêu cầu về độ tin cậy}
+\begin{itemize}
+    \item \textbf{Uptime}: Hệ thống phải đảm bảo thời gian hoạt động (uptime) ít nhất 99\% trong giờ làm việc.
+    \item \textbf{Backup dữ liệu}: Hệ thống tự động sao lưu cơ sở dữ liệu hàng ngày và lưu trữ ít nhất 30 ngày gần nhất.
+    \item \textbf{Xử lý lỗi}: Hệ thống phải xử lý các lỗi một cách graceful, không để hệ thống crash và thông báo lỗi rõ ràng cho người dùng.
+    \item \textbf{Transaction Management}: Các thao tác quan trọng (tạo flashcard, lưu kết quả học tập) phải được thực hiện trong transaction để đảm bảo tính toàn vẹn dữ liệu.
+    \item \textbf{Data Recovery}: Hệ thống có khả năng khôi phục dữ liệu từ backup trong trường hợp mất dữ liệu.
+\end{itemize}
+
+\subsection{Yêu cầu về tính dễ dùng}
+\begin{itemize}
+    \item \textbf{Giao diện người dùng}: Giao diện phải trực quan, dễ sử dụng, phù hợp với người dùng Việt Nam, hỗ trợ tiếng Việt đầy đủ.
+    \item \textbf{Responsive Design}: Giao diện phải tương thích và hiển thị tốt trên nhiều thiết bị khác nhau (desktop, tablet, mobile).
+    \item \textbf{Accessibility}: Hệ thống tuân thủ các tiêu chuẩn về khả năng truy cập (WCAG 2.1 Level AA), hỗ trợ người dùng khuyết tật.
+    \item \textbf{Feedback}: Hệ thống cung cấp phản hồi rõ ràng cho mọi hành động của người dùng (thông báo thành công, lỗi, cảnh báo).
+    \item \textbf{Help và Documentation}: Hệ thống cung cấp hướng dẫn sử dụng và tooltip cho các chức năng phức tạp.
+\end{itemize}
+
+\subsection{Yêu cầu về bảo mật}
+\begin{itemize}
+    \item \textbf{Authentication}: Hệ thống sử dụng JWT (JSON Web Token) với OAuth2 để xác thực người dùng, token có thời gian hết hạn hợp lý.
+    \item \textbf{Password Security}: Mật khẩu được hash bằng thuật toán bcrypt với salt, không lưu trữ mật khẩu dạng plain text.
+    \item \textbf{Authorization}: Hệ thống kiểm tra quyền truy cập cho mọi thao tác, đảm bảo người dùng chỉ có thể truy cập dữ liệu của mình hoặc dữ liệu được chia sẻ.
+    \item \textbf{HTTPS}: Tất cả các kết nối phải sử dụng HTTPS để mã hóa dữ liệu truyền tải.
+    \item \textbf{SQL Injection Prevention}: Sử dụng ORM (SQLModel) để tránh SQL injection, không sử dụng raw SQL queries trực tiếp.
+    \item \textbf{XSS Prevention}: Dữ liệu đầu vào được sanitize và escape để tránh XSS attacks.
+    \item \textbf{CORS}: Cấu hình CORS phù hợp để chỉ cho phép các domain được phép truy cập API.
+\end{itemize}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

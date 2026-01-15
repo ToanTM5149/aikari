@@ -1,0 +1,611 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage[utf8]{inputenc} 
+\usepackage{array} 
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{makecell}
+\usepackage{multirow}
+
+\begin{document}
+
+% ============================================
+% UC01: Học flashcard
+% ============================================
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+    \hline
+    \textbf{Mã Use case} & \textbf{UC01} & \textbf{Tên Use case} & \textbf{Học flashcard} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Học sinh (Student)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Học sinh đã đăng nhập vào hệ thống và có quyền truy cập vào bộ flashcard (là chủ sở hữu hoặc thành viên lớp học có bộ flashcard đó)} \\
+    \hline
+    \multirow{10}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Học sinh & Chọn bộ flashcard cần học từ danh sách \\
+        \hline
+        2 & Học sinh & Chọn chế độ học (spaced repetition, kiểm tra nhanh, ngẫu nhiên) \\
+        \hline
+        3 & Hệ thống & Tạo phiên học mới và lấy danh sách flashcard từ bộ đã chọn \\
+        \hline
+        4 & Hệ thống & Hiển thị flashcard đầu tiên (mặt trước) \\
+        \hline
+        5 & Học sinh & Xem mặt trước flashcard, có thể tương tác với AI để hỏi đáp hoặc yêu cầu giải thích \\
+        \hline
+        6 & Học sinh & Lật flashcard để xem mặt sau \\
+        \hline
+        7 & Học sinh & Đánh giá mức độ nhớ (recall score từ 0-5) \\
+        \hline
+        8 & Hệ thống & Ghi nhận kết quả đánh giá, tính toán thời gian ôn lại tiếp theo bằng thuật toán SM-2 \\
+        \hline
+        9 & Hệ thống & Cập nhật tiến độ học tập và hiển thị flashcard tiếp theo \\
+        \hline
+        10 & Học sinh & Lặp lại bước 4-9 cho đến khi hoàn thành tất cả flashcard hoặc kết thúc phiên học \\
+        \hline
+        11 & Học sinh & Kết thúc phiên học \\
+        \hline
+        12 & Hệ thống & Lưu kết quả phiên học, cập nhật thống kê và hiển thị tóm tắt kết quả \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{4}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        3a & Hệ thống & Thông báo lỗi nếu bộ flashcard không tồn tại hoặc không có quyền truy cập \\
+        \hline
+        3b & Hệ thống & Thông báo nếu bộ flashcard trống (không có flashcard nào) \\
+        \hline
+        8a & Hệ thống & Thông báo lỗi nếu không thể lưu kết quả đánh giá vào cơ sở dữ liệu \\
+        \hline
+        5a & Học sinh & Yêu cầu AI tạo đoạn văn minh họa hoặc test từ flashcard hiện tại \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Phiên học được lưu thành công, tiến độ học tập được cập nhật, thời gian ôn lại tiếp theo được tính toán cho từng flashcard} \\
+    \hline
+\end{tabular}
+\caption{Thông tin chi tiết về Use Case Học flashcard}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & studyset\_id & Mã định danh của bộ flashcard & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & session\_type & Loại phiên học & Có & "flashcard", "quick\_review" & "flashcard" \\
+    \hline
+    3 & recall\_score & Điểm đánh giá mức độ nhớ & Có & Số nguyên từ 0 đến 5 & 4 \\
+    \hline
+    4 & response\_time & Thời gian phản hồi (giây) & Không & Số thực dương & 3.5 \\
+    \hline
+    5 & hint\_used & Có sử dụng gợi ý hay không & Không & Boolean & true \\
+    \hline
+    6 & mode & Chế độ học & Không & "random" hoặc null & "random" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Học flashcard}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & session\_id & Mã định danh phiên học & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & terms & Danh sách flashcard trong phiên học & Có & Mảng các đối tượng term & [\{term\_id, term\_text, definition\}] \\
+    \hline
+    3 & next\_review\_date & Ngày ôn lại tiếp theo & Có & Định dạng ngày hợp lệ & "2025-01-15T10:30:00" \\
+    \hline
+    4 & ef & Hệ số dễ dàng (Ease Factor) & Có & Số thực từ 1.3 đến 2.5 & 2.1 \\
+    \hline
+    5 & interval & Khoảng thời gian ôn lại (ngày) & Có & Số nguyên dương & 7 \\
+    \hline
+    6 & session\_summary & Tóm tắt kết quả phiên học & Có & Đối tượng chứa thống kê & \{total\_reviewed: 20, average\_score: 3.5\} \\
+    \hline
+    7 & Thông báo lỗi (nếu có) & Lý do thất bại & Không & Chỉ hiển thị khi có lỗi & "Không tìm thấy bộ flashcard" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra cho Use Case Học flashcard}
+\end{table}
+
+\vspace{1cm}
+
+% ============================================
+% UC02: Quản lý flashcard
+% ============================================
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+    \hline
+    \textbf{Mã Use case} & \textbf{UC02} & \textbf{Tên Use case} & \textbf{Quản lý flashcard} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Học sinh (Student)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Học sinh đã đăng nhập vào hệ thống} \\
+    \hline
+    \multirow{12}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Học sinh & Truy cập mục quản lý flashcard \\
+        \hline
+        2 & Hệ thống & Hiển thị danh sách các bộ flashcard của học sinh \\
+        \hline
+        3 & Học sinh & Chọn "Tạo bộ flashcard mới" hoặc chọn bộ flashcard cần chỉnh sửa \\
+        \hline
+        4 & Hệ thống & Hiển thị form tạo mới hoặc form chỉnh sửa bộ flashcard \\
+        \hline
+        5 & Học sinh & Nhập thông tin bộ flashcard (tên, mô tả) và thêm các flashcard (mặt trước, mặt sau) \\
+        \hline
+        6 & Học sinh & Lưu bộ flashcard \\
+        \hline
+        7 & Hệ thống & Kiểm tra tính hợp lệ của dữ liệu (tên không rỗng, ít nhất một flashcard có đầy đủ mặt trước và mặt sau) \\
+        \hline
+        8 & Hệ thống & Lưu bộ flashcard và các flashcard vào cơ sở dữ liệu \\
+        \hline
+        9 & Hệ thống & Thông báo thành công và hiển thị bộ flashcard vừa tạo/chỉnh sửa \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{5}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        7a & Hệ thống & Thông báo lỗi nếu tên bộ flashcard rỗng hoặc không có flashcard hợp lệ \\
+        \hline
+        8a & Hệ thống & Thông báo lỗi nếu không thể kết nối cơ sở dữ liệu \\
+        \hline
+        3a & Học sinh & Chọn xóa bộ flashcard hoặc flashcard \\
+        \hline
+        3b & Học sinh & Chọn sao chép bộ flashcard hoặc import/export flashcard \\
+        \hline
+        3c & Học sinh & Gán flashcard vào category hoặc thay đổi category \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Bộ flashcard được tạo mới, chỉnh sửa hoặc xóa thành công và có sẵn trong hệ thống} \\
+    \hline
+\end{tabular}
+\caption{Thông tin chi tiết về Use Case Quản lý flashcard}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & title & Tên bộ flashcard & Có & Chuỗi không rỗng, tối đa 255 ký tự & "Từ vựng tiếng Anh cơ bản" \\
+    \hline
+    2 & description & Mô tả bộ flashcard & Không & Chuỗi văn bản, tối đa 500 ký tự & "Bộ flashcard học từ vựng tiếng Anh" \\
+    \hline
+    3 & term\_text & Mặt trước flashcard & Có & Chuỗi không rỗng & "Hello" \\
+    \hline
+    4 & definition & Mặt sau flashcard & Có & Chuỗi không rỗng & "Xin chào" \\
+    \hline
+    5 & example & Ví dụ sử dụng & Không & Chuỗi văn bản & "Hello, how are you?" \\
+    \hline
+    6 & image\_url & URL hình ảnh & Không & URL hợp lệ & "https://example.com/image.jpg" \\
+    \hline
+    7 & category\_id & Mã category & Không & UUID hợp lệ hoặc null & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Quản lý flashcard}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & studyset\_id & Mã định danh bộ flashcard & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & Thông báo lưu thành công & Xác nhận kết quả lưu & Có & "Thành công" hoặc "Thất bại" & "Tạo bộ flashcard thành công" \\
+    \hline
+    3 & Thông báo lỗi (nếu có) & Lý do lưu thất bại & Không & Chỉ hiển thị khi có lỗi & "Tên bộ flashcard không được để trống" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra cho Use Case Quản lý flashcard}
+\end{table}
+
+\vspace{1cm}
+
+% ============================================
+% UC03: Làm kiểm tra
+% ============================================
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+    \hline
+    \textbf{Mã Use case} & \textbf{UC03} & \textbf{Tên Use case} & \textbf{Làm kiểm tra} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Học sinh (Student)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Học sinh đã đăng nhập, có quyền truy cập bài kiểm tra (thành viên lớp học hoặc chủ sở hữu bộ flashcard), và chưa hoàn thành bài kiểm tra (trừ khi được phép làm lại)} \\
+    \hline
+    \multirow{11}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Học sinh & Xem danh sách bài kiểm tra có sẵn \\
+        \hline
+        2 & Học sinh & Chọn bài kiểm tra cần làm \\
+        \hline
+        3 & Hệ thống & Kiểm tra quyền truy cập và trạng thái làm bài trước đó \\
+        \hline
+        4 & Hệ thống & Tạo attempt mới và hiển thị câu hỏi đầu tiên \\
+        \hline
+        5 & Học sinh & Đọc câu hỏi và trả lời (trắc nghiệm, điền từ, hoặc tự luận) \\
+        \hline
+        6 & Học sinh & Chuyển sang câu hỏi tiếp theo hoặc quay lại câu hỏi trước \\
+        \hline
+        7 & Học sinh & Lặp lại bước 5-6 cho đến khi hoàn thành tất cả câu hỏi \\
+        \hline
+        8 & Học sinh & Xem lại các câu trả lời và nộp bài \\
+        \hline
+        9 & Hệ thống & Chấm điểm tự động, lưu kết quả vào cơ sở dữ liệu \\
+        \hline
+        10 & Hệ thống & Hiển thị kết quả (điểm số, số câu đúng/sai) và đáp án đúng (nếu được phép) \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{5}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        3a & Hệ thống & Thông báo lỗi nếu không có quyền truy cập bài kiểm tra \\
+        \hline
+        3b & Hệ thống & Thông báo nếu đã hoàn thành bài kiểm tra và không được phép làm lại (yêu cầu giáo viên phê duyệt) \\
+        \hline
+        4a & Hệ thống & Tự động nộp bài khi hết thời gian (nếu có giới hạn thời gian) \\
+        \hline
+        9a & Hệ thống & Thông báo lỗi nếu không thể lưu kết quả vào cơ sở dữ liệu \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Kết quả bài kiểm tra được lưu thành công, điểm số và đáp án được hiển thị, lịch sử làm bài được cập nhật} \\
+    \hline
+\end{tabular}
+\caption{Thông tin chi tiết về Use Case Làm kiểm tra}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & test\_id & Mã định danh bài kiểm tra & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & class\_id & Mã lớp học (nếu làm trong lớp) & Không & UUID hợp lệ hoặc null & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    3 & answers & Danh sách câu trả lời & Có & Mảng các đối tượng answer & [\{question\_id, user\_answer\}] \\
+    \hline
+    4 & question\_id & Mã câu hỏi & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    5 & user\_answer & Câu trả lời của học sinh & Có & Chuỗi không rỗng & "Hello" hoặc "A" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Làm kiểm tra}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & attempt\_id & Mã định danh lần làm bài & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & questions & Danh sách câu hỏi (không có đáp án) & Có & Mảng các đối tượng question & [\{question\_id, question\_text, options\}] \\
+    \hline
+    3 & score & Điểm số (phần trăm) & Có & Số thực từ 0 đến 100 & 85.5 \\
+    \hline
+    4 & correct\_answers & Số câu trả lời đúng & Có & Số nguyên từ 0 đến total\_questions & 17 \\
+    \hline
+    5 & total\_questions & Tổng số câu hỏi & Có & Số nguyên dương & 20 \\
+    \hline
+    6 & answers & Danh sách câu trả lời với đáp án đúng (nếu được phép) & Không & Mảng các đối tượng answer với correct\_answer & [\{question\_id, user\_answer, is\_correct, correct\_answer\}] \\
+    \hline
+    7 & Thông báo lỗi (nếu có) & Lý do thất bại & Không & Chỉ hiển thị khi có lỗi & "Bạn đã hoàn thành bài kiểm tra này" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra cho Use Case Làm kiểm tra}
+\end{table}
+
+\vspace{1cm}
+
+% ============================================
+% UC04: Quản lý lớp học
+% ============================================
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+    \hline
+    \textbf{Mã Use case} & \textbf{UC04} & \textbf{Tên Use case} & \textbf{Quản lý lớp học} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Giáo viên (Teacher)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Giáo viên đã đăng nhập vào hệ thống và có quyền quản lý lớp học (là chủ sở hữu hoặc co-teacher)} \\
+    \hline
+    \multirow{11}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Giáo viên & Truy cập mục quản lý lớp học \\
+        \hline
+        2 & Hệ thống & Hiển thị danh sách các lớp học của giáo viên \\
+        \hline
+        3 & Giáo viên & Chọn "Tạo lớp học mới" hoặc chọn lớp học cần quản lý \\
+        \hline
+        4 & Hệ thống & Hiển thị form tạo mới hoặc trang quản lý lớp học \\
+        \hline
+        5 & Giáo viên & Nhập thông tin lớp học (tên, mô tả, công khai/riêng tư) hoặc thực hiện các thao tác quản lý \\
+        \hline
+        6 & Giáo viên & Mời học sinh vào lớp (theo email/username) hoặc tạo mã tham gia lớp \\
+        \hline
+        7 & Hệ thống & Gửi lời mời hoặc tạo mã tham gia \\
+        \hline
+        8 & Học sinh & Chấp nhận lời mời hoặc tham gia bằng mã lớp \\
+        \hline
+        9 & Giáo viên & Xem danh sách thành viên và quản lý (chấp nhận, từ chối, xóa thành viên) \\
+        \hline
+        10 & Giáo viên & Gán bộ flashcard vào lớp học hoặc xóa bộ flashcard khỏi lớp \\
+        \hline
+        11 & Hệ thống & Lưu thay đổi vào cơ sở dữ liệu \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{5}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        6a & Hệ thống & Thông báo lỗi nếu người dùng không tồn tại hoặc đã là thành viên \\
+        \hline
+        8a & Học sinh & Từ chối lời mời tham gia lớp học \\
+        \hline
+        9a & Giáo viên & Từ chối yêu cầu tham gia của học sinh \\
+        \hline
+        11a & Hệ thống & Thông báo lỗi nếu không thể kết nối cơ sở dữ liệu \\
+        \hline
+        3a & Giáo viên & Chọn xóa lớp học (chỉ chủ sở hữu) \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Lớp học được tạo mới, chỉnh sửa hoặc xóa thành công, thành viên được thêm/xóa, nội dung học tập được gán vào lớp} \\
+    \hline
+\end{tabular}
+\caption{Thông tin chi tiết về Use Case Quản lý lớp học}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & class\_name & Tên lớp học & Có & Chuỗi không rỗng, tối đa 255 ký tự & "Lớp tiếng Anh 10A" \\
+    \hline
+    2 & description & Mô tả lớp học & Không & Chuỗi văn bản, tối đa 500 ký tự & "Lớp học tiếng Anh cơ bản" \\
+    \hline
+    3 & is\_public & Lớp công khai hay riêng tư & Có & Boolean & true \\
+    \hline
+    4 & user\_id & Mã người dùng cần mời & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    5 & role & Vai trò thành viên & Có & "MEMBER", "CO\_TEACHER" & "MEMBER" \\
+    \hline
+    6 & studyset\_id & Mã bộ flashcard cần gán & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    7 & class\_code & Mã tham gia lớp học & Không & Chuỗi 6-8 ký tự & "ABC123" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Quản lý lớp học}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & class\_id & Mã định danh lớp học & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & class\_code & Mã tham gia lớp học & Có & Chuỗi 6-8 ký tự & "ABC123" \\
+    \hline
+    3 & member\_count & Số lượng thành viên & Có & Số nguyên không âm & 25 \\
+    \hline
+    4 & Thông báo lưu thành công & Xác nhận kết quả lưu & Có & "Thành công" hoặc "Thất bại" & "Tạo lớp học thành công" \\
+    \hline
+    5 & Thông báo lỗi (nếu có) & Lý do lưu thất bại & Không & Chỉ hiển thị khi có lỗi & "Tên lớp học không được để trống" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra cho Use Case Quản lý lớp học}
+\end{table}
+
+\vspace{1cm}
+
+% ============================================
+% UC05: Quản lý bài kiểm tra
+% ============================================
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+    \hline
+    \textbf{Mã Use case} & \textbf{UC05} & \textbf{Tên Use case} & \textbf{Quản lý bài kiểm tra} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Giáo viên (Teacher)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Giáo viên đã đăng nhập và là chủ sở hữu của bộ flashcard (chỉ chủ sở hữu mới có quyền tạo bài kiểm tra)} \\
+    \hline
+    \multirow{12}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Giáo viên & Truy cập mục quản lý bài kiểm tra từ bộ flashcard \\
+        \hline
+        2 & Hệ thống & Hiển thị danh sách các bài kiểm tra của bộ flashcard \\
+        \hline
+        3 & Giáo viên & Chọn "Tạo bài kiểm tra mới" hoặc chọn bài kiểm tra cần chỉnh sửa \\
+        \hline
+        4 & Hệ thống & Hiển thị form tạo mới hoặc form chỉnh sửa bài kiểm tra \\
+        \hline
+        5 & Giáo viên & Nhập thông tin bài kiểm tra (tên, mô tả, số lượng câu hỏi, loại câu hỏi, thời gian làm bài, hiển thị đáp án) \\
+        \hline
+        6 & Giáo viên & Chọn sử dụng AI để tạo bài kiểm tra tự động hoặc tạo thủ công \\
+        \hline
+        7 & Hệ thống & Tạo các câu hỏi từ flashcard trong bộ (nếu dùng AI) hoặc chờ giáo viên nhập câu hỏi \\
+        \hline
+        8 & Hệ thống & Lưu bài kiểm tra và các câu hỏi vào cơ sở dữ liệu \\
+        \hline
+        9 & Hệ thống & Thông báo thành công và hiển thị bài kiểm tra vừa tạo \\
+        \hline
+        10 & Giáo viên & Xem kết quả làm bài của học sinh \\
+        \hline
+        11 & Giáo viên & Xử lý yêu cầu làm lại bài của học sinh (chấp nhận hoặc từ chối) \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{5}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        3a & Hệ thống & Thông báo lỗi nếu không phải chủ sở hữu bộ flashcard \\
+        \hline
+        7a & Hệ thống & Thông báo lỗi nếu bộ flashcard không có đủ flashcard để tạo câu hỏi \\
+        \hline
+        8a & Hệ thống & Thông báo lỗi nếu không thể kết nối cơ sở dữ liệu \\
+        \hline
+        3b & Giáo viên & Chọn xóa bài kiểm tra \\
+        \hline
+        11a & Giáo viên & Từ chối yêu cầu làm lại bài của học sinh \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Bài kiểm tra được tạo mới, chỉnh sửa hoặc xóa thành công, các câu hỏi được tạo và lưu, kết quả làm bài của học sinh được hiển thị} \\
+    \hline
+\end{tabular}
+\caption{Thông tin chi tiết về Use Case Quản lý bài kiểm tra}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & studyset\_id & Mã định danh bộ flashcard & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & title & Tên bài kiểm tra & Có & Chuỗi không rỗng, tối đa 255 ký tự & "Kiểm tra từ vựng tuần 1" \\
+    \hline
+    3 & description & Mô tả bài kiểm tra & Không & Chuỗi văn bản, tối đa 500 ký tự & "Bài kiểm tra về từ vựng đã học" \\
+    \hline
+    4 & total\_questions & Số lượng câu hỏi & Có & Số nguyên dương & 20 \\
+    \hline
+    5 & question\_types & Loại câu hỏi & Có & Mảng các loại: "multiple\_choice", "fill\_blank", "essay" & ["multiple\_choice", "fill\_blank"] \\
+    \hline
+    6 & time\_limit & Giới hạn thời gian (giây) & Không & Số nguyên dương hoặc null & 1800 (30 phút) \\
+    \hline
+    7 & show\_answers & Hiển thị đáp án sau khi nộp & Có & Boolean & true \\
+    \hline
+    8 & is\_ai\_generated & Sử dụng AI để tạo bài kiểm tra & Không & Boolean & true \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Quản lý bài kiểm tra}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & test\_id & Mã định danh bài kiểm tra & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & questions & Danh sách câu hỏi đã tạo & Có & Mảng các đối tượng question & [\{question\_id, question\_text, question\_type\}] \\
+    \hline
+    3 & Thông báo lưu thành công & Xác nhận kết quả lưu & Có & "Thành công" hoặc "Thất bại" & "Tạo bài kiểm tra thành công" \\
+    \hline
+    4 & Thông báo lỗi (nếu có) & Lý do lưu thất bại & Không & Chỉ hiển thị khi có lỗi & "Bộ flashcard không có đủ flashcard để tạo câu hỏi" \\
+    \hline
+    5 & attempt\_results & Kết quả làm bài của học sinh & Không & Mảng các đối tượng attempt & [\{attempt\_id, user\_id, score, completed\_at\}] \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra cho Use Case Quản lý bài kiểm tra}
+\end{table}
+
+\end{document}

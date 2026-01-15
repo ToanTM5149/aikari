@@ -1,0 +1,228 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage[utf8]{inputenc} 
+\usepackage{array} 
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{longtable}
+
+\begin{document}
+
+% ============================================
+% UC05: Quản lý bài kiểm tra
+% ============================================
+
+\begin{longtable}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+\caption{Thông tin chi tiết về Use Case Quản lý bài kiểm tra} \\
+    \hline
+    \textbf{Mã Use case} & \textbf{UC05} & \textbf{Tên Use case} & \textbf{Quản lý bài kiểm tra} \\
+    \hline
+    \endfirsthead
+    
+    \multicolumn{4}{c}%
+    {{\bfseries \tablename\ \thetable{} -- tiếp theo từ trang trước}} \\
+    \hline
+    \textbf{Mã Use case} & \textbf{UC05} & \textbf{Tên Use case} & \textbf{Quản lý bài kiểm tra} \\
+    \hline
+    \endhead
+    
+    \hline \multicolumn{4}{|r|}{{Tiếp tục ở trang sau}} \\ \hline
+    \endfoot
+    
+    \hline
+    \endlastfoot
+    
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Giáo viên (Teacher)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Giáo viên đã đăng nhập và là chủ sở hữu của bộ flashcard (chỉ chủ sở hữu mới có quyền tạo bài kiểm tra)} \\
+    \hline
+    \multirow{10}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Giáo viên & Truy cập quản lý test từ studyset (chỉ owner) \\
+        \hline
+        2 & Hệ thống & Hiển thị danh sách tests của studyset \\
+        \hline
+        3 & Giáo viên & Chọn "Tạo test mới" hoặc xem/xóa test \\
+        \hline
+        4 & Giáo viên & Nhập thông tin test (title, description, total\_questions, question\_types, time\_limit, show\_answers) và xác nhận \\
+        \hline
+        5 & Hệ thống & Generate questions tự động từ terms (random selection), tạo Test và TestQuestion, lưu database \\
+        \hline
+        6 & Hệ thống & Hiển thị test với danh sách questions đã tạo \\
+        \hline
+        7 & Giáo viên & Xem chi tiết TestAttempt của học sinh (score, correct\_answers, answers) \\
+        \hline
+        8 & Giáo viên & Xem danh sách ReattemptRequest trong class (PENDING, APPROVED, REJECTED) \\
+        \hline
+        9 & Giáo viên & Duyệt request: chọn APPROVED hoặc REJECTED, hệ thống cập nhật status, reviewed\_by, reviewed\_at \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{8}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1a & Hệ thống & Thông báo lỗi nếu người dùng không phải chủ sở hữu bộ flashcard ("Only study set owners can create tests") \\
+        \hline
+        2a & Hệ thống & Thông báo nếu chưa có bài kiểm tra nào \\
+        \hline
+        3a & Giáo viên & Chọn xóa bài kiểm tra (chỉ người tạo mới có quyền xóa) \\
+        \hline
+        3a.1 & Hệ thống & Xóa bài kiểm tra và tất cả dữ liệu liên quan (câu hỏi, bài làm, yêu cầu làm lại) \\
+        \hline
+        7a & Hệ thống & Thông báo lỗi nếu bộ flashcard không có đủ terms để tạo câu hỏi ("No terms available in study set") \\
+        \hline
+        7b & Hệ thống & Điều chỉnh số câu hỏi nếu số terms ít hơn số câu hỏi yêu cầu \\
+        \hline
+        8a & Hệ thống & Thông báo lỗi nếu không thể lưu vào cơ sở dữ liệu \\
+        \hline
+        10a & Hệ thống & Thông báo lỗi nếu không có quyền xem kết quả (không phải owner, học sinh, hoặc giáo viên lớp) \\
+        \hline
+        13a & Giáo viên & Từ chối yêu cầu làm lại bài (status = REJECTED) \\
+        \hline
+        13a.1 & Hệ thống & Học sinh có thể tạo yêu cầu mới sau khi bị từ chối \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Bài kiểm tra được tạo mới hoặc xóa thành công, các câu hỏi được tạo tự động từ terms trong bộ flashcard đã được lưu, yêu cầu làm lại của học sinh được duyệt (chấp nhận hoặc từ chối) và thông báo cho học sinh} \\
+    \hline
+\end{longtable}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào - Tạo bài kiểm tra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & studyset\_id & Mã định danh bộ flashcard & Có & UUID hợp lệ, user phải là owner & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & title & Tên bài kiểm tra & Có & Chuỗi không rỗng, tối đa 255 ký tự & "Kiểm tra từ vựng tuần 1" \\
+    \hline
+    3 & description & Mô tả bài kiểm tra & Không & Chuỗi văn bản, tối đa 500 ký tự & "Bài kiểm tra về từ vựng đã học" \\
+    \hline
+    4 & total\_questions & Số lượng câu hỏi & Có & Số nguyên dương, mặc định 10 & 20 \\
+    \hline
+    5 & question\_types & Loại câu hỏi & Có & Mảng các loại: "MULTIPLE\_CHOICE", "TRUE\_FALSE", "ESSAY" & ["MULTIPLE\_CHOICE", "TRUE\_FALSE"] \\
+    \hline
+    6 & time\_limit & Giới hạn thời gian (giây) & Không & Số nguyên dương hoặc null (không giới hạn) & 1800 (30 phút) \\
+    \hline
+    7 & show\_answers & Hiển thị đáp án sau khi nộp & Có & Boolean, mặc định false & true \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Quản lý bài kiểm tra}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào - Duyệt yêu cầu làm lại}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & request\_id & Mã định danh yêu cầu làm lại & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174001" \\
+    \hline
+    2 & status & Trạng thái duyệt & Có & "APPROVED" hoặc "REJECTED" & "APPROVED" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho duyệt yêu cầu làm lại}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra - Tạo bài kiểm tra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & test\_id & Mã định danh bài kiểm tra & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & title & Tên bài kiểm tra & Có & Chuỗi văn bản & "Kiểm tra từ vựng tuần 1" \\
+    \hline
+    3 & studyset\_id & Mã bộ flashcard & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174001" \\
+    \hline
+    4 & created\_by & Mã người tạo & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174002" \\
+    \hline
+    5 & questions & Danh sách câu hỏi đã tạo & Có & Mảng các đối tượng question với question\_id, question\_text, question\_type, correct\_answer, options & [\{"question\_id": "...", "question\_text": "...", "question\_type": "MULTIPLE\_CHOICE", ...\}] \\
+    \hline
+    6 & created\_at & Thời gian tạo & Có & Datetime & "2026-01-15T10:30:00Z" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra khi tạo bài kiểm tra}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra - Xem kết quả làm bài}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & attempt\_id & Mã định danh bài làm & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174003" \\
+    \hline
+    2 & test\_id & Mã bài kiểm tra & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    3 & user\_id & Mã học sinh làm bài & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174004" \\
+    \hline
+    4 & score & Điểm số (\%) & Có & Float 0-100 & 85.5 \\
+    \hline
+    5 & correct\_answers & Số câu đúng & Có & Integer & 17 \\
+    \hline
+    6 & total\_questions & Tổng số câu hỏi & Có & Integer & 20 \\
+    \hline
+    7 & completed\_at & Thời gian hoàn thành & Có & Datetime & "2026-01-15T11:00:00Z" \\
+    \hline
+    8 & answers & Danh sách đáp án của học sinh & Có & Mảng các đối tượng answer & [\{"question\_id": "...", "user\_answer": "...", "is\_correct": true\}] \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra khi xem kết quả làm bài}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra - Yêu cầu làm lại}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & request\_id & Mã yêu cầu & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174005" \\
+    \hline
+    2 & attempt\_id & Mã bài làm liên quan & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174003" \\
+    \hline
+    3 & user\_id & Mã học sinh yêu cầu & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174004" \\
+    \hline
+    4 & class\_id & Mã lớp học & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174006" \\
+    \hline
+    5 & status & Trạng thái yêu cầu & Có & "PENDING", "APPROVED", "REJECTED" & "APPROVED" \\
+    \hline
+    6 & reviewed\_by & Mã giáo viên duyệt & Không & UUID hợp lệ hoặc null & "123e4567-e89b-12d3-a456-426614174002" \\
+    \hline
+    7 & reviewed\_at & Thời gian duyệt & Không & Datetime hoặc null & "2026-01-15T12:00:00Z" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra liên quan đến yêu cầu làm lại}
+\end{table}
+
+\end{document}

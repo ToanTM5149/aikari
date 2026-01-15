@@ -1,0 +1,135 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage[utf8]{inputenc} 
+\usepackage{array} 
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{makecell}
+\usepackage{multirow}
+
+\begin{document}
+
+% ============================================
+% UC06: Quản lý category
+% ============================================
+
+\begin{longtable}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+\caption{Thông tin chi tiết về Use Case Quản lý category} \\
+    \hline
+    \textbf{Mã Use case} & \textbf{UC06} & \textbf{Tên Use case} & \textbf{Quản lý category} \\
+    \hline
+    \endfirsthead
+    
+    \multicolumn{4}{c}%
+    {{\bfseries \tablename\ \thetable{} -- tiếp theo từ trang trước}} \\
+    \hline
+    \textbf{Mã Use case} & \textbf{UC06} & \textbf{Tên Use case} & \textbf{Quản lý category} \\
+    \hline
+    \endhead
+    
+    \hline \multicolumn{4}{|r|}{{Tiếp tục ở trang sau}} \\ \hline
+    \endfoot
+    
+    \hline
+    \endlastfoot
+    
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Học sinh/Giáo viên (User)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Người dùng đã đăng nhập vào hệ thống} \\
+    \hline
+    \multirow{8}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Người dùng & Truy cập mục quản lý category \\
+        \hline
+        2 & Hệ thống & Hiển thị danh sách category của người dùng (owner\_id) kèm số lượng flashcard \\
+        \hline
+        3 & Người dùng & Chọn "Tạo category mới" hoặc chọn category để chỉnh sửa/xóa \\
+        \hline
+        4 & Hệ thống & Hiển thị form tạo mới hoặc form chỉnh sửa (name, description, color) \\
+        \hline
+        5 & Người dùng & Nhập thông tin category và lưu \\
+        \hline
+        6 & Hệ thống & Kiểm tra tính hợp lệ (name không rỗng, không trùng với category khác của user) \\
+        \hline
+        7 & Hệ thống & Lưu Category vào cơ sở dữ liệu \\
+        \hline
+        8 & Hệ thống & Thông báo thành công và hiển thị category vừa tạo/chỉnh sửa \\
+        \hline
+        9 & Người dùng & Gán flashcard vào category (cập nhật category\_id của StudySet) \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{5}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        6a & Hệ thống & Thông báo lỗi nếu tên category trống hoặc đã tồn tại \\
+        \hline
+        7a & Hệ thống & Thông báo lỗi nếu không thể kết nối cơ sở dữ liệu \\
+        \hline
+        3a & Người dùng & Chọn xóa category \\
+        \hline
+        3a.1 & Hệ thống & Hủy gán category\_id của tất cả StudySet trong category đó (set về null), sau đó xóa category \\
+        \hline
+        6b & Hệ thống & Thông báo lỗi nếu không có quyền truy cập category (không phải owner) \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Category được tạo mới, chỉnh sửa hoặc xóa thành công, flashcard được gán vào category phù hợp} \\
+    \hline
+\end{longtable}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & name & Tên category & Có & Chuỗi không rỗng, tối đa 100 ký tự, unique per user & "Tiếng Anh" \\
+    \hline
+    2 & description & Mô tả category & Không & Chuỗi văn bản, tối đa 500 ký tự & "Từ vựng tiếng Anh" \\
+    \hline
+    3 & color & Màu sắc category (hex code) & Không & String hex color hoặc null & "\#FF5733" \\
+    \hline
+    4 & studyset\_id & Mã bộ flashcard cần gán category & Có (khi gán) & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    5 & category\_id & Mã category cần gán & Không & UUID hợp lệ hoặc null (để hủy gán) & "123e4567-e89b-12d3-a456-426614174001" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Quản lý category}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & category\_id & Mã định danh category & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & name & Tên category & Có & Chuỗi văn bản & "Tiếng Anh" \\
+    \hline
+    3 & studyset\_count & Số lượng flashcard trong category & Có & Số nguyên không âm & 15 \\
+    \hline
+    4 & Thông báo lưu thành công & Xác nhận kết quả lưu & Có & "Thành công" hoặc "Thất bại" & "Tạo category thành công" \\
+    \hline
+    5 & Thông báo lỗi (nếu có) & Lý do lưu thất bại & Không & Chỉ hiển thị khi có lỗi & "Tên category đã tồn tại" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra cho Use Case Quản lý category}
+\end{table}
+
+\end{document}

@@ -1,0 +1,129 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage[utf8]{inputenc} 
+\usepackage{array} 
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{makecell}
+\usepackage{multirow}
+
+\begin{document}
+
+% ============================================
+% UC04: Quản lý lớp học
+% ============================================
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+    \hline
+    \textbf{Mã Use case} & \textbf{UC04} & \textbf{Tên Use case} & \textbf{Quản lý lớp học} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Giáo viên (Teacher)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Giáo viên đã đăng nhập vào hệ thống và có quyền quản lý lớp học (là chủ sở hữu hoặc co-teacher)} \\
+    \hline
+    \multirow{11}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Giáo viên & Truy cập mục quản lý lớp học \\
+        \hline
+        2 & Hệ thống & Hiển thị danh sách các lớp học của giáo viên (OWNER hoặc CO\_TEACHER) \\
+        \hline
+        3 & Giáo viên & Chọn "Tạo lớp học mới" hoặc chọn lớp để quản lý \\
+        \hline
+        4 & Hệ thống & Hiển thị form tạo mới hoặc trang quản lý lớp (thành viên, nội dung) \\
+        \hline
+        5 & Giáo viên & Nhập thông tin lớp học (class\_name, description, is\_public) và lưu \\
+        \hline
+        6 & Hệ thống & Tạo Class, sinh class\_code tự động, lưu vào database \\
+        \hline
+        7 & Giáo viên & Mời học sinh (qua user\_id) hoặc chia sẻ class\_code \\
+        \hline
+        8 & Hệ thống & Gửi lời mời (tạo ClassMember với PENDING) hoặc học sinh dùng mã tham gia \\
+        \hline
+        9 & Giáo viên & Quản lý thành viên: chấp nhận/từ chối yêu cầu, xóa thành viên, thay đổi role \\
+        \hline
+        10 & Giáo viên & Gán bộ flashcard vào lớp (tạo ClassStudySet) hoặc xóa khỏi lớp \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{5}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        6a & Hệ thống & Thông báo lỗi nếu người dùng không tồn tại hoặc đã là thành viên \\
+        \hline
+        8a & Học sinh & Từ chối lời mời tham gia lớp học \\
+        \hline
+        9a & Giáo viên & Từ chối yêu cầu tham gia của học sinh \\
+        \hline
+        11a & Hệ thống & Thông báo lỗi nếu không thể kết nối cơ sở dữ liệu \\
+        \hline
+        3a & Giáo viên & Chọn xóa lớp học (chỉ chủ sở hữu) \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Lớp học được tạo mới, chỉnh sửa hoặc xóa thành công, thành viên được thêm/xóa, nội dung học tập được gán vào lớp} \\
+    \hline
+\end{tabular}
+\caption{Thông tin chi tiết về Use Case Quản lý lớp học}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & class\_name & Tên lớp học & Có & Chuỗi không rỗng, tối đa 255 ký tự & "Lớp tiếng Anh 10A" \\
+    \hline
+    2 & description & Mô tả lớp học & Không & Chuỗi văn bản, tối đa 500 ký tự & "Lớp học tiếng Anh cơ bản" \\
+    \hline
+    3 & is\_public & Lớp công khai hay riêng tư & Có & Boolean & true \\
+    \hline
+    4 & user\_id & Mã người dùng cần mời & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    5 & role & Vai trò thành viên & Có & "MEMBER", "CO\_TEACHER" & "MEMBER" \\
+    \hline
+    6 & studyset\_id & Mã bộ flashcard cần gán & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    7 & class\_code & Mã tham gia lớp học & Không & Chuỗi 6-8 ký tự & "ABC123" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Quản lý lớp học}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & class\_id & Mã định danh lớp học & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & class\_code & Mã tham gia lớp học & Có & Chuỗi 6-8 ký tự & "ABC123" \\
+    \hline
+    3 & member\_count & Số lượng thành viên & Có & Số nguyên không âm & 25 \\
+    \hline
+    4 & Thông báo lưu thành công & Xác nhận kết quả lưu & Có & "Thành công" hoặc "Thất bại" & "Tạo lớp học thành công" \\
+    \hline
+    5 & Thông báo lỗi (nếu có) & Lý do lưu thất bại & Không & Chỉ hiển thị khi có lỗi & "Tên lớp học không được để trống" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra cho Use Case Quản lý lớp học}
+\end{table}
+
+\end{document}

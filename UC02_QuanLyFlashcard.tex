@@ -1,0 +1,123 @@
+\documentclass[../DoAn.tex]{subfiles}
+\usepackage[utf8]{inputenc} 
+\usepackage{array} 
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{makecell}
+\usepackage{multirow}
+
+\begin{document}
+
+% ============================================
+% UC02: Quản lý flashcard
+% ============================================
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{5cm}|m{2cm}|m{3cm}|m{3cm}|}
+    \hline
+    \textbf{Mã Use case} & \textbf{UC02} & \textbf{Tên Use case} & \textbf{Quản lý flashcard} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tác nhân}} & \multicolumn{3}{|m{9cm}|}{Học sinh (Student)} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Tiền điều kiện}} & \multicolumn{3}{|m{9cm}|}{Học sinh đã đăng nhập vào hệ thống} \\
+    \hline
+    \multirow{12}{*}{\textbf{Luồng sự kiện chính}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        1 & Học sinh & Truy cập mục quản lý flashcard \\
+        \hline
+        2 & Hệ thống & Hiển thị danh sách các bộ flashcard của học sinh (owner\_id) \\
+        \hline
+        3 & Học sinh & Chọn "Tạo bộ flashcard mới" hoặc chọn bộ để chỉnh sửa/xóa \\
+        \hline
+        4 & Hệ thống & Hiển thị form tạo mới hoặc form chỉnh sửa (title, description, category\_id, terms) \\
+        \hline
+        5 & Học sinh & Nhập thông tin bộ flashcard và thêm các term (term\_text, definition, example, image\_url) \\
+        \hline
+        6 & Học sinh & Lưu bộ flashcard \\
+        \hline
+        7 & Hệ thống & Kiểm tra tính hợp lệ (title không rỗng, ít nhất 1 term hợp lệ) \\
+        \hline
+        8 & Hệ thống & Lưu StudySet và các Term vào cơ sở dữ liệu \\
+        \hline
+        9 & Hệ thống & Thông báo thành công và hiển thị bộ flashcard vừa tạo/chỉnh sửa \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multirow{5}{*}{\textbf{Luồng sự kiện thay thế}} & 
+    \multicolumn{3}{|m{9cm}|}{
+    \begin{tabular}{|m{1cm}|m{2cm}|m{4.7cm}|} 
+        \hline
+        \textbf{STT} & \textbf{Thực hiện bởi} & \textbf{Hành động} \\
+        \hline
+        7a & Hệ thống & Thông báo lỗi nếu tên bộ flashcard rỗng hoặc không có flashcard hợp lệ \\
+        \hline
+        8a & Hệ thống & Thông báo lỗi nếu không thể kết nối cơ sở dữ liệu \\
+        \hline
+        3a & Học sinh & Chọn xóa bộ flashcard hoặc flashcard \\
+        \hline
+        3b & Học sinh & Chọn sao chép bộ flashcard hoặc import/export flashcard \\
+        \hline
+        3c & Học sinh & Gán flashcard vào category hoặc thay đổi category \\
+        \hline
+    \end{tabular}} \\
+    \hline
+    \multicolumn{1}{|m{4cm}|}{\textbf{Hậu điều kiện}} & \multicolumn{3}{|m{9cm}|}{Bộ flashcard được tạo mới, chỉnh sửa hoặc xóa thành công và có sẵn trong hệ thống} \\
+    \hline
+\end{tabular}
+\caption{Thông tin chi tiết về Use Case Quản lý flashcard}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu vào}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & title & Tên bộ flashcard & Có & Chuỗi không rỗng, tối đa 255 ký tự & "Từ vựng tiếng Anh cơ bản" \\
+    \hline
+    2 & description & Mô tả bộ flashcard & Không & Chuỗi văn bản, tối đa 500 ký tự & "Bộ flashcard học từ vựng tiếng Anh" \\
+    \hline
+    3 & term\_text & Mặt trước flashcard & Có & Chuỗi không rỗng & "Hello" \\
+    \hline
+    4 & definition & Mặt sau flashcard & Có & Chuỗi không rỗng & "Xin chào" \\
+    \hline
+    5 & example & Ví dụ sử dụng & Không & Chuỗi văn bản & "Hello, how are you?" \\
+    \hline
+    6 & image\_url & URL hình ảnh & Không & URL hợp lệ & "https://example.com/image.jpg" \\
+    \hline
+    7 & category\_id & Mã category & Không & UUID hợp lệ hoặc null & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu vào cho Use Case Quản lý flashcard}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|m{1cm}|m{2.5cm}|m{3cm}|m{1cm}|m{2.5cm}|m{3.5cm}|}
+    \hline
+    \multicolumn{6}{|c|}{\textbf{Dữ liệu đầu ra}} \\
+    \hline
+    \textbf{STT} & \textbf{Trường dữ liệu} & \textbf{Mô tả} & \textbf{Bắt buộc} & \textbf{Điều kiện hợp lệ} & \textbf{Ví dụ} \\
+    \hline
+    1 & studyset\_id & Mã định danh bộ flashcard & Có & UUID hợp lệ & "123e4567-e89b-12d3-a456-426614174000" \\
+    \hline
+    2 & Thông báo lưu thành công & Xác nhận kết quả lưu & Có & "Thành công" hoặc "Thất bại" & "Tạo bộ flashcard thành công" \\
+    \hline
+    3 & Thông báo lỗi (nếu có) & Lý do lưu thất bại & Không & Chỉ hiển thị khi có lỗi & "Tên bộ flashcard không được để trống" \\
+    \hline
+\end{tabular}
+\caption{Dữ liệu đầu ra cho Use Case Quản lý flashcard}
+\end{table}
+
+\end{document}

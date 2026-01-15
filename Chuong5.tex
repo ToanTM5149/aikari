@@ -1,0 +1,706 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+\chapter{Các đóng góp và giải pháp}
+
+Chương này trình bày các đóng góp và giải pháp kỹ thuật quan trọng mà sinh viên đã phát triển trong quá trình xây dựng hệ thống Aikari. Các giải pháp này được thiết kế để giải quyết các vấn đề cụ thể trong việc xây dựng một hệ thống học tập flashcard tích hợp AI, đảm bảo tính hiệu quả, khả năng mở rộng và trải nghiệm người dùng tối ưu.
+
+\section{Tích hợp thuật toán SM-2 với xử lý múi giờ địa phương}
+\label{section:5.1}
+
+\subsection{Dẫn dắt về bài toán}
+\label{subsection:5.1.1}
+
+Thuật toán SM-2 (SuperMemo 2) là một thuật toán spaced repetition được sử dụng rộng rãi để tối ưu hóa việc học tập thông qua việc tự động điều chỉnh khoảng thời gian giữa các lần ôn tập dựa trên khả năng nhớ lại của người học. Tuy nhiên, khi triển khai thuật toán này trong một hệ thống web toàn cầu, một vấn đề quan trọng nảy sinh: việc xử lý múi giờ (timezone) để đảm bảo tính chính xác của việc tính toán ngày ôn tập tiếp theo.
+
+Vấn đề cụ thể là: thuật toán SM-2 tính toán \texttt{next\_review\_date} dựa trên "ngày hôm nay" (today) của người dùng. Nếu hệ thống lưu trữ tất cả thời gian theo UTC (Coordinated Universal Time) mà không xem xét múi giờ địa phương của người dùng, sẽ dẫn đến các tình huống không mong muốn:
+
+\begin{itemize}
+    \item Một flashcard được đánh dấu cần ôn lại vào "ngày mai" có thể xuất hiện sớm hơn hoặc muộn hơn một ngày so với mong đợi của người dùng, tùy thuộc vào múi giờ của họ.
+    \item Việc so sánh \texttt{next\_review\_date} với "hôm nay" để xác định các flashcard đến hạn có thể không chính xác nếu không xét đến múi giờ địa phương.
+    \item Người dùng ở múi giờ UTC+7 (Việt Nam) có thể thấy các flashcard đến hạn vào đêm muộn hoặc sáng sớm, gây nhầm lẫn về thời điểm ôn tập.
+\end{itemize}
+
+Để giải quyết vấn đề này, hệ thống cần một cơ chế chuyển đổi múi giờ nhất quán và chính xác, đảm bảo rằng việc tính toán "ngày hôm nay" và so sánh ngày tháng được thực hiện dựa trên múi giờ địa phương của người dùng, trong khi vẫn lưu trữ dữ liệu trong database theo UTC để đảm bảo tính nhất quán.
+
+\subsection{Giải pháp}
+\label{subsection:5.1.2}
+
+Để giải quyết vấn đề xử lý múi giờ trong thuật toán SM-2, sinh viên đã thiết kế một giải pháp kết hợp việc sử dụng múi giờ địa phương (UTC+7 cho người dùng Việt Nam) trong quá trình tính toán, đồng thời lưu trữ dữ liệu trong database theo UTC để đảm bảo tính nhất quán và dễ dàng mở rộng cho các múi giờ khác trong tương lai.
+
+Giải pháp được triển khai trong class \texttt{SpacedRepetitionSM2} trong file \texttt{backend/app/services/learning_service.py}. Cụ thể:
+
+\textbf{Bước 1: Xác định "ngày hôm nay" theo múi giờ địa phương}
+
+Khi tính toán \texttt{next\_review\_date}, hệ thống chuyển đổi thời gian hiện tại từ UTC sang múi giờ địa phương (UTC+7) để xác định "ngày hôm nay" chính xác:
+
+\begin{verbatim}
+# Get "today" in local timezone (UTC+7) for calculation
+local_tz = timezone(timedelta(hours=7))
+now_utc = datetime.utcnow()
+now_local = now_utc.replace(tzinfo=timezone.utc).astimezone(local_tz)
+\end{verbatim}
+
+\textbf{Bước 2: Tính toán next\_review\_date dựa trên múi giờ địa phương}
+
+Sau khi tính toán interval (số ngày) dựa trên thuật toán SM-2, hệ thống cộng interval vào "ngày hôm nay" theo múi giờ địa phương:
+
+\begin{verbatim}
+# Calculate next_review_date based on local "today"
+next_review_local = now_local + timedelta(days=new_interval)
+\end{verbatim}
+
+\textbf{Bước 3: Chuyển đổi lại về UTC để lưu trữ}
+
+Cuối cùng, hệ thống chuyển đổi \texttt{next\_review\_date} về UTC (naive datetime) để lưu trữ trong database:
+
+\begin{verbatim}
+# Convert back to UTC naive datetime for storage
+next_review_date = next_review_local.astimezone(timezone.utc).replace(tzinfo=None)
+\end{verbatim}
+
+\textbf{Bước 4: So sánh ngày tháng khi truy vấn flashcard đến hạn}
+
+Trong hàm \texttt{get\_next\_term\_to\_review()}, hệ thống cũng sử dụng cùng logic chuyển đổi múi giờ khi so sánh \texttt{next\_review\_date} với "hôm nay":
+
+\begin{verbatim}
+# Get "today" in local timezone (UTC+7) for comparison
+local_tz = timezone(timedelta(hours=7))
+now_utc = datetime.utcnow()
+now_local = now_utc.replace(tzinfo=timezone.utc).astimezone(local_tz).replace(tzinfo=None)
+
+# Convert next_review_date (stored as UTC) to local for comparison
+next_review_utc = activity.next_review_date.replace(tzinfo=timezone.utc)
+next_review_local = next_review_utc.astimezone(local_tz).replace(tzinfo=None)
+
+if next_review_local <= now_local:
+    # Due for review
+    due_terms.append((term, activity))
+\end{verbatim}
+
+Giải pháp này đảm bảo rằng:
+\begin{itemize}
+    \item Việc tính toán "ngày hôm nay" luôn dựa trên múi giờ địa phương của người dùng (UTC+7).
+    \item Dữ liệu trong database được lưu trữ theo UTC, đảm bảo tính nhất quán và dễ dàng mở rộng.
+    \item Việc so sánh ngày tháng được thực hiện chính xác, không bị ảnh hưởng bởi sự khác biệt múi giờ.
+    \item Có thể dễ dàng mở rộng để hỗ trợ nhiều múi giờ khác nhau trong tương lai bằng cách thay đổi giá trị \texttt{local\_tz}.
+\end{itemize}
+
+\subsection{Kết quả đạt được}
+\label{subsection:5.1.3}
+
+Giải pháp xử lý múi giờ trong thuật toán SM-2 đã được triển khai thành công và đảm bảo tính chính xác của việc tính toán và so sánh ngày tháng. Các kết quả cụ thể:
+
+\begin{itemize}
+    \item \textbf{Tính chính xác}: Người dùng luôn thấy các flashcard đến hạn vào đúng "ngày hôm nay" theo múi giờ địa phương của họ, không bị ảnh hưởng bởi sự khác biệt múi giờ.
+    
+    \item \textbf{Tính nhất quán}: Tất cả dữ liệu thời gian được lưu trữ theo UTC trong database, đảm bảo tính nhất quán và dễ dàng quản lý.
+    
+    \item \textbf{Khả năng mở rộng}: Giải pháp có thể dễ dàng mở rộng để hỗ trợ nhiều múi giờ khác nhau bằng cách thêm cấu hình múi giờ cho từng người dùng.
+    
+    \item \textbf{Hiệu suất}: Việc chuyển đổi múi giờ được thực hiện trong memory, không ảnh hưởng đáng kể đến hiệu suất của hệ thống.
+\end{itemize}
+
+Chi tiết về thuật toán SM-2 và cách nó được tích hợp vào hệ thống đã được trình bày trong Chương 3 (phần \ref{section:3.2}) và Chương 4 (phần \ref{section:4.2}).
+
+\section{Kiến trúc tích hợp AI với Dify workflows tự host}
+\label{section:5.2}
+
+\subsection{Dẫn dắt về bài toán}
+\label{subsection:5.2.1}
+
+Việc tích hợp trí tuệ nhân tạo (AI) vào hệ thống học tập flashcard đòi hỏi một kiến trúc linh hoạt và có khả năng mở rộng. Thay vì phụ thuộc hoàn toàn vào các dịch vụ AI của bên thứ ba (như OpenAI API trực tiếp), hệ thống cần một giải pháp cho phép:
+
+\begin{itemize}
+    \item \textbf{Tự kiểm soát}: Có khả năng kiểm soát logic xử lý, prompt engineering, và workflow của AI mà không phụ thuộc vào các thay đổi từ nhà cung cấp bên thứ ba.
+    \item \textbf{Quản lý chi phí}: Có thể quản lý và tối ưu hóa chi phí sử dụng AI bằng cách tự host và điều chỉnh các tham số như model selection, temperature, và token limits.
+    \item \textbf{Tùy biến cao}: Có thể tạo các workflow AI phức tạp với nhiều bước xử lý, ví dụ như: phân tích ngữ cảnh học tập → sinh câu hỏi → kiểm tra chất lượng → điều chỉnh prompt → trả về kết quả.
+    \item \textbf{Bảo mật dữ liệu}: Đảm bảo dữ liệu học tập của người dùng không bị gửi đến các dịch vụ bên thứ ba mà không kiểm soát được.
+    \item \textbf{Tích hợp đa dạng}: Hỗ trợ nhiều loại tương tác AI khác nhau: chat conversation, content generation (test, quiz, paragraph), và workflow-based processing.
+\end{itemize}
+
+Dify là một nền tảng mã nguồn mở cho phép tự host và quản lý các AI workflows, nhưng việc tích hợp Dify vào một hệ thống web hiện có đòi hỏi một kiến trúc dịch vụ (service architecture) được thiết kế cẩn thận để đảm bảo tính modular, dễ bảo trì, và có khả năng xử lý lỗi tốt.
+
+\subsection{Giải pháp}
+\label{subsection:5.2.2}
+
+Sinh viên đã thiết kế một kiến trúc tích hợp AI với Dify workflows theo mô hình Service Layer Pattern, tách biệt rõ ràng giữa các tầng xử lý và đảm bảo tính modular và khả năng mở rộng.
+
+\textbf{Tầng 1: DifyService - Lớp tích hợp cơ sở}
+
+Lớp \texttt{DifyService} (trong \texttt{backend/app/services/dify\_service.py}) đóng vai trò là lớp tích hợp cơ sở với Dify API, cung cấp các phương thức generic để giao tiếp với Dify:
+
+\begin{itemize}
+    \item \texttt{chat\_completion()}: Gửi chat message đến Dify Chat App API, hỗ trợ conversation context và input variables.
+    \item \texttt{completion()}: Gửi completion request đến Dify Completion App API.
+    \item \texttt{run\_workflow()}: Chạy Dify Workflow App với các input variables tùy chỉnh.
+    \item \texttt{get\_conversation\_messages()}: Lấy lịch sử conversation từ Dify.
+\end{itemize}
+
+Lớp này xử lý tất cả các chi tiết kỹ thuật như authentication, HTTP requests, error handling, và response parsing, che giấu sự phức tạp của Dify API khỏi các lớp trên.
+
+\textbf{Tầng 2: Domain Services - Logic nghiệp vụ AI}
+
+Các domain services sử dụng \texttt{DifyService} để triển khai logic nghiệp vụ cụ thể:
+
+\begin{itemize}
+    \item \texttt{ChatbotService}: Quản lý conversation state, intent detection, và xử lý các loại message khác nhau (test generation, quiz generation, paragraph generation, free questions).
+    \item \texttt{GenerationService}: Xử lý việc sinh nội dung học tập (test, quiz, paragraph) với các tham số tùy chỉnh và validation.
+\end{itemize}
+
+Các service này không trực tiếp gọi Dify API, mà sử dụng \texttt{DifyService} như một abstraction layer, cho phép dễ dàng thay thế hoặc mock trong quá trình testing.
+
+\textbf{Tầng 3: API Routes - Interface với frontend}
+
+Các API routes (trong \texttt{backend/app/api/routes/}) sử dụng các domain services để xử lý HTTP requests từ frontend:
+
+\begin{itemize}
+    \item \texttt{/chatbot/studysets/\{studyset\_id\}/chat}: Endpoint chính cho chatbot conversation.
+    \item \texttt{/ai/generate/test}, \texttt{/ai/generate/quiz}, \texttt{/ai/generate/paragraph}: Endpoints cho content generation.
+\end{itemize}
+
+\textbf{Đặc điểm thiết kế quan trọng:}
+
+\begin{enumerate}
+    \item \textbf{Dependency Injection}: FastAPI's dependency injection được sử dụng để inject \texttt{DifyService} vào các domain services, cho phép dễ dàng testing và thay thế implementation.
+    
+    \item \textbf{Error Handling}: Mỗi tầng có cơ chế xử lý lỗi riêng, từ HTTP errors ở DifyService đến business logic errors ở domain services, và cuối cùng là HTTP responses ở API routes.
+    
+    \item \textbf{Configuration Management}: Cấu hình Dify (API endpoint, API key, app IDs) được quản lý tập trung thông qua environment variables và Pydantic settings, đảm bảo dễ dàng thay đổi giữa các môi trường (development, staging, production).
+    
+    \item \textbf{Async/Await}: Tất cả các tương tác với Dify API được thực hiện bất đồng bộ (async/await) để đảm bảo hiệu suất và khả năng xử lý nhiều request đồng thời.
+    
+    \item \textbf{Type Safety}: Sử dụng Pydantic schemas để validate inputs và outputs ở mỗi tầng, đảm bảo type safety và giảm thiểu lỗi runtime.
+\end{enumerate}
+
+Kiến trúc này cho phép hệ thống dễ dàng:
+\begin{itemize}
+    \item Thay thế Dify bằng một AI service khác bằng cách chỉ thay đổi \texttt{DifyService}.
+    \item Thêm các loại AI interaction mới bằng cách tạo domain service mới hoặc mở rộng service hiện có.
+    \item Test từng tầng độc lập bằng cách mock các dependencies.
+    \item Mở rộng để hỗ trợ nhiều AI providers khác nhau (multi-provider support).
+\end{itemize}
+
+\subsection{Kết quả đạt được}
+\label{subsection:5.2.3}
+
+Kiến trúc tích hợp AI với Dify workflows đã được triển khai thành công và đáp ứng tất cả các yêu cầu ban đầu:
+
+\begin{itemize}
+    \item \textbf{Tự kiểm soát}: Hệ thống có thể tự host Dify và kiểm soát hoàn toàn các AI workflows, prompts, và logic xử lý.
+    
+    \item \textbf{Modular Architecture}: Kiến trúc Service Layer Pattern cho phép dễ dàng bảo trì, mở rộng, và test từng component độc lập.
+    
+    \item \textbf{Tích hợp đa dạng}: Hệ thống hỗ trợ nhiều loại tương tác AI: chat conversation với context awareness, content generation (test, quiz, paragraph), và workflow-based processing.
+    
+    \item \textbf{Hiệu suất}: Sử dụng async/await đảm bảo hệ thống có thể xử lý nhiều request AI đồng thời mà không block.
+    
+    \item \textbf{Error Resilience}: Cơ chế xử lý lỗi ở nhiều tầng đảm bảo hệ thống có thể phục hồi từ các lỗi tạm thời của Dify API.
+    
+    \item \textbf{Type Safety}: Sử dụng Pydantic schemas giảm thiểu lỗi runtime và cải thiện developer experience.
+\end{itemize}
+
+Chi tiết về kiến trúc tổng quan của hệ thống đã được trình bày trong Chương 4 (phần \ref{section:4.1}), và các use case liên quan đến AI đã được mô tả trong Chương 2 (phần \ref{section:2.2}).
+
+\section{Dịch vụ Chatbot với state management và context awareness}
+\label{section:5.3}
+
+\subsection{Dẫn dắt về bài toán}
+\label{subsection:5.3.1}
+
+Một chatbot AI đơn giản chỉ trả lời câu hỏi của người dùng không đủ để hỗ trợ hiệu quả quá trình học tập. Trong bối cảnh học tập flashcard, người dùng cần một chatbot có khả năng:
+
+\begin{itemize}
+    \item \textbf{Hiểu ngữ cảnh học tập}: Chatbot cần biết người dùng đang học studyset nào, đang xem flashcard nào, và tiến độ học tập hiện tại để đưa ra phản hồi phù hợp.
+    \item \textbf{Quản lý conversation state}: Chatbot cần nhớ các thông tin đã thu thập trong conversation (ví dụ: loại test muốn tạo, số lượng câu hỏi, độ khó) để có thể thu thập đầy đủ thông tin trước khi thực hiện action.
+    \item \textbf{Hỗ trợ nhiều loại intent}: Người dùng có thể yêu cầu nhiều loại hỗ trợ khác nhau: tạo test, tạo quiz, sinh paragraph giải thích, hoặc đặt câu hỏi tự do. Chatbot cần phân biệt và xử lý từng loại intent một cách phù hợp.
+    \item \textbf{Điều hướng conversation}: Thay vì yêu cầu người dùng nhập tất cả thông tin trong một message, chatbot nên điều hướng conversation một cách tự nhiên, hỏi từng thông tin một và xác nhận trước khi thực hiện action.
+    \item \textbf{Duy trì conversation history}: Chatbot cần lưu trữ và sử dụng lịch sử conversation để đảm bảo tính liên tục và context awareness trong các lần tương tác tiếp theo.
+\end{itemize}
+
+Việc xây dựng một chatbot với các khả năng trên đòi hỏi một kiến trúc state management phức tạp, kết hợp giữa database persistence (để lưu conversation state và history) và in-memory state (để quản lý conversation flow hiện tại).
+
+\subsection{Giải pháp}
+\label{subsection:5.3.2}
+
+Sinh viên đã thiết kế và triển khai \texttt{ChatbotService} với một kiến trúc state machine để quản lý conversation state và context awareness. Giải pháp được triển khai trong \texttt{backend/app/services/chatbot\_service.py}.
+
+\textbf{State Machine Design}
+
+Chatbot sử dụng một state machine với các trạng thái sau:
+
+\begin{enumerate}
+    \item \texttt{INITIAL}: Trạng thái ban đầu, chatbot hiển thị menu các tùy chọn (tạo test, tạo quiz, sinh paragraph, đặt câu hỏi tự do).
+    \item \texttt{WAITING\_INTENT}: Đang chờ người dùng chọn intent từ menu hoặc nhập intent trực tiếp.
+    \item \texttt{COLLECTING\_TEST\_PARAMS}: Đang thu thập thông tin để tạo test (số lượng câu hỏi, độ khó, loại câu hỏi).
+    \item \texttt{GENERATING}: Đang xử lý request (gọi Dify API, sinh nội dung).
+    \item \texttt{COMPLETED}: Đã hoàn thành action, có thể tiếp tục với câu hỏi tự do hoặc bắt đầu action mới.
+\end{enumerate}
+
+\textbf{Database Models cho State Persistence}
+
+Hệ thống sử dụng hai database models để lưu trữ conversation state:
+
+\begin{itemize}
+    \item \texttt{ChatConversation}: Lưu trữ thông tin conversation (conversation\_id, studyset\_id, user\_id, state, created\_at, updated\_at).
+    \item \texttt{ChatMessage}: Lưu trữ từng message trong conversation (message\_id, conversation\_id, role, content, created\_at).
+\end{itemize}
+
+\textbf{Context Awareness}
+
+Chatbot có khả năng nhận biết ngữ cảnh học tập thông qua:
+
+\begin{itemize}
+    \item \texttt{studyset\_id}: Biết người dùng đang học studyset nào, có thể truyền thông tin về studyset (số lượng terms, nội dung) vào Dify prompt.
+    \item \texttt{term\_id} (optional): Biết người dùng đang xem flashcard nào, có thể sinh paragraph giải thích cụ thể cho term đó.
+    \item \texttt{conversation\_id}: Duy trì conversation history để đảm bảo tính liên tục.
+\end{itemize}
+
+\textbf{Intent Detection và Routing}
+
+Chatbot sử dụng pattern matching và keyword detection để phân loại intent:
+
+\begin{itemize}
+    \item Nếu message chứa từ khóa như "test", "kiểm tra", "exam" → intent là tạo test.
+    \item Nếu message chứa từ khóa như "quiz", "câu hỏi nhanh" → intent là tạo quiz.
+    \item Nếu message chứa từ khóa như "paragraph", "đoạn văn", "giải thích" → intent là sinh paragraph.
+    \item Nếu không khớp với intent nào → xử lý như câu hỏi tự do, gửi trực tiếp đến Dify chat API.
+\end{itemize}
+
+\textbf{Parameter Collection Flow}
+
+Khi người dùng chọn tạo test hoặc quiz, chatbot điều hướng conversation để thu thập thông tin:
+
+\begin{enumerate}
+    \item Hỏi số lượng câu hỏi (ví dụ: "Bạn muốn tạo test với bao nhiêu câu hỏi?").
+    \item Chờ phản hồi, validate input (phải là số nguyên dương).
+    \item Hỏi độ khó (ví dụ: "Bạn muốn độ khó như thế nào? (dễ/trung bình/khó)").
+    \item Chờ phản hồi, validate input.
+    \item Chuyển sang state \texttt{GENERATING}, gọi \texttt{GenerationService} để tạo test/quiz.
+    \item Hiển thị kết quả và chuyển sang state \texttt{COMPLETED}.
+\end{enumerate}
+
+\textbf{Integration với Dify}
+
+Chatbot sử dụng \texttt{DifyService} để gọi Dify API với context-aware prompts:
+
+\begin{itemize}
+    \item Khi sinh paragraph: Truyền nội dung flashcard hiện tại vào prompt để Dify sinh paragraph giải thích phù hợp.
+    \item Khi xử lý câu hỏi tự do: Truyền conversation history và studyset context vào Dify để đảm bảo AI hiểu ngữ cảnh.
+    \item Khi tạo test/quiz: Truyền danh sách terms và các tham số (số lượng, độ khó) vào Dify workflow.
+\end{itemize}
+
+\textbf{Error Handling và Recovery}
+
+Chatbot có cơ chế xử lý lỗi và phục hồi:
+
+\begin{itemize}
+    \item Nếu Dify API trả về lỗi: Chatbot thông báo lỗi và quay lại state trước đó, cho phép người dùng thử lại.
+    \item Nếu input không hợp lệ: Chatbot yêu cầu người dùng nhập lại với hướng dẫn rõ ràng.
+    \item Nếu conversation timeout: Chatbot có thể reset về state \texttt{INITIAL} sau một khoảng thời gian không hoạt động.
+\end{itemize}
+
+\subsection{Kết quả đạt được}
+\label{subsection:5.3.3}
+
+Dịch vụ Chatbot với state management và context awareness đã được triển khai thành công và cung cấp trải nghiệm người dùng tốt:
+
+\begin{itemize}
+    \item \textbf{Context Awareness}: Chatbot có thể hiểu và phản hồi dựa trên ngữ cảnh học tập hiện tại (studyset, term đang xem), đảm bảo các phản hồi phù hợp và hữu ích.
+    
+    \item \textbf{Natural Conversation Flow}: State machine cho phép chatbot điều hướng conversation một cách tự nhiên, thu thập thông tin từng bước thay vì yêu cầu người dùng nhập tất cả thông tin trong một lần.
+    
+    \item \textbf{Multi-Intent Support}: Chatbot có thể xử lý nhiều loại intent khác nhau (test generation, quiz generation, paragraph generation, free questions) trong cùng một conversation.
+    
+    \item \textbf{State Persistence}: Conversation state được lưu trữ trong database, đảm bảo tính liên tục giữa các session và khả năng phục hồi sau khi hệ thống restart.
+    
+    \item \textbf{Error Resilience}: Cơ chế xử lý lỗi và recovery đảm bảo chatbot có thể phục hồi từ các lỗi tạm thời và tiếp tục hỗ trợ người dùng.
+    
+    \item \textbf{User Experience}: Người dùng có thể tương tác với chatbot một cách tự nhiên, không cần học các cú pháp đặc biệt, chatbot sẽ tự động hiểu intent và điều hướng conversation phù hợp.
+\end{itemize}
+
+Chi tiết về use case tương tác AI đã được trình bày trong Chương 2 (phần \ref{section:2.2}), và thiết kế API cho chatbot đã được mô tả trong Chương 4 (phần \ref{section:4.2}).
+
+\section{Service Layer Pattern với Dependency Injection trong FastAPI}
+\label{section:5.4}
+
+\subsection{Dẫn dắt về bài toán}
+\label{subsection:5.4.1}
+
+Khi xây dựng một hệ thống backend phức tạp với nhiều services và dependencies, việc quản lý các phụ thuộc (dependencies) giữa các components trở thành một thách thức quan trọng. Các vấn đề cụ thể bao gồm:
+
+\begin{itemize}
+    \item \textbf{Tight Coupling}: Nếu các API routes trực tiếp tạo instances của services và database sessions, code trở nên tightly coupled, khó test và khó thay thế implementations.
+    \item \textbf{Code Duplication}: Logic nghiệp vụ có thể bị lặp lại giữa các API routes, dẫn đến việc khó bảo trì và dễ phát sinh lỗi.
+    \item \textbf{Testing Difficulties}: Khó test các API routes độc lập vì chúng phụ thuộc trực tiếp vào database và external services.
+    \item \textbf{Dependency Management}: Khó quản lý lifecycle của các dependencies (ví dụ: khi nào tạo database session, khi nào đóng session, khi nào tạo service instance).
+    \item \textbf{Configuration Management}: Khó quản lý cấu hình (database connection, API keys, settings) một cách tập trung và nhất quán.
+\end{itemize}
+
+FastAPI cung cấp một hệ thống Dependency Injection mạnh mẽ, nhưng để tận dụng tối đa khả năng này và xây dựng một kiến trúc clean và maintainable, cần một pattern thiết kế rõ ràng.
+
+\subsection{Giải pháp}
+\label{subsection:5.4.2}
+
+Sinh viên đã áp dụng Service Layer Pattern kết hợp với FastAPI Dependency Injection để tách biệt rõ ràng giữa API routes (presentation layer) và business logic (service layer), đồng thời quản lý dependencies một cách hiệu quả.
+
+\textbf{Service Layer Pattern}
+
+Hệ thống được tổ chức thành các tầng rõ ràng:
+
+\begin{enumerate}
+    \item \textbf{API Routes Layer} (\texttt{backend/app/api/routes/}): Chỉ chịu trách nhiệm nhận HTTP requests, validate inputs (sử dụng Pydantic schemas), gọi services, và trả về HTTP responses. Không chứa business logic.
+    
+    \item \textbf{Service Layer} (\texttt{backend/app/services/}): Chứa tất cả business logic. Các services nhận dependencies (database session, other services) thông qua constructor hoặc method parameters.
+    
+    \item \textbf{Data Access Layer} (\texttt{backend/app/models/}): Định nghĩa database models và cung cấp abstraction cho database operations.
+\end{enumerate}
+
+\textbf{Dependency Injection với FastAPI}
+
+FastAPI's dependency injection được sử dụng để quản lý dependencies một cách tự động:
+
+\textbf{1. Database Session Dependency}
+
+Trong \texttt{backend/app/api/deps.py}, một dependency function được định nghĩa để cung cấp database session:
+
+\begin{verbatim}
+def get_session() -> Generator[Session, None, None]:
+    """Dependency để lấy database session"""
+    with Session(engine) as session:
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+\end{verbatim}
+
+Các API routes sử dụng dependency này:
+
+\begin{verbatim}
+@router.post("/studysets/{studyset_id}/review")
+async def submit_review(
+    studyset_id: UUID,
+    review: ReviewSubmission,
+    current_user: CurrentUser,
+    session: Session = Depends(get_session)  # Dependency injection
+):
+    # Sử dụng session
+    result = LearningService.record_review(...)
+    return result
+\end{verbatim}
+
+\textbf{2. Current User Dependency}
+
+Một dependency để lấy thông tin user hiện tại từ JWT token:
+
+\begin{verbatim}
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    session: Session = Depends(get_session)
+) -> User:
+    """Dependency để lấy current user từ JWT token"""
+    # Decode JWT, validate, return User
+    ...
+\end{verbatim}
+
+\textbf{3. Service Dependencies}
+
+Các services được tạo trong API routes với dependencies được inject:
+
+\begin{verbatim}
+@router.post("/chatbot/studysets/{studyset_id}/chat")
+async def chat_with_studyset(
+    studyset_id: UUID,
+    request: ChatRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    # Tạo service với dependencies
+    chatbot_service = ChatbotService(session, use_mock=False)
+    
+    # Sử dụng service
+    response = await chatbot_service.handle_message(...)
+    return response
+\end{verbatim}
+
+\textbf{4. Configuration Dependencies}
+
+Cấu hình được quản lý tập trung thông qua Pydantic Settings:
+
+\begin{verbatim}
+class Settings(BaseSettings):
+    database_url: str
+    dify_api_key: str
+    dify_api_endpoint: str
+    ...
+
+settings = Settings()
+\end{verbatim}
+
+Các services sử dụng settings này thông qua dependency injection hoặc direct access.
+
+\textbf{Lợi ích của Pattern này}
+
+\begin{enumerate}
+    \item \textbf{Separation of Concerns}: API routes chỉ lo xử lý HTTP, business logic nằm trong services.
+    
+    \item \textbf{Testability}: Có thể dễ dàng mock dependencies trong tests:
+    \begin{verbatim}
+    def test_api_endpoint():
+        mock_session = Mock()
+        mock_service = Mock()
+        # Test API route với mocked dependencies
+    \end{verbatim}
+    
+    \item \textbf{Reusability}: Services có thể được sử dụng lại trong nhiều API routes hoặc background tasks.
+    
+    \item \textbf{Dependency Lifecycle Management}: FastAPI tự động quản lý lifecycle của dependencies (khi nào tạo, khi nào cleanup).
+    
+    \item \textbf{Type Safety}: Sử dụng type hints và Pydantic schemas đảm bảo type safety ở compile time.
+    
+    \item \textbf{Configuration Centralization}: Tất cả cấu hình được quản lý tập trung, dễ thay đổi giữa các môi trường.
+\end{enumerate}
+
+\textbf{Ví dụ cụ thể: LearningService}
+
+\texttt{LearningService} được thiết kế với các static methods nhận session và các parameters cần thiết:
+
+\begin{verbatim}
+class LearningService:
+    @staticmethod
+    def get_next_term_to_review(
+        session: Session,
+        user_id: uuid.UUID,
+        studyset_id: uuid.UUID
+    ) -> Term | None:
+        # Business logic ở đây
+        ...
+    
+    @staticmethod
+    def record_review(
+        session: Session,
+        user_id: uuid.UUID,
+        term_id: uuid.UUID,
+        studyset_id: uuid.UUID,
+        recall_score: int
+    ) -> ReviewResponse:
+        # Business logic ở đây
+        ...
+\end{verbatim}
+
+API route sử dụng service này:
+
+\begin{verbatim}
+@router.get("/studysets/{studyset_id}/next")
+async def get_next_term(
+    studyset_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    term = LearningService.get_next_term_to_review(
+        session=session,
+        user_id=current_user.user_id,
+        studyset_id=studyset_id
+    )
+    return NextTermResponse(term=term)
+\end{verbatim}
+
+Pattern này đảm bảo rằng:
+\begin{itemize}
+    \item API route không cần biết chi tiết về cách \texttt{LearningService} hoạt động.
+    \item \texttt{LearningService} không phụ thuộc vào FastAPI, có thể được sử dụng trong các context khác (CLI, background tasks).
+    \item Dễ dàng test \texttt{LearningService} độc lập bằng cách truyền mock session.
+\end{itemize}
+
+\subsection{Kết quả đạt được}
+\label{subsection:5.4.3}
+
+Service Layer Pattern với Dependency Injection đã được áp dụng thành công trong toàn bộ hệ thống và mang lại nhiều lợi ích:
+
+\begin{itemize}
+    \item \textbf{Clean Architecture}: Code được tổ chức rõ ràng với separation of concerns, dễ đọc và dễ hiểu.
+    
+    \item \textbf{High Testability}: Có thể test từng layer độc lập bằng cách mock dependencies, đảm bảo test coverage cao và tests chạy nhanh.
+    
+    \item \textbf{Maintainability}: Business logic tập trung trong services, dễ bảo trì và mở rộng. Khi cần thay đổi logic, chỉ cần sửa trong service, không cần sửa nhiều API routes.
+    
+    \item \textbf{Reusability}: Services có thể được sử dụng lại trong nhiều contexts (API routes, background tasks, CLI commands) mà không cần duplicate code.
+    
+    \item \textbf{Dependency Management}: FastAPI tự động quản lý lifecycle của dependencies (database sessions, connections), đảm bảo resource cleanup đúng cách.
+    
+    \item \textbf{Type Safety}: Sử dụng type hints và Pydantic schemas giảm thiểu lỗi runtime và cải thiện developer experience với IDE autocomplete và type checking.
+    
+    \item \textbf{Configuration Management}: Cấu hình được quản lý tập trung, dễ dàng thay đổi giữa các môi trường (development, staging, production) thông qua environment variables.
+\end{itemize}
+
+Kiến trúc tổng quan của hệ thống và cách các services được tổ chức đã được trình bày trong Chương 4 (phần \ref{section:4.1} và \ref{subsection:4.1.3}).
+
+\section{Session-based Learning Management với Review Scheduling}
+\label{section:5.5}
+
+\subsection{Dẫn dắt về bài toán}
+\label{subsection:5.5.1}
+
+Trong một hệ thống học tập flashcard với thuật toán spaced repetition, việc quản lý learning sessions và lịch trình ôn tập là một thách thức quan trọng. Các vấn đề cụ thể bao gồm:
+
+\begin{itemize}
+    \item \textbf{Session Tracking}: Hệ thống cần theo dõi khi nào người dùng bắt đầu và kết thúc một session học tập, để có thể tính toán thống kê như thời gian học, số lượng flashcard đã học trong session.
+    \item \textbf{Review Scheduling}: Sau khi kết thúc một session học, hệ thống cần xác định các flashcard nào cần được ôn lại trong các session tiếp theo dựa trên thuật toán SM-2 và \texttt{next\_review\_date}.
+    \item \textbf{Progress Aggregation}: Hệ thống cần tổng hợp tiến độ học tập từ nhiều sessions để cung cấp thống kê tổng thể (số flashcard đã học, tỉ lệ nhớ/quên, completion rate).
+    \item \textbf{Session-based Analytics}: Giáo viên và người dùng cần xem thống kê theo từng session để hiểu rõ hơn về thói quen học tập và hiệu quả của từng buổi học.
+    \item \textbf{Resume Capability}: Người dùng có thể muốn tạm dừng một session và tiếp tục sau, hệ thống cần lưu trữ state của session để có thể resume.
+\end{itemize}
+
+Việc xây dựng một hệ thống quản lý sessions với các khả năng trên đòi hỏi một thiết kế database schema và business logic phức tạp, đảm bảo tính nhất quán dữ liệu và hiệu suất truy vấn.
+
+\subsection{Giải pháp}
+\label{subsection:5.5.2}
+
+Sinh viên đã thiết kế và triển khai một hệ thống Session-based Learning Management với các components chính: \texttt{LearningSession} model, \texttt{SessionService}, và integration với \texttt{LearningService} để quản lý review scheduling.
+
+\textbf{Database Schema Design}
+
+Hệ thống sử dụng hai database models chính:
+
+\begin{enumerate}
+    \item \texttt{LearningSession}: Lưu trữ thông tin về mỗi session học tập:
+    \begin{itemize}
+        \item \texttt{session\_id}: UUID identifier
+        \item \texttt{user\_id}: Người dùng thực hiện session
+        \item \texttt{studyset\_id}: Studyset đang học
+        \item \texttt{started\_at}: Thời điểm bắt đầu session
+        \item \texttt{ended\_at}: Thời điểm kết thúc session (nullable, null nếu session chưa kết thúc)
+        \item \texttt{terms\_studied}: Số lượng terms đã học trong session
+        \item \texttt{terms\_mastered}: Số lượng terms đã mastered trong session
+    \end{itemize}
+    
+    \item \texttt{SessionReview}: Lưu trữ thông tin về các flashcard được ôn lại trong session:
+    \begin{itemize}
+        \item \texttt{review\_id}: UUID identifier
+        \item \texttt{session\_id}: Foreign key đến \texttt{LearningSession}
+        \item \texttt{term\_id}: Flashcard được ôn
+        \item \texttt{reviewed\_at}: Thời điểm ôn
+        \item \texttt{recall\_score}: Điểm đánh giá (0-5)
+        \item \texttt{is\_correct}: Đúng/Sai
+    \end{itemize}
+\end{enumerate}
+
+\textbf{SessionService - Quản lý Session Lifecycle}
+
+\texttt{SessionService} (trong \texttt{backend/app/services/session\_service.py}) cung cấp các phương thức để quản lý session lifecycle:
+
+\begin{itemize}
+    \item \texttt{start\_session()}: Tạo một \texttt{LearningSession} mới với \texttt{started\_at} = now, \texttt{ended\_at} = null.
+    
+    \item \texttt{end\_session()}: Cập nhật \texttt{LearningSession} với \texttt{ended\_at} = now, tính toán \texttt{terms\_studied} và \texttt{terms\_mastered} từ các \texttt{SessionReview} trong session.
+    
+    \item \texttt{get\_active\_session()}: Lấy session đang active (chưa kết thúc) của user cho một studyset cụ thể, cho phép resume session.
+    
+    \item \texttt{get\_session\_history()}: Lấy lịch sử các sessions của user, có thể filter theo studyset, date range, và pagination.
+\end{itemize}
+
+\textbf{Integration với LearningService}
+
+Khi người dùng submit một review trong session, hệ thống:
+
+\begin{enumerate}
+    \item Gọi \texttt{LearningService.record\_review()} để cập nhật \texttt{StudyActivity} và tính toán \texttt{next\_review\_date} dựa trên SM-2.
+    
+    \item Tạo một \texttt{SessionReview} record để liên kết review với session hiện tại.
+    
+    \item Cập nhật thống kê session (tăng \texttt{terms\_studied}, tăng \texttt{terms\_mastered} nếu recall\_score >= 4).
+\end{enumerate}
+
+\textbf{Review Scheduling Logic}
+
+Sau khi kết thúc session, hệ thống sử dụng \texttt{next\_review\_date} từ \texttt{StudyActivity} để xác định các flashcard cần ôn lại:
+
+\begin{itemize}
+    \item Các flashcard có \texttt{next\_review\_date} <= "hôm nay" sẽ được ưu tiên trong session tiếp theo.
+    \item Các flashcard chưa từng được học (không có \texttt{StudyActivity}) sẽ được đề xuất tiếp theo.
+    \item Các flashcard đã học nhưng chưa đến hạn sẽ được đề xuất cuối cùng, sắp xếp theo EF (thấp nhất trước).
+\end{itemize}
+
+Logic này được triển khai trong \texttt{LearningService.get\_next\_term\_to\_review()}, đảm bảo rằng người dùng luôn học các flashcard quan trọng nhất trước.
+
+\textbf{Progress Aggregation}
+
+\texttt{ProgressSummary} được cập nhật dựa trên tất cả \texttt{StudyActivity} của user cho một studyset:
+
+\begin{itemize}
+    \item \texttt{mastered\_terms}: Số flashcard có EF > 2.5 và interval > 21 ngày.
+    \item \texttt{reviewing\_terms}: Số flashcard đang trong quá trình học (đã học nhưng chưa mastered).
+    \item \texttt{forgotten\_terms}: Số flashcard có recall\_score < 3 trong lần học gần nhất.
+    \item \texttt{completion\_rate}: Tỷ lệ phần trăm flashcard đã học (ít nhất một lần) trên tổng số flashcard.
+    \item \texttt{next\_due\_date}: Ngày ôn tập sớm nhất tiếp theo trong tất cả flashcard.
+\end{itemize}
+
+\textbf{Session-based Analytics}
+
+Hệ thống cung cấp các thống kê theo session:
+
+\begin{itemize}
+    \item Thời gian học trong session (tính từ \texttt{started\_at} đến \texttt{ended\_at}).
+    \item Số lượng flashcard đã học, đã mastered trong session.
+    \item Tỷ lệ nhớ/quên trong session.
+    \item So sánh giữa các sessions để xem xu hướng cải thiện.
+\end{itemize}
+
+Các thống kê này được tính toán trong \texttt{AnalyticsService} và được hiển thị trong dashboard của người dùng và giáo viên.
+
+\textbf{Resume Capability}
+
+Hệ thống hỗ trợ resume session thông qua:
+
+\begin{itemize}
+    \item Khi người dùng bắt đầu học một studyset, hệ thống kiểm tra xem có session active không.
+    \item Nếu có, hệ thống cho phép người dùng tiếp tục session đó hoặc bắt đầu session mới.
+    \item State của session (các flashcard đã học) được lưu trữ trong \texttt{SessionReview}, cho phép hiển thị tiến độ trong session.
+\end{itemize}
+
+\subsection{Kết quả đạt được}
+\label{subsection:5.5.3}
+
+Hệ thống Session-based Learning Management đã được triển khai thành công và cung cấp các khả năng quản lý học tập toàn diện:
+
+\begin{itemize}
+    \item \textbf{Session Tracking}: Hệ thống theo dõi chính xác thời gian học và số lượng flashcard đã học trong mỗi session, cung cấp dữ liệu cho analytics.
+    
+    \item \textbf{Review Scheduling}: Thuật toán SM-2 kết hợp với session management đảm bảo các flashcard được ôn lại đúng thời điểm, tối ưu hóa quá trình ghi nhớ.
+    
+    \item \textbf{Progress Aggregation}: Thống kê tổng thể được tính toán chính xác từ tất cả sessions, cung cấp cái nhìn toàn diện về tiến độ học tập.
+    
+    \item \textbf{Session Analytics}: Người dùng và giáo viên có thể xem thống kê chi tiết theo từng session, giúp hiểu rõ hơn về thói quen học tập và hiệu quả của từng buổi học.
+    
+    \item \textbf{Resume Capability}: Người dùng có thể tạm dừng và tiếp tục session, cải thiện trải nghiệm người dùng.
+    
+    \item \textbf{Data Consistency}: Database schema được thiết kế để đảm bảo tính nhất quán dữ liệu, với foreign keys và constraints phù hợp.
+    
+    \item \textbf{Performance}: Các truy vấn được tối ưu hóa với indexes phù hợp, đảm bảo hiệu suất tốt ngay cả với lượng dữ liệu lớn.
+\end{itemize}
+
+Chi tiết về database schema và các models liên quan đã được trình bày trong Chương 4 (phần \ref{section:4.2}), và các use case liên quan đến học tập đã được mô tả trong Chương 2 (phần \ref{section:2.2}).
+
+\section{Kết luận chương}
+
+Chương này đã trình bày năm đóng góp và giải pháp kỹ thuật quan trọng trong quá trình xây dựng hệ thống Aikari:
+
+\begin{enumerate}
+    \item \textbf{Tích hợp thuật toán SM-2 với xử lý múi giờ địa phương}: Giải quyết vấn đề tính toán chính xác ngày ôn tập trong môi trường đa múi giờ.
+    
+    \item \textbf{Kiến trúc tích hợp AI với Dify workflows tự host}: Xây dựng một kiến trúc modular và có khả năng mở rộng cho việc tích hợp AI.
+    
+    \item \textbf{Dịch vụ Chatbot với state management và context awareness}: Tạo ra một chatbot thông minh có khả năng hiểu ngữ cảnh và quản lý conversation state.
+    
+    \item \textbf{Service Layer Pattern với Dependency Injection trong FastAPI}: Áp dụng các best practices để xây dựng một kiến trúc backend clean và maintainable.
+    
+    \item \textbf{Session-based Learning Management với Review Scheduling}: Quản lý học tập theo session với lịch trình ôn tập thông minh.
+\end{enumerate}
+
+Các giải pháp này không chỉ giải quyết các vấn đề cụ thể trong quá trình phát triển, mà còn đóng góp vào việc xây dựng một hệ thống có tính mở rộng cao, dễ bảo trì, và cung cấp trải nghiệm người dùng tốt. Các giải pháp này có thể được áp dụng và mở rộng cho các dự án tương tự trong tương lai.
+
+\end{document}
