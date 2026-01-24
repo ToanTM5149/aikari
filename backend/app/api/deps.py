@@ -50,7 +50,7 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
   # Refresh token được quản lý qua RefreshToken.revoked field
   
   # token_data.sub contains user_id (UUID as string)
-  from app.crud.crud import get_user_by_id
+  from app.crud import get_user_by_id
 
   try:
     user_id = uuid.UUID(token_data.sub) if token_data.sub else None
@@ -98,7 +98,7 @@ def check_studyset_access(
   1. They own the studyset, OR
   2. The studyset is part of a class they are an active member of
   """
-  from app.crud.crud import get_studyset
+  from app.crud import get_studyset
   from app.models import ClassStudySet, ClassMember, MembershipStatus
   
   studyset = get_studyset(session=session, studyset_id=studyset_id)

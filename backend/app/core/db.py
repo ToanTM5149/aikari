@@ -4,7 +4,7 @@ from sqlalchemy.pool import QueuePool
 from sqlalchemy import event
 from sqlalchemy.exc import DisconnectionError
 
-from app.crud.crud import create_user
+from app.crud import create_user
 from app.core.config import settings
 from app.models import User, UserRole
 from app.schemas import UserCreate

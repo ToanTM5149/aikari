@@ -1,7 +1,7 @@
 """CRUD operations for the application."""
 
-from .crud import (
-    # User CRUD
+# User CRUD
+from .user import (
     authenticate,
     authenticate_by_username,
     create_user,
@@ -9,29 +9,41 @@ from .crud import (
     get_user_by_id,
     get_user_by_username,
     update_user,
-    # Class CRUD
+)
+
+# Class CRUD
+from .class_crud import (
     create_class,
     delete_class,
     get_class,
     get_classes_by_owner,
-    get_user_class_membership,
     get_user_classes,
     update_class,
-    # ClassMember CRUD
+)
+
+# ClassMember CRUD
+from .class_member import (
     create_class_member,
     delete_class_member,
     get_class_members,
     get_invitations,
     get_pending_requests,
+    get_user_class_membership,
     get_user_invitations,
     update_class_member,
-    # StudySet CRUD
+)
+
+# StudySet CRUD
+from .studyset import (
     create_studyset,
     delete_studyset,
     get_studyset,
     get_studysets_by_owner,
     update_studyset,
-    # Term CRUD
+)
+
+# Term CRUD
+from .term import (
     create_term,
     delete_term,
     get_term,
