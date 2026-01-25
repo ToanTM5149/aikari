@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import login, private, users, utils, classes, studysets, categories, learning, tests, chatbot, admin, session
+from app.api.routes import login, private, users, utils, classes, studysets, categories, learning, tests, chatbot, admin, session, enrollment
 from app.core.config import settings
 
 api_router = APIRouter()
@@ -15,6 +15,7 @@ api_router.include_router(learning.router, prefix="/learning", tags=["learning"]
 api_router.include_router(session.router, prefix="/session", tags=["session"])
 api_router.include_router(tests.router, prefix="/tests", tags=["tests"])
 api_router.include_router(chatbot.router)
+api_router.include_router(enrollment.router)
 
 
 if settings.ENVIRONMENT == "local":

@@ -15,6 +15,8 @@ from app.models import (
     ClassStudySet,
     AIGeneratedContents,
     ChatConversation,
+    SessionReview,
+    StudentStudySet,
 )
 from app.schemas import StudySetCreate, StudySetUpdate
 
@@ -69,7 +71,14 @@ def delete_studyset(*, session: Session, studyset_id: uuid.UUID) -> None:
     for progress in progress_summaries:
         session.delete(progress)
     
-    # 3. Delete StudyActivity entries (has FK to StudySet)
+    # 3. Delete StudentStudySet entries (junction table - Phase 1 addition)
+    student_studysets = session.exec(
+        select(StudentStudySet).where(StudentStudySet.studyset_id == studyset_id)
+    ).all()
+    for enrollment in student_studysets:
+        session.delete(enrollment)
+
+    # 4. Delete StudyActivity entries (has FK to StudySet)
     activities = session.exec(
         select(StudyActivity).where(StudyActivity.studyset_id == studyset_id)
     ).all()
@@ -118,21 +127,33 @@ def delete_studyset(*, session: Session, studyset_id: uuid.UUID) -> None:
     ).all()
     for css in class_studysets:
         session.delete(css)
-    
-    # 6. Delete Term entries (has FK to StudySet)
+
+    # 6. FIX BUG: Delete SessionReview entries BEFORE deleting Terms
+    # Get all terms in this studyset
     terms = session.exec(
         select(Term).where(Term.studyset_id == studyset_id)
     ).all()
+    term_ids = [term.term_id for term in terms]
+
+    # Delete SessionReview for these terms
+    if term_ids:
+        session_reviews = session.exec(
+            select(SessionReview).where(SessionReview.term_id.in_(term_ids))
+        ).all()
+        for review in session_reviews:
+            session.delete(review)
+
+    # 7. Delete Term entries (now safe after SessionReview deleted)
     for term in terms:
         session.delete(term)
     
-    # 7. Delete AIGeneratedContents entries (has FK to StudySet)
+    # 8. Delete AIGeneratedContents entries (has FK to StudySet)
     ai_contents = session.exec(
         select(AIGeneratedContents).where(AIGeneratedContents.studyset_id == studyset_id)
     ).all()
     for content in ai_contents:
         session.delete(content)
-    
+
     # 9. Finally, delete the studyset
     session.delete(db_studyset)
     session.commit()

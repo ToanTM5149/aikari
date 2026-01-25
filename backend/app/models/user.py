@@ -46,5 +46,9 @@ class User(SQLModel, table=True):
     study_activities: list["StudyActivity"] = Relationship(back_populates="user")
     progress_summaries: list["ProgressSummary"] = Relationship(back_populates="user")
     learning_sessions: list["LearningSession"] = Relationship(back_populates="user")
+    enrolled_studysets: list["StudentStudySet"] = Relationship(
+        back_populates="student",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 

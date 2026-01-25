@@ -51,6 +51,17 @@ from .term import (
     update_term,
 )
 
+# StudentStudySet CRUD
+from .student_studyset import (
+    enroll_student,
+    unenroll_student,
+    update_last_studied,
+    get_student_studysets,
+    get_studyset_students,
+    is_student_enrolled,
+    get_enrollment,
+)
+
 __all__ = [
     # User
     "authenticate",
@@ -88,5 +99,13 @@ __all__ = [
     "get_term",
     "get_terms_by_studyset",
     "update_term",
+    # StudentStudySet
+    "enroll_student",
+    "unenroll_student",
+    "update_last_studied",
+    "get_student_studysets",
+    "get_studyset_students",
+    "is_student_enrolled",
+    "get_enrollment",
 ]
 

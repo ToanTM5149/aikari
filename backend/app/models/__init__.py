@@ -24,6 +24,7 @@ from app.models.class_ import Class, ClassMember, ClassStudySet
 from app.models.progress import ProgressSummary
 from app.models.content import AIGeneratedContents
 from app.models.studyset import StudySet
+from app.models.student_studyset import StudentStudySet
 from app.models.term import Term
 from app.models.test import Test, TestQuestion, TestAttempt, TestAnswer, ReattemptRequest
 from app.models.refresh_token import RefreshToken
@@ -50,6 +51,7 @@ __all__ = [
     "ClassMember",
     "ClassStudySet",
     "StudySet",
+    "StudentStudySet",
     "Term",
     "Test",
     "TestQuestion",

@@ -27,6 +27,10 @@ class StudySet(SQLModel, table=True):
     study_activities: list["StudyActivity"] = Relationship(back_populates="study_set")
     progress_summaries: list["ProgressSummary"] = Relationship(back_populates="study_set")
     classes: list["ClassStudySet"] = Relationship(back_populates="studyset")
+    enrolled_students: list["StudentStudySet"] = Relationship(
+        back_populates="studyset",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
 

@@ -81,6 +81,37 @@ def upgrade():
         ['studyset_id']
     )
 
+    # TestQuestion indexes
+    op.create_index(
+        'idx_testquestion_term',
+        'TestQuestion',
+        ['term_id']
+    )
+    op.create_index(
+        'idx_testquestion_test',
+        'TestQuestion',
+        ['test_id']
+    )
+
+    # Test indexes
+    op.create_index(
+        'idx_test_studyset',
+        'Test',
+        ['studyset_id']
+    )
+
+    # SessionReview indexes
+    op.create_index(
+        'idx_sessionreview_term',
+        'SessionReview',
+        ['term_id']
+    )
+    op.create_index(
+        'idx_sessionreview_session',
+        'SessionReview',
+        ['session_id']
+    )
+
 
 def downgrade():
     """Remove all performance indexes"""
@@ -103,3 +134,14 @@ def downgrade():
 
     # Drop Term indexes
     op.drop_index('idx_term_studyset', table_name='Term')
+
+    # Drop TestQuestion indexes
+    op.drop_index('idx_testquestion_test', table_name='TestQuestion')
+    op.drop_index('idx_testquestion_term', table_name='TestQuestion')
+
+    # Drop Test indexes
+    op.drop_index('idx_test_studyset', table_name='Test')
+
+    # Drop SessionReview indexes
+    op.drop_index('idx_sessionreview_session', table_name='SessionReview')
+    op.drop_index('idx_sessionreview_term', table_name='SessionReview')

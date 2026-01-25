@@ -260,7 +260,17 @@ class SessionService:
         learning_session.status = SessionStatus.COMPLETED
         learning_session.ended_at = datetime.utcnow()
         learning_session.updated_at = datetime.utcnow()
-        
+
+        # Update StudentStudySet last_studied_at (auto-enrollment if not enrolled)
+        if learning_session.studyset_id:
+            from app.crud.student_studyset import update_last_studied
+            update_last_studied(
+                session=session,
+                student_id=learning_session.user_id,
+                studyset_id=learning_session.studyset_id,
+                timestamp=learning_session.ended_at
+            )
+
         session.commit()
         session.refresh(learning_session)
         

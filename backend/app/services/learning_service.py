@@ -325,10 +325,19 @@ class LearningService:
         session.add(activity)
         session.commit()
         session.refresh(activity)
-        
+
         # Update progress summary
         LearningService.update_progress_summary(session, user_id, studyset_id)
-        
+
+        # Update StudentStudySet last_studied_at (auto-enrollment if not enrolled)
+        from app.crud.student_studyset import update_last_studied
+        update_last_studied(
+            session=session,
+            student_id=user_id,
+            studyset_id=studyset_id,
+            timestamp=activity.end_time
+        )
+
         return activity
     
     @staticmethod
