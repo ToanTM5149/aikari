@@ -28,10 +28,10 @@ export const studySetApi = baseApi.injectEndpoints({
      * Get StudySets - Lấy danh sách studysets của user
      * GET /studysets/
      */
-    getStudySets: builder.query<StudySetsResponse, PaginationParams & { category_id?: string } | void>({
-      query: (params = {}) => ({
+    getStudySets: builder.query<StudySetsResponse, PaginationParams & { category_id?: string } | undefined>({
+      query: (params) => ({
         url: '/studysets/',
-        params,
+        params: params || {},
       }),
       providesTags: ['Flashcard'],
     }),
@@ -118,6 +118,17 @@ export const studySetApi = baseApi.injectEndpoints({
         { type: 'Flashcard', id: `${studysetId}-term-${termId}` },
       ],
     }),
+
+    /**
+     * Get Term by ID only (for terms management)
+     * GET /studysets/terms/{term_id}/
+     */
+    getTermByIdOnly: builder.query<Term, string>({
+      query: (termId) => `/studysets/terms/${termId}/`,
+      providesTags: (result, error, termId) => [
+        { type: 'Flashcard', id: `term-${termId}` },
+      ],
+    }),
     
     /**
      * Create Term
@@ -132,7 +143,7 @@ export const studySetApi = baseApi.injectEndpoints({
         }),
         invalidatesTags: (result, error, { studysetId }) => [
           { type: 'Flashcard', id: `${studysetId}-terms` },
-          'Flashcard',
+          { type: 'Flashcard', id: 'ALL_TERMS' },
         ],
       }
     ),
@@ -153,6 +164,8 @@ export const studySetApi = baseApi.injectEndpoints({
       invalidatesTags: (result, error, { studysetId, termId }) => [
         { type: 'Flashcard', id: `${studysetId}-term-${termId}` },
         { type: 'Flashcard', id: `${studysetId}-terms` },
+        { type: 'Flashcard', id: 'ALL_TERMS' },
+        { type: 'Flashcard', id: `TERM-${termId}` },
       ],
     }),
     
@@ -168,10 +181,36 @@ export const studySetApi = baseApi.injectEndpoints({
         url: `/studysets/${studysetId}/terms/${termId}/`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result, error, { studysetId }) => [
+      invalidatesTags: (result, error, { studysetId, termId }) => [
         { type: 'Flashcard', id: `${studysetId}-terms` },
-        'Flashcard',
+        { type: 'Flashcard', id: 'ALL_TERMS' },
+        { type: 'Flashcard', id: `TERM-${termId}` },
       ],
+    }),
+
+    /**
+     * Get All Terms - Get all terms from user's accessible studysets
+     * GET /studysets/terms/all/
+     * Supports filtering by studyset_id and search
+     */
+    getAllTerms: builder.query<
+      TermsResponse,
+      { studysetId?: string; q?: string } & PaginationParams
+    >({
+      query: ({ studysetId, q, ...params }) => ({
+        url: '/studysets/terms/all/',
+        params: {
+          studyset_id: studysetId,
+          q: q || undefined,
+          ...params,
+        },
+      }),
+      providesTags: (result) => [
+        { type: 'Flashcard', id: 'ALL_TERMS' },
+        ...(result?.data?.map((term) => ({ type: 'Flashcard' as const, id: `TERM-${term.term_id}` })) || []),
+      ],
+      // Keep data in cache for 60 seconds to prevent unnecessary refetches
+      keepUnusedDataFor: 60,
     }),
   }),
 });
@@ -180,7 +219,6 @@ export const studySetApi = baseApi.injectEndpoints({
  * Export Hooks
  */
 export const {
-  useGetCategoriesQuery,
   useGetStudySetsQuery,
   useGetStudySetByIdQuery,
   useCreateStudySetMutation,
@@ -188,8 +226,10 @@ export const {
   useDeleteStudySetMutation,
   useGetTermsQuery,
   useGetTermByIdQuery,
+  useGetTermByIdOnlyQuery,
   useCreateTermMutation,
   useUpdateTermMutation,
   useDeleteTermMutation,
+  useGetAllTermsQuery,
 } = studySetApi;
 

@@ -93,7 +93,7 @@ class DifyService:
         query: str,
         user: str | None = None,
         conversation_id: str | None = None,
-        response_mode: str = "blocking",
+        response_mode: str = "streaming",
         inputs: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
@@ -143,7 +143,7 @@ class DifyService:
         data: dict[str, Any] = {
             "inputs": {},
             "query": prompt,
-            "response_mode": "blocking",
+            "response_mode": "streaming",
         }
 
         if user:

@@ -18,6 +18,7 @@ from app.models.test import (
     ReattemptRequest,
 )
 from app.models.term import Term
+from app.models.studyset_term import StudySetTerm
 from app.models.studyset import StudySet
 from app.models.class_ import Class, ClassMember, ClassStudySet
 from app.models.enums import QuestionType, ReattemptStatus, ClassRole, MembershipStatus
@@ -108,8 +109,11 @@ def generate_test_questions(
 ) -> list[dict]:
     """Generate questions for a test"""
     # Get all terms from studyset
+    # PHASE 3.2: Read from StudySetTerm junction table
     terms = session.exec(
-        select(Term).where(Term.studyset_id == studyset_id)
+        select(Term)
+        .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+        .where(StudySetTerm.studyset_id == studyset_id)
     ).all()
     
     if not terms:

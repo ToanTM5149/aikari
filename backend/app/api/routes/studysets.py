@@ -2,12 +2,13 @@ import uuid
 from typing import Any
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, func
 
 from app import crud
+from app.crud import studyset_term as crud_studyset_term
 from app.api.deps import CurrentUser, SessionDep, check_studyset_access
-from app.models import StudySet, Term, StudyActivity, ProgressSummary, ClassStudySet, ClassMember, MembershipStatus
+from app.models import StudySet, Term, StudyActivity, ProgressSummary, ClassStudySet, ClassMember, MembershipStatus, StudySetTerm
 from app.schemas import (
     Message,
     StudySetCreate,
@@ -82,13 +83,14 @@ def read_studysets(
     studyset_ids = [s.studyset_id for s in sets]
 
     # Query 1: Get term counts for all studysets in one query
+    # PHASE 3.2: Read from StudySetTerm junction table instead of Term.studyset_id
     term_counts_statement = (
         select(
-            Term.studyset_id,
-            func.count(Term.term_id).label('term_count')
+            StudySetTerm.studyset_id,
+            func.count(StudySetTerm.term_id).label('term_count')
         )
-        .where(Term.studyset_id.in_(studyset_ids))
-        .group_by(Term.studyset_id)
+        .where(StudySetTerm.studyset_id.in_(studyset_ids))
+        .group_by(StudySetTerm.studyset_id)
     )
     term_counts_result = session.exec(term_counts_statement).all()
     term_counts_map = {row.studyset_id: row.term_count for row in term_counts_result}
@@ -269,7 +271,14 @@ def read_terms(
         limit=limit
     )
     
-    return {"data": terms, "count": len(terms)}
+    # Add studyset_id to each term for response compatibility
+    terms_with_studyset_id = []
+    for term in terms:
+        term_dict = term.model_dump()
+        term_dict['studyset_id'] = studyset_id
+        terms_with_studyset_id.append(TermPublic(**term_dict))
+    
+    return {"data": terms_with_studyset_id, "count": len(terms_with_studyset_id)}
 
 
 @router.get("/{studyset_id}/terms/{term_id}/", response_model=TermPublic)
@@ -291,8 +300,12 @@ def read_term(
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     term = crud.get_term(session=session, term_id=term_id)
-    if not term or term.studyset_id != studyset_id:
+    if not term:
         raise HTTPException(status_code=404, detail="Term not found")
+
+    # Check if term belongs to studyset via junction table
+    if not crud_studyset_term.is_term_in_studyset(session=session, studyset_id=studyset_id, term_id=term_id):
+        raise HTTPException(status_code=404, detail="Term not found in this studyset")
     
     # Migrate dữ liệu cũ từ attributes.paragraph sang paragraphs nếu cần
     if (term.paragraphs is None or len(term.paragraphs) == 0) and term.attributes and term.attributes.get("paragraph"):
@@ -316,7 +329,10 @@ def read_term(
         session.commit()
         session.refresh(term)
     
-    return term
+    # Add studyset_id to response for compatibility
+    term_dict = term.model_dump()
+    term_dict['studyset_id'] = studyset_id
+    return TermPublic(**term_dict)
 
 
 @router.post("/{studyset_id}/terms/", response_model=TermPublic)
@@ -337,9 +353,13 @@ def create_term(
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     term = crud.create_term(
-        session=session, term_in=term_in, studyset_id=studyset_id
+        session=session, term_in=term_in, studyset_id=studyset_id, added_by=current_user.user_id
     )
-    return term
+    
+    # Add studyset_id to response for compatibility
+    term_dict = term.model_dump()
+    term_dict['studyset_id'] = studyset_id
+    return TermPublic(**term_dict)
 
 
 @router.put("/{studyset_id}/terms/{term_id}/", response_model=TermPublic)
@@ -359,14 +379,22 @@ def update_term(
         raise HTTPException(status_code=404, detail="Study set not found")
     
     term = crud.get_term(session=session, term_id=term_id)
-    if not term or term.studyset_id != studyset_id:
+    if not term:
         raise HTTPException(status_code=404, detail="Term not found")
+
+    # Check if term belongs to studyset via junction table
+    if not crud_studyset_term.is_term_in_studyset(session=session, studyset_id=studyset_id, term_id=term_id):
+        raise HTTPException(status_code=404, detail="Term not found in this studyset")
     
     if studyset.owner_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     term = crud.update_term(session=session, db_term=term, term_in=term_in)
-    return term
+    
+    # Add studyset_id to response for compatibility
+    term_dict = term.model_dump()
+    term_dict['studyset_id'] = studyset_id
+    return TermPublic(**term_dict)
 
 
 @router.delete("/{studyset_id}/terms/{term_id}/", response_model=Message)
@@ -384,12 +412,267 @@ def delete_term(
         raise HTTPException(status_code=404, detail="Study set not found")
     
     term = crud.get_term(session=session, term_id=term_id)
-    if not term or term.studyset_id != studyset_id:
+    if not term:
         raise HTTPException(status_code=404, detail="Term not found")
+
+    # Check if term belongs to studyset via junction table
+    if not crud_studyset_term.is_term_in_studyset(session=session, studyset_id=studyset_id, term_id=term_id):
+        raise HTTPException(status_code=404, detail="Term not found in this studyset")
     
     if studyset.owner_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     crud.delete_term(session=session, term_id=term_id)
     return Message(message="Term deleted successfully")
+
+
+# Terms management endpoint - Get all terms from user's studysets
+@router.get("/terms/all/")
+def get_all_terms(
+    current_user: CurrentUser,
+    session: SessionDep,
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(5, ge=1, le=100, description="Maximum number of records to return"),
+    studyset_id: uuid.UUID | None = Query(None, description="Filter by study set ID"),
+    q: str | None = Query(None, description="Search query for term text or definition"),
+) -> Any:
+    """
+    Get all terms from studysets that the user owns or has access to.
+    
+    Supports:
+    - Filter by studyset_id (optional)
+    - Search by term_text or definition (q parameter)
+    - Pagination
+    
+    Returns terms with their studyset_ids (a term can belong to multiple studysets).
+    """
+    from sqlmodel import or_, distinct
+    
+    # Get all studyset_ids that user has access to
+    # 1. Studysets owned by user
+    owned_studysets = session.exec(
+        select(StudySet.studyset_id).where(StudySet.owner_id == current_user.user_id)
+    ).all()
+    
+    # 2. Studysets in classes where user is active member
+    class_studysets = session.exec(
+        select(distinct(ClassStudySet.studyset_id))
+        .join(ClassMember, ClassMember.class_id == ClassStudySet.class_id)
+        .where(ClassMember.user_id == current_user.user_id)
+        .where(ClassMember.status == MembershipStatus.ACTIVE)
+    ).all()
+    
+    # Combine all accessible studyset_ids
+    accessible_studyset_ids = list(set(owned_studysets) | set(class_studysets))
+    
+    if not accessible_studyset_ids:
+        return {"data": [], "count": 0}
+    
+    # Filter by studyset_id if provided
+    if studyset_id:
+        if studyset_id not in accessible_studyset_ids:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        accessible_studyset_ids = [studyset_id]
+    
+    # Build query to get distinct terms from accessible studysets
+    # Join StudySetTerm to get terms that belong to accessible studysets
+    base_statement = (
+        select(Term)
+        .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+        .where(StudySetTerm.studyset_id.in_(accessible_studyset_ids))
+        .distinct()
+    )
+    
+    # Add search filter if provided
+    if q:
+        from sqlmodel import or_
+        search_filter = or_(
+            Term.term_text.ilike(f"%{q}%"),
+            Term.definition.ilike(f"%{q}%")
+        )
+        base_statement = base_statement.where(search_filter)
+    
+    # Count total (distinct terms) - count distinct term_ids matching filters
+    # We need to count distinct term_ids, not all rows
+    count_base = (
+        select(distinct(StudySetTerm.term_id))
+        .join(Term, Term.term_id == StudySetTerm.term_id)
+        .where(StudySetTerm.studyset_id.in_(accessible_studyset_ids))
+    )
+    
+    if q:
+        from sqlmodel import or_
+        search_filter = or_(
+            Term.term_text.ilike(f"%{q}%"),
+            Term.definition.ilike(f"%{q}%")
+        )
+        count_base = count_base.where(search_filter)
+    
+    # Count distinct term_ids
+    count_statement = select(func.count()).select_from(
+        count_base.subquery()
+    )
+    total_count = session.exec(count_statement).one() or 0
+    
+    # Get paginated terms - order by created_at DESC so newest terms appear first
+    statement = base_statement.order_by(Term.created_at.desc()).offset(skip).limit(limit)
+    terms = list(session.exec(statement).all())
+    
+    if not terms:
+        return {"data": [], "count": 0}
+    
+    # For each term, get all studyset_ids it belongs to (from accessible studysets)
+    term_ids = [term.term_id for term in terms]
+    studyset_terms = session.exec(
+        select(StudySetTerm)
+        .where(StudySetTerm.term_id.in_(term_ids))
+        .where(StudySetTerm.studyset_id.in_(accessible_studyset_ids))
+    ).all()
+    
+    # Group studyset_ids by term_id
+    term_studysets_map: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for st in studyset_terms:
+        if st.term_id not in term_studysets_map:
+            term_studysets_map[st.term_id] = []
+        term_studysets_map[st.term_id].append(st.studyset_id)
+    
+    # Build response with studyset_id (use first one for compatibility)
+    terms_with_studyset_id = []
+    for term in terms:
+        term_dict = term.model_dump()
+        studyset_ids = term_studysets_map.get(term.term_id, [])
+        # Use first studyset_id for response compatibility
+        term_dict['studyset_id'] = studyset_ids[0] if studyset_ids else None
+        terms_with_studyset_id.append(TermPublic(**term_dict))
+    
+    return {"data": terms_with_studyset_id, "count": total_count}
+
+
+# Get term by termId only (for terms management page)
+@router.get("/terms/{term_id}/", response_model=TermPublic)
+def get_term_by_id(
+    term_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Get term by ID (without requiring studyset_id).
+    Used for terms management page where we only have term_id.
+    """
+    term = crud.get_term(session=session, term_id=term_id)
+    if not term:
+        raise HTTPException(status_code=404, detail="Term not found")
+    
+    # Get all studysets that contain this term
+    term_studyset_ids = session.exec(
+        select(StudySetTerm.studyset_id)
+        .where(StudySetTerm.term_id == term_id)
+    ).all()
+    
+    if not term_studyset_ids:
+        raise HTTPException(status_code=404, detail="Term not found in any studyset")
+    
+    # Check if user has access to any of these studysets
+    accessible_studyset_id = None
+    for studyset_id in term_studyset_ids:
+        # Check if user is owner
+        studyset = session.get(StudySet, studyset_id)
+        if studyset and studyset.owner_id == current_user.user_id:
+            accessible_studyset_id = studyset_id
+            break
+        
+        # Check if user is member of class that has this studyset
+        class_access = session.exec(
+            select(ClassMember)
+            .join(ClassStudySet, ClassStudySet.class_id == ClassMember.class_id)
+            .where(
+                ClassMember.user_id == current_user.user_id,
+                ClassStudySet.studyset_id == studyset_id,
+                ClassMember.status == MembershipStatus.ACTIVE
+            )
+        ).first()
+        
+        if class_access:
+            accessible_studyset_id = studyset_id
+            break
+    
+    if not accessible_studyset_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Use first accessible studyset_id for response compatibility
+    term_dict = term.model_dump()
+    term_dict['studyset_id'] = accessible_studyset_id
+    return TermPublic(**term_dict)
+
+
+# Add term to studyset endpoint
+@router.post("/{studyset_id}/terms/{term_id}/add/", response_model=Message)
+def add_term_to_studyset(
+    studyset_id: uuid.UUID,
+    term_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Add an existing term to a studyset (N:M relationship).
+    
+    This allows reusing terms across multiple studysets (term library feature).
+    """
+    studyset = crud.get_studyset(session=session, studyset_id=studyset_id)
+    if not studyset:
+        raise HTTPException(status_code=404, detail="Study set not found")
+    
+    # Check permissions
+    if studyset.owner_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Check if term exists
+    term = crud.get_term(session=session, term_id=term_id)
+    if not term:
+        raise HTTPException(status_code=404, detail="Term not found")
+    
+    # Add term to studyset (idempotent)
+    crud_studyset_term.add_term_to_studyset(
+        session=session,
+        studyset_id=studyset_id,
+        term_id=term_id,
+        added_by=current_user.user_id,
+    )
+    
+    return Message(message="Term added to study set successfully")
+
+
+# Remove term from studyset endpoint
+@router.delete("/{studyset_id}/terms/{term_id}/remove/", response_model=Message)
+def remove_term_from_studyset(
+    studyset_id: uuid.UUID,
+    term_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Any:
+    """
+    Remove a term from a studyset (delete N:M relationship).
+    
+    Note: This does NOT delete the term itself - just removes it from this studyset.
+    The term can still be used in other studysets.
+    """
+    studyset = crud.get_studyset(session=session, studyset_id=studyset_id)
+    if not studyset:
+        raise HTTPException(status_code=404, detail="Study set not found")
+    
+    # Check permissions
+    if studyset.owner_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Remove term from studyset
+    removed = crud_studyset_term.remove_term_from_studyset(
+        session=session,
+        studyset_id=studyset_id,
+        term_id=term_id,
+    )
+    
+    if not removed:
+        raise HTTPException(status_code=404, detail="Term not found in this study set")
+    
+    return Message(message="Term removed from study set successfully")
 

@@ -33,15 +33,23 @@ class LearningSession(SQLModel, table=True):
 
 class SessionReview(SQLModel, table=True):
     __tablename__ = "SessionReview"
-    
+
     review_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     session_id: uuid.UUID = Field(foreign_key="LearningSession.session_id")
     term_id: uuid.UUID = Field(foreign_key="Term.term_id")
+
+    # PHASE 3.1+: Add studyset_id for quick review lookups without joins
+    # This denormalizes the data to avoid joining through LearningSession or Term
+    studyset_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="StudySet.studyset_id"
+    )
+
     recall_score: int = Field(default=0)  # 0-5
     response_time: float = Field(default=0.0)  # seconds
     hint_used: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     # Relationships
     session: LearningSession = Relationship(back_populates="reviews")
     term: "Term" = Relationship()

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from app.api.deps import get_current_user, get_session
-from app.models import User
+from app.models import User, StudySetTerm, Term
 from app.schemas.session import (
     StartSessionRequest,
     StartSessionResponse,
@@ -55,7 +55,12 @@ def start_learning_session(
             
             # Get ALL terms from studyset (not filtered by activity)
             # This ensures we return the same terms as when session started
-            terms_statement = select(Term).where(Term.studyset_id == request.studyset_id)
+            # PHASE 3.2: Read from StudySetTerm junction table
+            terms_statement = (
+                select(Term)
+                .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+                .where(StudySetTerm.studyset_id == request.studyset_id)
+            )
             all_terms = list(db.exec(terms_statement).all())
             
             # Get reviewed terms in this session to track progress

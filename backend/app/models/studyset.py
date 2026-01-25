@@ -1,9 +1,17 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import ContentType
+
+if TYPE_CHECKING:
+    from app.models import (
+        User, Category, Term, Test, AIGeneratedContents,
+        StudyActivity, ProgressSummary, ClassStudySet,
+        StudentStudySet, StudySetTerm
+    )
 
 
 class StudySet(SQLModel, table=True):
@@ -21,7 +29,13 @@ class StudySet(SQLModel, table=True):
     # Relationships
     owner: "User" = Relationship(back_populates="study_sets")
     category: "Category" = Relationship(back_populates="study_sets")
-    terms: list["Term"] = Relationship(back_populates="study_set")
+
+    # PHASE 3.3: N:M relationship via junction table (single source of truth)
+    studyset_terms: list["StudySetTerm"] = Relationship(
+        back_populates="studyset",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
     tests: list["Test"] = Relationship(back_populates="study_set")
     ai_generated_contents: list["AIGeneratedContents"] = Relationship(back_populates="study_set")
     study_activities: list["StudyActivity"] = Relationship(back_populates="study_set")

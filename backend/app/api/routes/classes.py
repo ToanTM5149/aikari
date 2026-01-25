@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
-from app.models import Class, ClassMember, ClassRole, MembershipStatus, User, ClassStudySet, StudySet
+from app.models import Class, ClassMember, ClassRole, MembershipStatus, User, ClassStudySet, StudySet, StudySetTerm
 from app.schemas import (
     ClassCreate,
     ClassMemberCreate,
@@ -777,13 +777,14 @@ def get_class_studysets(
     from app.schemas import StudySetPublic
 
     # Query 1: Get term counts for all studysets in one query
+    # PHASE 3.2: Read from StudySetTerm junction table
     term_counts_statement = (
         select(
-            Term.studyset_id,
-            func.count(Term.term_id).label('term_count')
+            StudySetTerm.studyset_id,
+            func.count(StudySetTerm.term_id).label('term_count')
         )
-        .where(Term.studyset_id.in_(studyset_ids))
-        .group_by(Term.studyset_id)
+        .where(StudySetTerm.studyset_id.in_(studyset_ids))
+        .group_by(StudySetTerm.studyset_id)
     )
     term_counts_result = session.exec(term_counts_statement).all()
     term_counts_map = {row.studyset_id: row.term_count for row in term_counts_result}

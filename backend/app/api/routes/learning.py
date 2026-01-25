@@ -10,7 +10,8 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep, check_studyset_access
-from app.models import StudySet, Term, StudyActivity, ProgressSummary
+from app.crud import studyset_term as crud_studyset_term
+from app.models import StudySet, Term, StudyActivity, ProgressSummary, StudySetTerm
 from app.schemas import (
     LearningSessionStart,
     LearningSessionStartResponse,
@@ -54,7 +55,12 @@ def start_learning_session(
     
     # Get ALL terms from studyset - no filtering or sorting
     # Simply return all terms in the studyset
-    terms_statement = select(Term).where(Term.studyset_id == session_data.studyset_id)
+    # PHASE 3.2: Read from StudySetTerm junction table
+    terms_statement = (
+        select(Term)
+        .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+        .where(StudySetTerm.studyset_id == session_data.studyset_id)
+    )
     all_terms = list(session.exec(terms_statement).all())
     
     # Apply limit if specified (for session_size)
@@ -64,8 +70,11 @@ def start_learning_session(
         terms = all_terms
     
     # Count total terms in studyset
-    total_terms_statement = select(Term).where(Term.studyset_id == session_data.studyset_id)
-    total_terms = len(list(session.exec(total_terms_statement).all()))
+    # PHASE 3.3: Read from StudySetTerm (single source of truth)
+    total_terms = crud_studyset_term.count_studyset_terms(
+        session=session,
+        studyset_id=session_data.studyset_id
+    )
     
     # Get activities to determine if terms are new
     activities_statement = (
@@ -184,9 +193,12 @@ def submit_review(
     if not check_studyset_access(session, studyset_id, current_user.user_id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    # Verify term belongs to studyset
+    # Verify term belongs to studyset via junction table
     term = session.get(Term, review.term_id)
-    if not term or term.studyset_id != studyset_id:
+    if not term:
+        raise HTTPException(status_code=404, detail="Term not found")
+
+    if not crud_studyset_term.is_term_in_studyset(session=session, studyset_id=studyset_id, term_id=review.term_id):
         raise HTTPException(status_code=404, detail="Term not found in this study set")
     
     # Record the review
@@ -329,7 +341,12 @@ def get_studyset_stats(
         raise HTTPException(status_code=404, detail="Study set not found")
     
     # Get all terms
-    terms_statement = select(Term).where(Term.studyset_id == studyset_id)
+    # PHASE 3.2: Read from StudySetTerm junction table
+    terms_statement = (
+        select(Term)
+        .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+        .where(StudySetTerm.studyset_id == studyset_id)
+    )
     all_terms = list(session.exec(terms_statement).all())
     total_terms = len(all_terms)
     

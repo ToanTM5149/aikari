@@ -29,7 +29,7 @@ export default function AuthenticatedLayout() {
     
     // Define role-based access rules
     const adminOnlyRoutes = ['/user-management', '/token-management', '/dashboard/admin'];
-    const studentTeacherOnlyRoutes = ['/dashboard', '/dashboard/studysets', '/dashboard/categories', '/dashboard/class', '/create', '/history'];
+    const studentTeacherOnlyRoutes = ['/dashboard', '/dashboard/studysets', '/dashboard/terms', '/dashboard/categories', '/dashboard/class', '/create', '/history'];
     
     // Admin trying to access student/teacher routes
     if (userRole === 'ADMIN' && studentTeacherOnlyRoutes.some(route => currentPath.startsWith(route))) {
@@ -49,6 +49,7 @@ export default function AuthenticatedLayout() {
     const path = location.pathname;
     if (path === "/dashboard") return "home";
     if (path.startsWith("/dashboard/studysets")) return "studysets";
+    if (path.startsWith("/dashboard/terms")) return "terms";
     if (path.startsWith("/dashboard/categories")) return "categories";
     if (path.startsWith("/dashboard/class")) return "class";
     if (path.startsWith("/dashboard/admin")) return "admin";
@@ -66,6 +67,9 @@ export default function AuthenticatedLayout() {
         break;
       case "studysets":
         navigate("/dashboard/studysets");
+        break;
+      case "terms":
+        navigate("/dashboard/terms");
         break;
       case "categories":
         navigate("/dashboard/categories");

@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlmodel import Session, select, func
 
-from app.models import StudyActivity, Term, ProgressSummary, StudySet
+from app.models import StudyActivity, Term, ProgressSummary, StudySet, StudySetTerm
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,12 @@ class LearningService:
         3. Terms with lowest EF (hardest ones)
         """
         # Get all terms in studyset
-        terms_statement = select(Term).where(Term.studyset_id == studyset_id)
+        # PHASE 3.2: Read from StudySetTerm junction table
+        terms_statement = (
+            select(Term)
+            .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+            .where(StudySetTerm.studyset_id == studyset_id)
+        )
         all_terms = session.exec(terms_statement).all()
         
         if not all_terms:
@@ -183,7 +188,12 @@ class LearningService:
         regardless of when they were last reviewed.
         """
         # Get all terms in studyset
-        terms_statement = select(Term).where(Term.studyset_id == studyset_id)
+        # PHASE 3.2: Read from StudySetTerm junction table
+        terms_statement = (
+            select(Term)
+            .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+            .where(StudySetTerm.studyset_id == studyset_id)
+        )
         all_terms = list(session.exec(terms_statement).all())
         
         if not all_terms:
@@ -382,9 +392,10 @@ class LearningService:
             return progress
         
         # Calculate statistics
+        # PHASE 3.2: Count from StudySetTerm junction table
         total_terms_statement = (
-            select(func.count(Term.term_id))
-            .where(Term.studyset_id == studyset_id)
+            select(func.count(StudySetTerm.term_id))
+            .where(StudySetTerm.studyset_id == studyset_id)
         )
         total_terms = session.exec(total_terms_statement).one()
         

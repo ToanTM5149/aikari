@@ -129,9 +129,11 @@ def delete_studyset(*, session: Session, studyset_id: uuid.UUID) -> None:
         session.delete(css)
 
     # 6. FIX BUG: Delete SessionReview entries BEFORE deleting Terms
-    # Get all terms in this studyset
+    # Get all terms in this studyset via StudySetTerm junction table
     terms = session.exec(
-        select(Term).where(Term.studyset_id == studyset_id)
+        select(Term)
+        .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+        .where(StudySetTerm.studyset_id == studyset_id)
     ).all()
     term_ids = [term.term_id for term in terms]
 

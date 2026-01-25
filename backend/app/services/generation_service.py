@@ -13,6 +13,7 @@ from app.models.content import AIGeneratedContents
 from app.models.enums import GenerateType, QuestionType
 from app.models.studyset import StudySet
 from app.models.term import Term
+from app.models.studyset_term import StudySetTerm
 from app.models.test import Test, TestQuestion
 from app.services import dify_service
 
@@ -51,7 +52,12 @@ class GenerationService:
             raise ValueError(f"StudySet {studyset_id} not found")
         
         # Load all terms
-        terms_statement = select(Term).where(Term.studyset_id == studyset_id)
+        # PHASE 3.2: Read from StudySetTerm junction table
+        terms_statement = (
+            select(Term)
+            .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+            .where(StudySetTerm.studyset_id == studyset_id)
+        )
         terms = session.exec(terms_statement).all()
         
         if not terms:
@@ -76,30 +82,44 @@ class GenerationService:
         self,
         term_id: uuid.UUID,
         session: Session,
+        studyset_id: uuid.UUID | None = None,
     ) -> str:
         """
         Chuẩn bị context từ một term cụ thể
         Format: "StudySet: {title}\n\nTerm: {term_text}\nDefinition: {definition}"
-        
+
         Args:
             term_id: ID của term
             session: Database session
-            
+            studyset_id: Optional studyset ID (if term is in multiple studysets)
+
         Returns:
             Formatted context string cho term đó
-            
+
         Raises:
             ValueError: Nếu term không tồn tại
         """
         term = session.exec(select(Term).where(Term.term_id == term_id)).first()
-        
+
         if not term:
             raise ValueError(f"Term {term_id} not found")
-        
+
         # Load studyset để lấy title
-        studyset = session.exec(
-            select(StudySet).where(StudySet.studyset_id == term.studyset_id)
-        ).first()
+        # If studyset_id provided, use it; otherwise get first studyset from junction table
+        if not studyset_id:
+            studyset_term = session.exec(
+                select(StudySetTerm)
+                .where(StudySetTerm.term_id == term_id)
+                .order_by(StudySetTerm.added_at)
+            ).first()
+            if studyset_term:
+                studyset_id = studyset_term.studyset_id
+
+        studyset = None
+        if studyset_id:
+            studyset = session.exec(
+                select(StudySet).where(StudySet.studyset_id == studyset_id)
+            ).first()
         
         # Format context chỉ cho term này
         context_parts = []
@@ -138,7 +158,12 @@ class GenerationService:
             ValueError: Nếu không tìm thấy term nào
         """
         # Load all terms
-        terms_statement = select(Term).where(Term.studyset_id == studyset_id)
+        # PHASE 3.2: Read from StudySetTerm junction table
+        terms_statement = (
+            select(Term)
+            .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+            .where(StudySetTerm.studyset_id == studyset_id)
+        )
         terms = session.exec(terms_statement).all()
         
         if not terms:
@@ -346,16 +371,22 @@ class GenerationService:
                     except ValueError as e:
                         logger.warning(f"Could not map term_text '{term_text}': {e}")
                         # Fallback: use first term
+                        # PHASE 3.2: Read from StudySetTerm junction table
                         terms = session.exec(
-                            select(Term).where(Term.studyset_id == studyset_id)
+                            select(Term)
+                            .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+                            .where(StudySetTerm.studyset_id == studyset_id)
                         ).all()
                         if terms:
                             term_id = terms[0].term_id
-                
+
                 # Fallback nếu không có term_text hoặc không tìm thấy
                 if not term_id:
+                    # PHASE 3.2: Read from StudySetTerm junction table
                     terms = session.exec(
-                        select(Term).where(Term.studyset_id == studyset_id)
+                        select(Term)
+                        .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+                        .where(StudySetTerm.studyset_id == studyset_id)
                     ).all()
                     if terms:
                         term_id = terms[0].term_id
@@ -453,7 +484,7 @@ class GenerationService:
         try:
             # Nếu có term_id, chỉ lấy context từ term đó
             if term_id:
-                study_context = self.prepare_term_context(term_id, session)
+                study_context = self.prepare_term_context(term_id, session, studyset_id)
             else:
                 # Fallback: lấy context từ toàn bộ studyset (giữ backward compatibility)
                 study_context = self.prepare_study_context(studyset_id, session)
@@ -713,8 +744,11 @@ class GenerationService:
                 }
             else:
                 # Fallback: lưu vào tất cả terms (giữ backward compatibility)
+                # PHASE 3.2: Read from StudySetTerm junction table
                 terms = session.exec(
-                    select(Term).where(Term.studyset_id == studyset_id)
+                    select(Term)
+                    .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+                    .where(StudySetTerm.studyset_id == studyset_id)
                 ).all()
                 
                 if not terms:

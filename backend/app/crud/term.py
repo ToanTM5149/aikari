@@ -1,8 +1,9 @@
 import uuid
+from datetime import datetime
 
 from sqlmodel import Session, select
 
-from app.models import Term, StudyActivity, SessionReview, TestQuestion
+from app.models import Term, StudyActivity, SessionReview, TestQuestion, StudySetTerm
 from app.schemas import TermCreate, TermUpdate
 
 
@@ -12,11 +13,37 @@ def get_term(*, session: Session, term_id: uuid.UUID) -> Term | None:
 
 
 def create_term(
-    *, session: Session, term_in: TermCreate, studyset_id: uuid.UUID
+    *, session: Session, term_in: TermCreate, studyset_id: uuid.UUID, added_by: uuid.UUID | None = None
 ) -> Term:
-    """Create new term"""
-    db_obj = Term.model_validate(term_in, update={"studyset_id": studyset_id})
+    """
+    Create new term and add to studyset via junction table.
+
+    PHASE 3.3: Writes only to StudySetTerm (single source of truth)
+
+    Args:
+        session: Database session
+        term_in: Term creation data
+        studyset_id: StudySet to add the term to
+        added_by: User who created the term (optional)
+
+    Returns:
+        Created Term
+    """
+    # Create term (no studyset_id field anymore)
+    db_obj = Term.model_validate(term_in)
     session.add(db_obj)
+    session.flush()  # Flush to get term_id without committing
+
+    # Write to StudySetTerm junction table (single source of truth)
+    studyset_term = StudySetTerm(
+        studyset_id=studyset_id,
+        term_id=db_obj.term_id,
+        added_by=added_by,
+        added_at=db_obj.created_at,
+        order=0,  # Default order, can be updated later
+    )
+    session.add(studyset_term)
+
     session.commit()
     session.refresh(db_obj)
     return db_obj
@@ -33,7 +60,13 @@ def update_term(*, session: Session, db_term: Term, term_in: TermUpdate) -> Term
 
 
 def delete_term(*, session: Session, term_id: uuid.UUID) -> None:
-    """Delete term with proper cleanup of dependent records
+    """
+    Delete term with proper cleanup of dependent records.
+
+    PHASE 3.3: StudySetTerm relationships are automatically deleted via cascade
+    (defined in Term.studyset_terms relationship).
+
+    Note: This REMOVES the term from all studysets (deletes all N:M relationships).
 
     Raises:
         ValueError: If term has dependencies that prevent deletion
@@ -42,43 +75,50 @@ def delete_term(*, session: Session, term_id: uuid.UUID) -> None:
     if not db_term:
         return
 
-    # Step 1: Delete SessionReview entries (FIX BUG)
+    # Step 1: Delete SessionReview entries
     session_reviews = session.exec(
         select(SessionReview).where(SessionReview.term_id == term_id)
     ).all()
     for review in session_reviews:
         session.delete(review)
 
-    # Step 2: Check TestQuestion - prevent deletion if used in completed tests
+    # Step 2: Delete TestQuestion entries
+    # (in production might want to prevent deletion if used in completed tests)
     test_questions = session.exec(
         select(TestQuestion).where(TestQuestion.term_id == term_id)
     ).all()
-
-    # For now, just delete them (in production might want to prevent deletion)
     for tq in test_questions:
         session.delete(tq)
 
-    # Step 3: Delete term (StudyActivity will remain with FK to deleted term)
-    # Note: StudyActivity is historical data, we keep it even if term is deleted
+    # Step 3: Delete term
+    # StudySetTerm relationships are automatically deleted via cascade
+    # StudyActivity is historical data, we keep it even if term is deleted
     session.delete(db_term)
     session.commit()
 
 
 def get_terms_by_studyset(
-    *, 
-    session: Session, 
-    studyset_id: uuid.UUID, 
+    *,
+    session: Session,
+    studyset_id: uuid.UUID,
     user_id: uuid.UUID | None = None,
     status: str | None = None,
-    skip: int = 0, 
+    skip: int = 0,
     limit: int = 100
 ) -> list[Term]:
-    """Get all terms in a study set, optionally filtered by study status"""
+    """
+    Get all terms in a study set, optionally filtered by study status.
+
+    PHASE 3.2: Reads from StudySetTerm junction table instead of Term.studyset_id
+    """
+    # PHASE 3.2: Read from StudySetTerm junction table (NEW)
     statement = (
         select(Term)
-        .where(Term.studyset_id == studyset_id)
+        .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+        .where(StudySetTerm.studyset_id == studyset_id)
+        .order_by(StudySetTerm.order, Term.created_at)
     )
-    
+
     all_terms = list(session.exec(statement).all())
     
     # If no status filter or user_id, return all terms

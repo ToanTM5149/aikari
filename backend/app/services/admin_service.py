@@ -14,6 +14,7 @@ from app.models import (
     ClassStudySet,
     StudySet,
     Term,
+    StudySetTerm,
     StudyActivity,
     ProgressSummary,
     Test,
@@ -606,7 +607,9 @@ class AdminService:
                 func.count(StudyActivity.activity_id).label('activity_count'),
             )
             .join(User, StudySet.owner_id == User.user_id)
-            .outerjoin(Term, Term.studyset_id == StudySet.studyset_id)
+            # PHASE 3.2: Join via StudySetTerm junction table
+            .outerjoin(StudySetTerm, StudySetTerm.studyset_id == StudySet.studyset_id)
+            .outerjoin(Term, Term.term_id == StudySetTerm.term_id)
             .outerjoin(StudyActivity, StudyActivity.studyset_id == StudySet.studyset_id)
             .group_by(StudySet.studyset_id, User.username)
             .order_by(func.count(distinct(StudyActivity.user_id)).desc())
@@ -646,7 +649,9 @@ class AdminService:
                 func.count(StudyActivity.activity_id).label('activity_count'),
             )
             .join(User, StudySet.owner_id == User.user_id)
-            .outerjoin(Term, Term.studyset_id == StudySet.studyset_id)
+            # PHASE 3.2: Join via StudySetTerm junction table
+            .outerjoin(StudySetTerm, StudySetTerm.studyset_id == StudySet.studyset_id)
+            .outerjoin(Term, Term.term_id == StudySetTerm.term_id)
             .outerjoin(StudyActivity, StudyActivity.studyset_id == StudySet.studyset_id)
             .group_by(StudySet.studyset_id, User.username)
             .order_by(func.count(StudyActivity.activity_id).desc())

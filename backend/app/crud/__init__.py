@@ -62,6 +62,17 @@ from .student_studyset import (
     get_enrollment,
 )
 
+# StudySetTerm CRUD (Phase 3.1+)
+from .studyset_term import (
+    add_term_to_studyset,
+    remove_term_from_studyset,
+    get_studyset_terms,
+    get_term_studysets,
+    count_studyset_terms,
+    update_term_order,
+    is_term_in_studyset,
+)
+
 __all__ = [
     # User
     "authenticate",
@@ -107,5 +118,13 @@ __all__ = [
     "get_studyset_students",
     "is_student_enrolled",
     "get_enrollment",
+    # StudySetTerm (Phase 3.1+)
+    "add_term_to_studyset",
+    "remove_term_from_studyset",
+    "get_studyset_terms",
+    "get_term_studysets",
+    "count_studyset_terms",
+    "update_term_order",
+    "is_term_in_studyset",
 ]
 

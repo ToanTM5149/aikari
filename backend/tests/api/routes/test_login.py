@@ -8,8 +8,8 @@ from app.core.security import verify_password
 from app.crud import create_user
 from app.schemas import UserCreate
 from app.services import generate_password_reset_token
-from app.tests.utils.user import user_authentication_headers
-from app.tests.utils.utils import random_email, random_lower_string
+from tests.utils.user import user_authentication_headers
+from tests.utils.utils import random_email, random_lower_string
 
 
 def test_get_access_token(client: TestClient) -> None:

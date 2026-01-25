@@ -8,12 +8,13 @@ from sqlmodel import Session, select
 from typing import Any
 
 from app.models import (
-    LearningSession, 
-    SessionReview, 
+    LearningSession,
+    SessionReview,
     SessionStatus,
     StudyActivity,
     StudySet,
-    Term
+    Term,
+    StudySetTerm
 )
 from app.services.learning_service import SpacedRepetitionSM2
 
@@ -47,10 +48,14 @@ class SessionService:
         # Simply get ALL terms from studyset, no filtering or sorting
         terms = []
         if studyset_id:
-            from app.models import Term
             from sqlmodel import select
-            
-            terms_statement = select(Term).where(Term.studyset_id == studyset_id)
+
+            # PHASE 3.2: Read from StudySetTerm junction table
+            terms_statement = (
+                select(Term)
+                .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
+                .where(StudySetTerm.studyset_id == studyset_id)
+            )
             terms = list(session.exec(terms_statement).all())
             
             # Use actual terms count if provided total_cards is 0 or less
@@ -176,14 +181,19 @@ class SessionService:
         
         # Process each review
         for review in reviews:
-            # Get studyset_id from session or from term
+            # Get studyset_id from session or from StudySetTerm junction
             studyset_id = learning_session.studyset_id
             if not studyset_id:
-                # Get from term (for quick review with multiple studysets)
-                term = session.get(Term, review.term_id)
-                if term:
-                    studyset_id = term.studyset_id
-            
+                # Get from StudySetTerm junction (for quick review with multiple studysets)
+                # Get first studyset associated with this term
+                studyset_term = session.exec(
+                    select(StudySetTerm)
+                    .where(StudySetTerm.term_id == review.term_id)
+                    .order_by(StudySetTerm.added_at)
+                ).first()
+                if studyset_term:
+                    studyset_id = studyset_term.studyset_id
+
             if not studyset_id:
                 continue
             

@@ -11,6 +11,7 @@ from app.api.deps import get_session, get_current_user
 from app.models.user import User
 from app.models.studyset import StudySet
 from app.models.student_studyset import StudentStudySet
+from app.models.studyset_term import StudySetTerm
 from app.schemas.student_studyset import (
     StudentStudySetRead,
     EnrolledStudySetDetail,
@@ -194,13 +195,14 @@ def get_my_enrolled_studysets(
     studyset_ids = [s.studyset_id for s in studysets]
 
     # Bulk query term counts for all studysets
+    # PHASE 3.2: Read from StudySetTerm junction table
     term_counts_statement = (
         select(
-            Term.studyset_id,
-            func.count(Term.term_id).label('term_count')
+            StudySetTerm.studyset_id,
+            func.count(StudySetTerm.term_id).label('term_count')
         )
-        .where(Term.studyset_id.in_(studyset_ids))
-        .group_by(Term.studyset_id)
+        .where(StudySetTerm.studyset_id.in_(studyset_ids))
+        .group_by(StudySetTerm.studyset_id)
     )
     term_counts_result = session.exec(term_counts_statement).all()
     term_counts_map = {row.studyset_id: row.term_count for row in term_counts_result}

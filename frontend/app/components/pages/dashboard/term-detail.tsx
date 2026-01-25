@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import {
   useGetTermByIdQuery,
+  useGetTermByIdOnlyQuery,
   useUpdateTermMutation,
 } from "~/redux/features/studyset";
 import {
@@ -36,24 +37,43 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { formatDateTime } from "~/utils/date";
 
 export function TermDetail() {
-  const { studysetId, termId } = useParams<{ studysetId: string; termId: string }>();
+  const { studysetId, termId } = useParams<{ studysetId?: string; termId: string }>();
   const navigate = useNavigate();
+  
+  // Check if we're from terms management page (no studysetId)
+  const isFromTermsManagement = !studysetId;
 
-  // Query
+  // Query - use different endpoint based on whether studysetId is available
   const {
-    data: termData,
-    isLoading: loadingTerm,
-    error: termError,
-    refetch: refetchTerm,
+    data: termDataFromStudyset,
+    isLoading: loadingTermFromStudyset,
+    error: termErrorFromStudyset,
+    refetch: refetchTermFromStudyset,
   } = useGetTermByIdQuery(
     { studysetId: studysetId!, termId: termId! },
-    { skip: !studysetId || !termId }
+    { skip: !studysetId || !termId || isFromTermsManagement }
   );
 
-  // Mutation
+  const {
+    data: termDataFromTerms,
+    isLoading: loadingTermFromTerms,
+    error: termErrorFromTerms,
+    refetch: refetchTermFromTerms,
+  } = useGetTermByIdOnlyQuery(
+    termId!,
+    { skip: !termId || !isFromTermsManagement }
+  );
+
+  // Use appropriate data based on mode
+  const termData = isFromTermsManagement ? termDataFromTerms : termDataFromStudyset;
+  const loadingTerm = isFromTermsManagement ? loadingTermFromTerms : loadingTermFromStudyset;
+  const termError = isFromTermsManagement ? termErrorFromTerms : termErrorFromStudyset;
+  const refetchTerm = isFromTermsManagement ? refetchTermFromTerms : refetchTermFromStudyset;
+
+  // Mutation (only for dialog edit mode from studyset)
   const [updateTerm, { isLoading: updating }] = useUpdateTermMutation();
 
-  // Local state for edit dialog
+  // Local state for edit dialog (only when from studyset)
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingTerm, setEditingTerm] = useState<{
     term_text: string;
@@ -107,7 +127,11 @@ export function TermDetail() {
   }, [termData]);
 
   const handleBack = () => {
-    navigate(`/dashboard/studysets/${studysetId}`);
+    if (isFromTermsManagement) {
+      navigate('/dashboard/terms');
+    } else {
+      navigate(`/dashboard/studysets/${studysetId}`);
+    }
   };
 
   const handleOpenEditDialog = () => {
@@ -123,7 +147,7 @@ export function TermDetail() {
   };
 
   const handleSaveEditDialog = async () => {
-    if (!editingTerm || !termId) return;
+    if (!editingTerm || !termId || !termData) return;
 
     if (!editingTerm.term_text.trim() || !editingTerm.definition.trim()) {
       toast.error("Please fill in both term and definition");
@@ -132,7 +156,7 @@ export function TermDetail() {
 
     try {
       await updateTerm({
-        studysetId: studysetId!,
+        studysetId: termData.studyset_id,
         termId: termId,
         data: {
           term_text: editingTerm.term_text,
@@ -143,6 +167,7 @@ export function TermDetail() {
       }).unwrap();
       toast.success("Flashcard updated!");
       setEditDialogOpen(false);
+      refetchTerm();
     } catch (error: any) {
       const errorMsg =
         typeof error?.data?.detail === "string"
@@ -198,82 +223,82 @@ export function TermDetail() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
-          <Button size="sm" onClick={handleOpenEditDialog}>
+          <Button size="sm" onClick={() => navigate(`/dashboard/terms/${termId}/edit`)}>
             <Edit2 className="w-4 h-4 mr-2" />
             Edit
           </Button>
         </div>
 
         {/* Flashcard - 2 mặt */}
-        <Card className="w-full">
-          <CardContent className="p-8">
-            <div className="aspect-[4/3] max-w-2xl mx-auto" style={{ perspective: 1000 }}>
-              <motion.div
-                className="relative w-full h-full cursor-pointer"
-                style={{ transformStyle: "preserve-3d" }}
-                animate={{
-                  rotateY: isFlipped ? 180 : 0,
-                }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-                onClick={() => setIsFlipped(!isFlipped)}
-              >
-                {/* Front - Term */}
-                <Card className="absolute inset-0 backface-hidden">
-                  <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center">
-                    {term.image_url && (
-                      <div className="mb-4 w-full max-w-xs">
-                        <img
-                          src={term.image_url}
-                          alt={term.term_text}
-                          className="w-full h-40 object-cover rounded-lg shadow-md"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <p className="text-2xl font-medium line-clamp-6">
-                      {term.term_text}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-6">
-                      Click to flip
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Back - Definition */}
-                <Card
-                  className="absolute inset-0 backface-hidden bg-primary/5"
-                  style={{ transform: "rotateY(180deg)" }}
+          <Card className="w-full">
+            <CardContent className="p-8">
+              <div className="aspect-[4/3] max-w-2xl mx-auto" style={{ perspective: 1000 }}>
+                <motion.div
+                  className="relative w-full h-full cursor-pointer"
+                  style={{ transformStyle: "preserve-3d" }}
+                  animate={{
+                    rotateY: isFlipped ? 180 : 0,
+                  }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                  onClick={() => setIsFlipped(!isFlipped)}
                 >
-                  <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center">
-                    <Badge variant="secondary" className="mb-4">
-                      Definition
-                    </Badge>
-                    {term.image_url && (
-                      <div className="mb-4 w-full max-w-xs">
-                        <img
-                          src={term.image_url}
-                          alt={term.definition}
-                          className="w-full h-40 object-cover rounded-lg shadow-md"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <p className="text-2xl text-primary line-clamp-6">
-                      {term.definition}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-6">
-                      Click to flip
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-          </CardContent>
-        </Card>
+                  {/* Front - Term */}
+                  <Card className="absolute inset-0 backface-hidden">
+                    <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center">
+                      {term.image_url && (
+                        <div className="mb-4 w-full max-w-xs">
+                          <img
+                            src={term.image_url}
+                            alt={term.term_text}
+                            className="w-full h-40 object-cover rounded-lg shadow-md"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      <p className="text-2xl font-medium line-clamp-6">
+                        {term.term_text}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-6">
+                        Click to flip
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Back - Definition */}
+                  <Card
+                    className="absolute inset-0 backface-hidden bg-primary/5"
+                    style={{ transform: "rotateY(180deg)" }}
+                  >
+                    <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center">
+                      <Badge variant="secondary" className="mb-4">
+                        Definition
+                      </Badge>
+                      {term.image_url && (
+                        <div className="mb-4 w-full max-w-xs">
+                          <img
+                            src={term.image_url}
+                            alt={term.definition}
+                            className="w-full h-40 object-cover rounded-lg shadow-md"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      <p className="text-2xl text-primary line-clamp-6">
+                        {term.definition}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-6">
+                        Click to flip
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+            </CardContent>
+          </Card>
 
         {/* Tabs: Example và AI Example */}
         <Card>
@@ -404,7 +429,8 @@ export function TermDetail() {
         </Card>
         </div>
 
-        {/* Edit Dialog */}
+        {/* Edit Dialog - Only show when from studyset (not from terms management) */}
+        {!isFromTermsManagement && (
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -553,6 +579,7 @@ export function TermDetail() {
           </DialogFooter>
         </DialogContent>
         </Dialog>
+        )}
 
         {/* CSS for backface visibility */}
         <style>{`
@@ -564,23 +591,25 @@ export function TermDetail() {
       </div>
       
       {/* Right Chatbot Sidebar */}
-      <div 
-        className="flex-shrink-0 overflow-hidden border-l"
-        style={{ 
-          width: isChatbotCollapsed ? '48px' : `${chatbotWidth}px`,
-          transition: isChatbotCollapsed ? 'width 0.2s ease' : 'none'
-        }}
-      >
-        <Chatbot 
-          isCollapsed={isChatbotCollapsed}
-          onToggleCollapse={handleToggleChatbot}
-          width={chatbotWidth}
-          onWidthChange={handleChatbotWidthChange}
-          studysetId={studysetId!}
-          termId={termId}  // Truyền termId để chatbot có thể generate paragraph cho term này
-          onParagraphGenerated={refetchTerm}  // Refetch term data khi paragraph được generate
-        />
-      </div>
+      {termData && (
+        <div 
+          className="flex-shrink-0 overflow-hidden border-l"
+          style={{ 
+            width: isChatbotCollapsed ? '48px' : `${chatbotWidth}px`,
+            transition: isChatbotCollapsed ? 'width 0.2s ease' : 'none'
+          }}
+        >
+          <Chatbot 
+            isCollapsed={isChatbotCollapsed}
+            onToggleCollapse={handleToggleChatbot}
+            width={chatbotWidth}
+            onWidthChange={handleChatbotWidthChange}
+            studysetId={termData.studyset_id}
+            termId={termId}
+            onParagraphGenerated={refetchTerm}
+          />
+        </div>
+      )}
     </div>
   );
 }

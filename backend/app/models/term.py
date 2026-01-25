@@ -1,17 +1,20 @@
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Column, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
+if TYPE_CHECKING:
+    from app.models import StudySet, StudyActivity, StudySetTerm
+
 
 class Term(SQLModel, table=True):
     __tablename__ = "Term"
-    
+
     term_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    studyset_id: uuid.UUID = Field(foreign_key="StudySet.studyset_id")
+
     term_text: str = Field(max_length=255)
     definition: str = Field(sa_column=Column(Text))
     example: str | None = Field(default=None, sa_column=Column(Text))
@@ -24,9 +27,14 @@ class Term(SQLModel, table=True):
     )
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     # Relationships
-    study_set: "StudySet" = Relationship(back_populates="terms")
+    # PHASE 3.3: N:M relationship via junction table (single source of truth)
+    studyset_terms: list["StudySetTerm"] = Relationship(
+        back_populates="term",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
     study_activities: list["StudyActivity"] = Relationship(back_populates="term")
 
 
