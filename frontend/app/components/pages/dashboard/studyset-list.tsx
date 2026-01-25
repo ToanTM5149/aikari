@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { useNavigate } from "react-router"
 import { useDebounce } from "~/hooks/useDebounce"
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
 import { Button } from "~/components/ui/button"
 import { Badge } from "~/components/ui/badge"
 import { Input } from "~/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import {
   BookOpen,
   Search,
@@ -19,6 +20,7 @@ import {
   FileText,
   Layers,
   Play,
+  UserPlus,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -32,6 +34,9 @@ import {
   useGetStudySetsQuery, 
   useDeleteStudySetMutation 
 } from "~/redux/features/studyset"
+import {
+  useGetMyEnrolledStudysetsQuery,
+} from "~/redux/features/enrollment"
 import { useAppSelector } from "~/redux/store"
 import { selectCurrentUser } from "~/redux/features/auth/slice"
 import { CreateStudySetDialog } from "./create-studyset-dialog"
@@ -52,30 +57,114 @@ export function StudySetList() {
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(9)
+  const [activeTab, setActiveTab] = useState<"created" | "enrolled">("created")
 
   // Debounce search query với 500ms delay
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
 
-  // Reset to page 1 when debounced search changes or category changes
+  // Reset to page 1 when debounced search changes, category changes, or tab changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearchQuery, selectedCategory])
+  }, [debouncedSearchQuery, selectedCategory, activeTab])
 
-  // API calls with pagination and search
-  const { data, isLoading, isFetching, error } = useGetStudySetsQuery({
-    skip: (currentPage - 1) * itemsPerPage,
-    limit: itemsPerPage,
-    q: debouncedSearchQuery || undefined,  // Send debounced search query to backend
-    category_id: selectedCategory,
-  })
+  // API calls - fetch created studysets
+  const { 
+    data: createdData, 
+    isLoading: isLoadingCreated, 
+    isFetching: isFetchingCreated, 
+    error: createdError 
+  } = useGetStudySetsQuery(
+    {
+      skip: activeTab === "enrolled" ? 0 : (currentPage - 1) * itemsPerPage,
+      limit: activeTab === "enrolled" ? 1000 : itemsPerPage,
+      q: debouncedSearchQuery || undefined,
+      category_id: selectedCategory,
+    },
+    { skip: activeTab === "enrolled" } // Skip if on enrolled tab
+  )
+
+  // API calls - fetch enrolled studysets
+  const { 
+    data: enrolledData, 
+    isLoading: isLoadingEnrolled, 
+    isFetching: isFetchingEnrolled, 
+    error: enrolledError 
+  } = useGetMyEnrolledStudysetsQuery(
+    {
+      skip: activeTab === "created" ? 0 : (currentPage - 1) * itemsPerPage,
+      limit: activeTab === "created" ? 1000 : itemsPerPage,
+      q: activeTab === "enrolled" ? (debouncedSearchQuery || undefined) : undefined,
+      category_id: activeTab === "enrolled" ? selectedCategory : undefined,
+      sort_by: "last_studied_at",
+      sort_order: "desc",
+    },
+    { skip: activeTab === "created" } // Skip if on created tab
+  )
+
   const [deleteStudySet] = useDeleteStudySetMutation()
 
-  const studySets = data?.data || []
-  const totalItems = data?.count || 0
-  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  // Transform enrolled studysets to match StudySet format
+  const enrolledStudySets = useMemo(() => {
+    if (!enrolledData?.data) return []
+    return enrolledData.data.map((enrolled) => ({
+      studyset_id: enrolled.studyset_id,
+      title: enrolled.title,
+      description: enrolled.description,
+      content_type: enrolled.content_type as any,
+      category_id: enrolled.category_id,
+      owner_id: enrolled.owner_id,
+      created_at: enrolled.created_at,
+      updated_at: enrolled.updated_at,
+      term_count: enrolled.term_count || 0, // Use term_count from API
+      last_activity_at: enrolled.last_studied_at,
+      progress: 0, // Will be fetched separately if needed
+      // Add enrollment metadata
+      enrolled_at: enrolled.enrolled_at,
+      last_studied_at: enrolled.last_studied_at,
+      is_enrolled: true,
+    }))
+  }, [enrolledData])
 
-  // No need for client-side filtering anymore - backend handles it
-  const filteredStudySets = studySets
+  const createdStudySets = createdData?.data || []
+
+  // Filter and paginate based on active tab
+  const { studySets, totalItems, totalPages } = useMemo(() => {
+    let allSets: any[] = []
+    let total = 0
+
+    if (activeTab === "created") {
+      // Show created studysets
+      allSets = createdStudySets
+      total = createdData?.count || 0
+    } else {
+      // Show enrolled studysets (include all, even owned ones)
+      // This shows all studysets the user has enrolled in, regardless of ownership
+      // Search and filtering are now handled server-side via API
+      allSets = enrolledStudySets
+      total = enrolledData?.count || 0
+    }
+
+    const pages = Math.ceil(total / itemsPerPage)
+
+    return {
+      studySets: allSets,
+      totalItems: total,
+      totalPages: pages,
+    }
+  }, [
+    activeTab,
+    createdStudySets,
+    enrolledStudySets,
+    createdData?.count,
+    debouncedSearchQuery,
+    selectedCategory,
+    currentPage,
+    itemsPerPage,
+  ])
+
+  const isLoading = activeTab === "created" ? isLoadingCreated : isLoadingEnrolled
+  const isFetching = activeTab === "created" ? isFetchingCreated : isFetchingEnrolled
+  const error = activeTab === "created" ? createdError : enrolledError
 
   // Handle pagination
   const handlePageChange = (page: number) => {
@@ -165,7 +254,7 @@ export function StudySetList() {
               <div>
                 <CardTitle>My Study Sets</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {filteredStudySets.length} study set{filteredStudySets.length !== 1 ? 's' : ''}
+                  {studySets.length} study set{studySets.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
@@ -209,6 +298,22 @@ export function StudySetList() {
             />
           </div>
           
+          {/* Tabs to filter by type */}
+          <div className="mt-4">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+              <TabsList>
+                <TabsTrigger value="created">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  My Created
+                </TabsTrigger>
+                <TabsTrigger value="enrolled">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Enrolled
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
           {/* Category Filter */}
           <div className="mt-3">
             <CategoryFilter
@@ -229,7 +334,7 @@ export function StudySetList() {
             </div>
           )}
           
-          {filteredStudySets.length === 0 ? (
+          {studySets.length === 0 ? (
             <div className="flex items-center justify-center h-64 text-muted-foreground">
               <div className="text-center">
                 <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -267,7 +372,7 @@ export function StudySetList() {
                   exit={{ opacity: 0 }}
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                 >
-                  {filteredStudySets.map((studySet, index) => (
+                  {studySets.map((studySet, index) => (
                     <StudySetCard
                       key={studySet.studyset_id}
                       studySet={studySet}
@@ -293,7 +398,7 @@ export function StudySetList() {
                   exit={{ opacity: 0 }}
                   className="space-y-2"
                 >
-                  {filteredStudySets.map((studySet, index) => (
+                  {studySets.map((studySet, index) => (
                     <StudySetCard
                       key={studySet.studyset_id}
                       studySet={studySet}
@@ -315,7 +420,7 @@ export function StudySetList() {
           )}
 
           {/* Pagination */}
-          {filteredStudySets.length > 0 && totalPages > 1 && (
+          {studySets.length > 0 && totalPages > 1 && (
             <div className="mt-6">
               <DataPagination
                 currentPage={currentPage}

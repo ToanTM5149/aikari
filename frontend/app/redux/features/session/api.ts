@@ -30,7 +30,7 @@ export const sessionApi = baseApi.injectEndpoints({
         method: 'POST',
         body: data,
       }),
-      invalidatesTags: ['Session', 'Learning', 'Progress', 'Flashcard'],
+      invalidatesTags: ['Session', 'Learning', 'Progress', 'Flashcard', 'Enrollment'],
     }),
 
     // Get active session

@@ -2,9 +2,10 @@
 
 from datetime import datetime, timedelta
 import uuid
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlmodel import Session, select, func, or_
 
 from app.api.deps import get_session, get_current_user
 from app.models.user import User
@@ -92,53 +93,138 @@ def unenroll_from_studyset(
         )
 
 
-@router.get("/me/studysets", response_model=list[EnrolledStudySetDetail])
+@router.get("/me/studysets")
 def get_my_enrolled_studysets(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    q: str | None = Query(None, description="Search query for studyset title or description"),
+    category_id: uuid.UUID | None = Query(None, description="Filter by category ID"),
+    sort_by: str = Query("last_studied_at", description="Sort field: last_studied_at, enrolled_at, created_at, title"),
+    sort_order: str = Query("desc", description="Sort order: asc or desc"),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
-):
-    """Get all studysets current user is enrolled in
+) -> Any:
+    """Get all studysets current user is enrolled in with search, filtering, and sorting
+
+    Supports:
+    - Search by title/description (q parameter)
+    - Filter by category (category_id parameter)
+    - Sorting by last_studied_at, enrolled_at, created_at, or title
+    - Pagination (skip, limit)
+
+    OPTIMIZED: Uses JOIN to avoid N+1 queries
 
     Args:
         skip: Number of records to skip (pagination)
         limit: Maximum number of records to return
+        q: Search query for studyset title or description
+        category_id: Filter by category ID
+        sort_by: Field to sort by (last_studied_at, enrolled_at, created_at, title)
+        sort_order: Sort order (asc or desc)
         current_user: Current authenticated user
         session: Database session
 
     Returns:
-        list[EnrolledStudySetDetail]: List of enrolled studysets with details
+        dict: {"data": list[EnrolledStudySetDetail], "count": int}
     """
-    # Get enrollments
-    enrollments = get_student_studysets(
-        session=session,
-        student_id=current_user.user_id,
-        skip=skip,
-        limit=limit
+    from app.models import Term
+
+    # Build base query with JOIN to StudySet
+    base_query = (
+        select(StudentStudySet, StudySet)
+        .join(StudySet, StudentStudySet.studyset_id == StudySet.studyset_id)
+        .where(StudentStudySet.student_id == current_user.user_id)
     )
 
-    # Join with StudySet to get details
-    result = []
-    for enrollment in enrollments:
-        studyset = session.get(StudySet, enrollment.studyset_id)
-        if studyset:
-            result.append(
-                EnrolledStudySetDetail(
-                    studyset_id=studyset.studyset_id,
-                    title=studyset.title,
-                    description=studyset.description,
-                    owner_id=studyset.owner_id,
-                    content_type=studyset.content_type.value,
-                    category_id=studyset.category_id,
-                    enrolled_at=enrollment.enrolled_at,
-                    last_studied_at=enrollment.last_studied_at,
-                    created_at=studyset.created_at,
-                    updated_at=studyset.updated_at
-                )
-            )
+    # Add search filter if provided
+    if q:
+        search_filter = or_(
+            StudySet.title.ilike(f"%{q}%"),
+            StudySet.description.ilike(f"%{q}%")
+        )
+        base_query = base_query.where(search_filter)
 
-    return result
+    # Filter by category_id if provided
+    if category_id:
+        base_query = base_query.where(StudySet.category_id == category_id)
+
+    # Count total enrollments matching filters before pagination
+    count_query = (
+        select(func.count(StudentStudySet.studyset_id))
+        .join(StudySet, StudentStudySet.studyset_id == StudySet.studyset_id)
+        .where(StudentStudySet.student_id == current_user.user_id)
+    )
+    if q:
+        search_filter = or_(
+            StudySet.title.ilike(f"%{q}%"),
+            StudySet.description.ilike(f"%{q}%")
+        )
+        count_query = count_query.where(search_filter)
+    if category_id:
+        count_query = count_query.where(StudySet.category_id == category_id)
+    
+    total_count = session.exec(count_query).one() or 0
+
+    # Apply sorting
+    sort_field_map = {
+        "last_studied_at": StudentStudySet.last_studied_at,
+        "enrolled_at": StudentStudySet.enrolled_at,
+        "created_at": StudySet.created_at,
+        "title": StudySet.title,
+    }
+    sort_field = sort_field_map.get(sort_by, StudentStudySet.last_studied_at)
+    
+    if sort_order.lower() == "asc":
+        base_query = base_query.order_by(sort_field.asc().nulls_last())
+    else:
+        base_query = base_query.order_by(sort_field.desc().nulls_last())
+
+    # Apply pagination
+    base_query = base_query.offset(skip).limit(limit)
+
+    # Execute query
+    results = session.exec(base_query).all()
+
+    if not results:
+        return {"data": [], "count": total_count}
+
+    # Extract enrollments and studysets
+    enrollments = [r[0] for r in results]
+    studysets = [r[1] for r in results]
+    studyset_ids = [s.studyset_id for s in studysets]
+
+    # Bulk query term counts for all studysets
+    term_counts_statement = (
+        select(
+            Term.studyset_id,
+            func.count(Term.term_id).label('term_count')
+        )
+        .where(Term.studyset_id.in_(studyset_ids))
+        .group_by(Term.studyset_id)
+    )
+    term_counts_result = session.exec(term_counts_statement).all()
+    term_counts_map = {row.studyset_id: row.term_count for row in term_counts_result}
+
+    # Build result list
+    result = []
+    for enrollment, studyset in zip(enrollments, studysets):
+        result.append(
+            EnrolledStudySetDetail(
+                studyset_id=studyset.studyset_id,
+                title=studyset.title,
+                description=studyset.description,
+                owner_id=studyset.owner_id,
+                content_type=studyset.content_type.value,
+                category_id=studyset.category_id,
+                enrolled_at=enrollment.enrolled_at,
+                last_studied_at=enrollment.last_studied_at,
+                created_at=studyset.created_at,
+                updated_at=studyset.updated_at,
+                term_count=term_counts_map.get(studyset.studyset_id, 0)
+            )
+        )
+
+    return {"data": result, "count": total_count}
 
 
 @router.get("/me/stats", response_model=EnrollmentStats)

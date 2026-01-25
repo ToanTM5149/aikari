@@ -4,11 +4,12 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from backend.app.crud import crud
+from app.crud import crud
 from app.core.config import settings
 from app.core.security import verify_password
-from backend.app.models.models import User, UserCreate
-from app.tests.utils.utils import random_email, random_lower_string
+from app.models import User
+from app.schemas import UserCreate
+from tests.utils.utils import random_email, random_lower_string
 
 
 def test_get_users_superuser_me(

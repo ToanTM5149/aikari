@@ -38,6 +38,7 @@ class EnrolledStudySetDetail(BaseModel):
     last_studied_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    term_count: int = 0  # Number of terms in this studyset
 
     class Config:
         from_attributes = True

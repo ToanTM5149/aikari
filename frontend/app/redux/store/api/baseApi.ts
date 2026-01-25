@@ -133,6 +133,7 @@ export const baseApi = createApi({
     'Attempt',
     'ReattemptRequest',
     'Session',
+    'Enrollment',
     // Admin tags
     'AdminDashboard',
     'SystemOverview',

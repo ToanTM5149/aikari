@@ -55,6 +55,7 @@ export const learningApi = baseApi.injectEndpoints({
         { type: 'Learning', id: studysetId },
         { type: 'Progress', id: studysetId },
         'Flashcard', // Invalidate studyset list to refresh last_activity_at and progress
+        'Enrollment', // Invalidate enrollment to refresh enrolled studysets tab
       ],
     }),
 
@@ -71,7 +72,7 @@ export const learningApi = baseApi.injectEndpoints({
           session_start: sessionStart,
         },
       }),
-      invalidatesTags: ['Learning', 'Progress', 'Flashcard'], // Invalidate studyset list to refresh last_activity_at and progress
+      invalidatesTags: ['Learning', 'Progress', 'Flashcard', 'Enrollment'], // Invalidate studyset list and enrollment to refresh tabs
     }),
 
     // Get studyset progress
