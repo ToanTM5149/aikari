@@ -17,6 +17,7 @@ from app.models import (
     ChatConversation,
     SessionReview,
     StudentStudySet,
+    StudySetTerm,
 )
 from app.schemas import StudySetCreate, StudySetUpdate
 

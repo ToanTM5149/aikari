@@ -198,7 +198,6 @@ export function CategoryManagement() {
                             <DropdownMenuItem
                               onClick={() => handleDeleteClick(category)}
                               className="text-destructive"
-                              disabled={category.studyset_count > 0}
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
@@ -267,9 +266,9 @@ export function CategoryManagement() {
             <AlertDialogDescription>
               Are you sure you want to delete "{selectedCategory?.name}"?
               {selectedCategory && selectedCategory.studyset_count > 0 ? (
-                <span className="block mt-2 text-destructive font-medium">
-                  ⚠️ This category has {selectedCategory.studyset_count} study set(s).
-                  Please reassign or delete them first.
+                <span className="block mt-2 text-orange-600 dark:text-orange-400 font-medium">
+                  This category has {selectedCategory.studyset_count} study set(s).
+                  They will be unlinked from this category (not deleted).
                 </span>
               ) : (
                 <span className="block mt-2">
@@ -282,7 +281,7 @@ export function CategoryManagement() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              disabled={isDeleting || (selectedCategory?.studyset_count ?? 0) > 0}
+              disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? (
