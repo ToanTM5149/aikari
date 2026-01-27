@@ -8,11 +8,11 @@ export default function ClassPageRoute() {
   const user = useAppSelector(selectCurrentUser)
 
   const handleStudySetClick = () => {
-    navigate("/dashboard/flashcard")
+    navigate("/common/flashcard")
   }
 
   const handleStatisticsClick = (className: string) => {
-    navigate(`/dashboard/class/${encodeURIComponent(className)}/statistics`)
+    navigate(`/classes/${encodeURIComponent(className)}/statistics`)
   }
 
   return (

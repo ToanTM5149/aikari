@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 
-from app.models import Term, StudyActivity, SessionReview, TestQuestion, StudySetTerm
+from app.models import Term, StudyActivity, SessionReview, TestQuestion, TestAnswer, StudySetTerm
 from app.schemas import TermCreate, TermUpdate
 
 
@@ -18,7 +18,7 @@ def create_term(
     """
     Create new term and add to studyset via junction table.
 
-    PHASE 3.3: Writes only to StudySetTerm (single source of truth)
+    Writes only to StudySetTerm (single source of truth)
 
     Args:
         session: Database session
@@ -63,10 +63,8 @@ def delete_term(*, session: Session, term_id: uuid.UUID) -> None:
     """
     Delete term with proper cleanup of dependent records.
 
-    PHASE 3.3: StudySetTerm relationships are automatically deleted via cascade
+    StudySetTerm relationships are automatically deleted via cascade
     (defined in Term.studyset_terms relationship).
-
-    Note: This REMOVES the term from all studysets (deletes all N:M relationships).
 
     Raises:
         ValueError: If term has dependencies that prevent deletion
@@ -75,24 +73,41 @@ def delete_term(*, session: Session, term_id: uuid.UUID) -> None:
     if not db_term:
         return
 
-    # Step 1: Delete SessionReview entries
+    # Step 1: Delete StudyActivity entries (has NOT NULL FK to Term)
+    study_activities = session.exec(
+        select(StudyActivity).where(StudyActivity.term_id == term_id)
+    ).all()
+    for activity in study_activities:
+        session.delete(activity)
+
+    # Step 2: Delete SessionReview entries
     session_reviews = session.exec(
         select(SessionReview).where(SessionReview.term_id == term_id)
     ).all()
     for review in session_reviews:
         session.delete(review)
 
-    # Step 2: Delete TestQuestion entries
-    # (in production might want to prevent deletion if used in completed tests)
+    # Step 3: Delete TestAnswer entries before deleting TestQuestion
+    # (to avoid NOT NULL constraint violation on question_id)
     test_questions = session.exec(
         select(TestQuestion).where(TestQuestion.term_id == term_id)
     ).all()
+    question_ids = [tq.question_id for tq in test_questions]
+    
+    if question_ids:
+        test_answers = session.exec(
+            select(TestAnswer).where(TestAnswer.question_id.in_(question_ids))
+        ).all()
+        for answer in test_answers:
+            session.delete(answer)
+
+    # Step 4: Delete TestQuestion entries
+    # (in production might want to prevent deletion if used in completed tests)
     for tq in test_questions:
         session.delete(tq)
 
-    # Step 3: Delete term
+    # Step 5: Delete term
     # StudySetTerm relationships are automatically deleted via cascade
-    # StudyActivity is historical data, we keep it even if term is deleted
     session.delete(db_term)
     session.commit()
 
@@ -109,9 +124,9 @@ def get_terms_by_studyset(
     """
     Get all terms in a study set, optionally filtered by study status.
 
-    PHASE 3.2: Reads from StudySetTerm junction table instead of Term.studyset_id
+    Reads from StudySetTerm junction table instead of Term.studyset_id
     """
-    # PHASE 3.2: Read from StudySetTerm junction table (NEW)
+    #  Read from StudySetTerm junction table (NEW)
     statement = (
         select(Term)
         .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)

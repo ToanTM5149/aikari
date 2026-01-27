@@ -1,7 +1,7 @@
 """
 CRUD operations for StudySetTerm junction table
 
-Phase 3.1+: Supports N:M relationship between StudySet and Term
+Supports N:M relationship between StudySet and Term
 """
 
 import uuid

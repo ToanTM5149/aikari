@@ -98,7 +98,7 @@ export function HistoryPage() {
   const attempts = historyData?.data || [];
 
   const handleViewResult = (attemptId: string) => {
-    navigate(`/dashboard/attempts/${attemptId}/result`);
+    navigate(`/attempts/${attemptId}/result`);
   };
 
   const handleDeleteClick = (attemptId: string) => {

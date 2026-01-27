@@ -175,7 +175,7 @@ export function CreateFlashcard() {
       toast.success(`Successfully saved "${setTitle}" with ${validCards.length} flashcards!`)
       
       // Navigate to the studyset detail page
-      navigate(`/dashboard/flashcards/${studyset.studyset_id}`)
+      navigate(`/studysets/${studyset.studyset_id}`)
     } catch (error: any) {
       const errorMsg = error?.data?.detail || error?.message || "Failed to save flashcard set"
       toast.error(errorMsg)

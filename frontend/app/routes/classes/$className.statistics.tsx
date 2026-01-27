@@ -6,7 +6,7 @@ export default function ClassStatisticsRoute() {
   const params = useParams()
   
   const handleBack = () => {
-    navigate("/dashboard/class")
+    navigate("/classes")
   }
 
   // Decode className if it was encoded

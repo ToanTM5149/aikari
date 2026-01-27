@@ -271,9 +271,9 @@ export function FlashcardLearningPage(props: FlashcardLearningPageProps = {}) {
         if (onEndNavigate) {
           onEndNavigate();
         } else if (studysetId) {
-          navigate(`/dashboard/studysets/${studysetId}`);
+          navigate(`/studysets/${studysetId}`);
         } else {
-          navigate('/dashboard');
+          navigate('/home');
         }
       }
       return;
@@ -294,9 +294,9 @@ export function FlashcardLearningPage(props: FlashcardLearningPageProps = {}) {
         if (onEndNavigate) {
           onEndNavigate();
         } else if (studysetId) {
-          navigate(`/dashboard/studysets/${studysetId}`);
+          navigate(`/studysets/${studysetId}`);
         } else {
-          navigate('/dashboard');
+          navigate('/home');
         }
       }
     } catch (error) {
@@ -309,9 +309,9 @@ export function FlashcardLearningPage(props: FlashcardLearningPageProps = {}) {
         if (onEndNavigate) {
           onEndNavigate();
         } else if (studysetId) {
-          navigate(`/dashboard/studysets/${studysetId}`);
+          navigate(`/studysets/${studysetId}`);
         } else {
-          navigate('/dashboard');
+          navigate('/home');
         }
       }
     }

@@ -55,7 +55,7 @@ def start_learning_session(
     
     # Get ALL terms from studyset - no filtering or sorting
     # Simply return all terms in the studyset
-    # PHASE 3.2: Read from StudySetTerm junction table
+    # Read from StudySetTerm junction table
     terms_statement = (
         select(Term)
         .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
@@ -70,7 +70,7 @@ def start_learning_session(
         terms = all_terms
     
     # Count total terms in studyset
-    # PHASE 3.3: Read from StudySetTerm (single source of truth)
+    # Read from StudySetTerm (single source of truth)
     total_terms = crud_studyset_term.count_studyset_terms(
         session=session,
         studyset_id=session_data.studyset_id
@@ -341,7 +341,7 @@ def get_studyset_stats(
         raise HTTPException(status_code=404, detail="Study set not found")
     
     # Get all terms
-    # PHASE 3.2: Read from StudySetTerm junction table
+    # Read from StudySetTerm junction table
     terms_statement = (
         select(Term)
         .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)

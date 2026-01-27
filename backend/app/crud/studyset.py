@@ -71,7 +71,7 @@ def delete_studyset(*, session: Session, studyset_id: uuid.UUID) -> None:
     for progress in progress_summaries:
         session.delete(progress)
     
-    # 3. Delete StudentStudySet entries (junction table - Phase 1 addition)
+    # 3. Delete StudentStudySet entries (junction table)
     student_studysets = session.exec(
         select(StudentStudySet).where(StudentStudySet.studyset_id == studyset_id)
     ).all()

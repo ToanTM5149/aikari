@@ -33,8 +33,8 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
   const user = useAppSelector(selectCurrentUser)
   
   // Fetch all studysets and classes
-  const { data: studysetsData, isLoading: studysetsLoading } = useGetStudySetsQuery()
-  const { data: classesData, isLoading: classesLoading } = useGetClassesQuery()
+  const { data: studysetsData, isLoading: studysetsLoading } = useGetStudySetsQuery(undefined)
+  const { data: classesData, isLoading: classesLoading } = useGetClassesQuery(undefined)
 
   // Process data
   const recentStudySets = useMemo(() => {
@@ -87,7 +87,7 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
             <Clock className="w-5 h-5" />
             Recent Study Sets
           </h2>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/studysets")}>View All</Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/studysets")}>View All</Button>
         </div>
         {recentStudySets.length === 0 ? (
           <Card className="p-8 text-center">
@@ -117,7 +117,7 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
             <TrendingUp className="w-5 h-5" />
             Recommended for You
           </h2>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/studysets")}>Explore More</Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/studysets")}>Explore More</Button>
         </div>
         {recommendedStudySets.length === 0 ? (
           <Card className="p-8 text-center">
@@ -146,7 +146,7 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
             <GraduationCap className="w-5 h-5" />
             Your Classes
           </h2>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/class")}>Manage</Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/classes")}>Manage</Button>
         </div>
         {recommendedClasses.length === 0 ? (
           <Card className="p-8 text-center">
@@ -163,7 +163,7 @@ export function HomePage({ onStudySetClick }: HomePageProps) {
               >
                 <Card 
                   className="cursor-pointer hover:shadow-sm transition-shadow"
-                  onClick={() => navigate(`/dashboard/class/${classItem.class_id}`)}
+                  onClick={() => navigate(`/classes/${classItem.class_id}`)}
                 >
                   <CardContent className="flex items-center gap-4 p-4">
                     <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">

@@ -777,7 +777,7 @@ def get_class_studysets(
     from app.schemas import StudySetPublic
 
     # Query 1: Get term counts for all studysets in one query
-    # PHASE 3.2: Read from StudySetTerm junction table
+    # Read from StudySetTerm junction table
     term_counts_statement = (
         select(
             StudySetTerm.studyset_id,

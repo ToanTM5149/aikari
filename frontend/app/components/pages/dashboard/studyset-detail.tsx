@@ -505,7 +505,7 @@ export function StudySetDetail() {
     try {
       await deleteStudySet(studysetId!).unwrap();
       toast.success("Study set deleted");
-      navigate("/dashboard/studysets");
+      navigate("/studysets");
     } catch (error: any) {
       const errorMsg = getErrorMessage(error);
       toast.error(errorMsg);
@@ -526,7 +526,7 @@ export function StudySetDetail() {
 
   // Test handlers
   const handleAttemptTest = (testId: string) => {
-    navigate(`/dashboard/studysets/${studysetId}/test/${testId}`);
+    navigate(`/studysets/${studysetId}/test/${testId}`);
   };
 
   const handleViewResult = async (attemptId: string) => {
@@ -592,7 +592,7 @@ export function StudySetDetail() {
           <p className="text-muted-foreground mb-4">
             This study set does not exist or you do not have access to it.
           </p>
-          <Button onClick={() => navigate("/dashboard/studysets")}>
+          <Button onClick={() => navigate("/studysets")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
@@ -612,7 +612,7 @@ export function StudySetDetail() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => navigate("/dashboard/studysets")}
+                  onClick={() => navigate("/studysets")}
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
@@ -1198,7 +1198,7 @@ export function StudySetDetail() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => navigate(`/dashboard/studysets/${studysetId}/terms/${term.term_id}`)}
+                                onClick={() => navigate(`/studysets/${studysetId}/terms/${term.term_id}`)}
                                 className="shrink-0"
                                 title="View details"
                               >
@@ -1236,7 +1236,7 @@ export function StudySetDetail() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/study`)}>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/studysets/${studysetId}/study`)}>
                     <CardContent className="p-6">
                       <div className="flex flex-col items-center text-center gap-4">
                         <div className="p-4 bg-blue-100 rounded-full">
@@ -1250,7 +1250,7 @@ export function StudySetDetail() {
                     </CardContent>
                   </Card>
 
-                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/dashboard/studysets/${studysetId}/study?mode=random`)}>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/studysets/${studysetId}/study?mode=random`)}>
                     <CardContent className="p-6">
                       <div className="flex flex-col items-center text-center gap-4">
                         <div className="p-4 bg-purple-100 rounded-full">

@@ -22,7 +22,7 @@ export function LoginExample() {
   // Redirect nếu đã authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/home');
     }
   }, [isAuthenticated, navigate]);
 

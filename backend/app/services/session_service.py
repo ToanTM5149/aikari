@@ -50,7 +50,7 @@ class SessionService:
         if studyset_id:
             from sqlmodel import select
 
-            # PHASE 3.2: Read from StudySetTerm junction table
+            # Read from StudySetTerm junction table
             terms_statement = (
                 select(Term)
                 .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)

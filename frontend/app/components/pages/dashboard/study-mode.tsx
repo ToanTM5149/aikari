@@ -122,7 +122,7 @@ export function StudyMode() {
           <p className="text-muted-foreground mb-4">
             Add flashcards to this study set before starting
           </p>
-          <Button onClick={() => navigate(`/dashboard/studysets/${studysetId}`)}>
+          <Button onClick={() => navigate(`/studysets/${studysetId}`)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
@@ -139,7 +139,7 @@ export function StudyMode() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(`/dashboard/studysets/${studysetId}`)}
+            onClick={() => navigate(`/studysets/${studysetId}`)}
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -301,7 +301,7 @@ export function StudyMode() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/dashboard/studysets/${studysetId}`)}
+            onClick={() => navigate(`/studysets/${studysetId}`)}
           >
             Kết thúc học
           </Button>

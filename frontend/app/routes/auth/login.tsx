@@ -13,7 +13,7 @@ export default function LoginRoute() {
     if (userRole === 'ADMIN') {
       navigate("/statistics")
     } else {
-      navigate("/dashboard")
+      navigate("/home")
     }
   }
 

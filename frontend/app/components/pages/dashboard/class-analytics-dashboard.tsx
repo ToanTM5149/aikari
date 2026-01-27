@@ -911,7 +911,7 @@ export function ClassAnalyticsDashboard() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate(`/dashboard/class/${classId}`)}
+          onClick={() => navigate(`/classes/${classId}`)}
           className="flex-shrink-0"
         >
           <ArrowLeft className="h-4 w-4" />

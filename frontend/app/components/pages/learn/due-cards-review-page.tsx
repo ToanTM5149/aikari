@@ -130,7 +130,7 @@ export function DueCardsReviewPage() {
             <p className="text-gray-600 mb-4">
               You're all caught up! No cards are due for review right now.
             </p>
-            <Button onClick={() => navigate('/dashboard')}>
+            <Button onClick={() => navigate('/home')}>
               Back to Dashboard
             </Button>
           </CardContent>
@@ -151,7 +151,7 @@ export function DueCardsReviewPage() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Button
           variant="ghost"
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/home')}
           className="mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -289,7 +289,7 @@ export function DueCardsReviewPage() {
       <FlashcardLearningPage
         initialTerms={dueCardsTerms}
         title="Due Cards Review"
-        onEndNavigate={() => navigate('/dashboard')}
+        onEndNavigate={() => navigate('/home')}
         autoAdvance={false}
       />
     );

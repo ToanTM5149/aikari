@@ -38,7 +38,7 @@ class SessionReview(SQLModel, table=True):
     session_id: uuid.UUID = Field(foreign_key="LearningSession.session_id")
     term_id: uuid.UUID = Field(foreign_key="Term.term_id")
 
-    # PHASE 3.1+: Add studyset_id for quick review lookups without joins
+    # Add studyset_id for quick review lookups without joins
     # This denormalizes the data to avoid joining through LearningSession or Term
     studyset_id: uuid.UUID | None = Field(
         default=None,

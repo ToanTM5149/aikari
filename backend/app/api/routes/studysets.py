@@ -83,7 +83,7 @@ def read_studysets(
     studyset_ids = [s.studyset_id for s in sets]
 
     # Query 1: Get term counts for all studysets in one query
-    # PHASE 3.2: Read from StudySetTerm junction table instead of Term.studyset_id
+    # Read from StudySetTerm junction table instead of Term.studyset_id
     term_counts_statement = (
         select(
             StudySetTerm.studyset_id,

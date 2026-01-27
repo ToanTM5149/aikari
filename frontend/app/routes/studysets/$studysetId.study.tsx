@@ -3,4 +3,3 @@ import { FlashcardLearningPage } from "~/components/pages/learn/flashcard-learni
 export default function StudyModePage() {
   return <FlashcardLearningPage />;
 }
-

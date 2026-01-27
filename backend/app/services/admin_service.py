@@ -607,7 +607,6 @@ class AdminService:
                 func.count(StudyActivity.activity_id).label('activity_count'),
             )
             .join(User, StudySet.owner_id == User.user_id)
-            # PHASE 3.2: Join via StudySetTerm junction table
             .outerjoin(StudySetTerm, StudySetTerm.studyset_id == StudySet.studyset_id)
             .outerjoin(Term, Term.term_id == StudySetTerm.term_id)
             .outerjoin(StudyActivity, StudyActivity.studyset_id == StudySet.studyset_id)
@@ -649,7 +648,6 @@ class AdminService:
                 func.count(StudyActivity.activity_id).label('activity_count'),
             )
             .join(User, StudySet.owner_id == User.user_id)
-            # PHASE 3.2: Join via StudySetTerm junction table
             .outerjoin(StudySetTerm, StudySetTerm.studyset_id == StudySet.studyset_id)
             .outerjoin(Term, Term.term_id == StudySetTerm.term_id)
             .outerjoin(StudyActivity, StudyActivity.studyset_id == StudySet.studyset_id)

@@ -45,9 +45,9 @@ export function ProgressDashboard() {
 
   const handleBack = () => {
     if (studysetId) {
-      navigate(`/dashboard/studysets/${studysetId}`);
+      navigate(`/studysets/${studysetId}`);
     } else {
-      navigate('/dashboard/studysets');
+      navigate('/studysets');
     }
   };
 

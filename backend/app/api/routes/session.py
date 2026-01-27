@@ -55,7 +55,7 @@ def start_learning_session(
             
             # Get ALL terms from studyset (not filtered by activity)
             # This ensures we return the same terms as when session started
-            # PHASE 3.2: Read from StudySetTerm junction table
+            # Read from StudySetTerm junction table
             terms_statement = (
                 select(Term)
                 .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)

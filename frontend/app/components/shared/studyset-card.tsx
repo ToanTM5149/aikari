@@ -54,12 +54,12 @@ export function StudySetCard({
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/dashboard/studysets/${studySet.studyset_id}`);
+    navigate(`/studysets/${studySet.studyset_id}`);
   };
 
   const handleStartStudy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/dashboard/studysets/${studySet.studyset_id}/study`);
+    navigate(`/studysets/${studySet.studyset_id}/study`);
   };
 
   const isOwner = currentUserId && studySet.owner_id === currentUserId;

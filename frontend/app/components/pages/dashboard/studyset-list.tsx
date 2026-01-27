@@ -186,7 +186,7 @@ export function StudySetList() {
 
   // Handle navigate to detail
   const handleViewDetail = (id: string) => {
-    navigate(`/dashboard/studysets/${id}`)
+    navigate(`/studysets/${id}`)
   }
 
   // Loading state

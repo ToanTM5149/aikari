@@ -160,12 +160,12 @@ export function TermsManagement() {
 
   // Open detail page
   const openDetailPage = (term: Term) => {
-    navigate(`/dashboard/terms/${term.term_id}`)
+    navigate(`/terms/${term.term_id}`)
   }
 
   // Open edit page
   const openEditDialog = (term: Term) => {
-    navigate(`/dashboard/terms/${term.term_id}/edit`)
+    navigate(`/terms/${term.term_id}/edit`)
   }
 
   // Check if user is owner of studyset

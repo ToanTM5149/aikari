@@ -195,7 +195,7 @@ def get_my_enrolled_studysets(
     studyset_ids = [s.studyset_id for s in studysets]
 
     # Bulk query term counts for all studysets
-    # PHASE 3.2: Read from StudySetTerm junction table
+    # Read from StudySetTerm junction table
     term_counts_statement = (
         select(
             StudySetTerm.studyset_id,

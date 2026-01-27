@@ -92,7 +92,7 @@ export function TermEditPage() {
         },
       }).unwrap()
       toast.success("Term updated successfully")
-      navigate(`/dashboard/terms/${termId}`)
+      navigate(`/terms/${termId}`)
     } catch (error: any) {
       const errorMsg =
         typeof error?.data?.detail === "string"
@@ -105,7 +105,7 @@ export function TermEditPage() {
   }
 
   const handleBack = () => {
-    navigate(`/dashboard/terms/${termId}`)
+    navigate(`/terms/${termId}`)
   }
 
   // Save preferences to localStorage
@@ -147,7 +147,7 @@ export function TermEditPage() {
                 This flashcard does not exist or you do not have access to it.
               </p>
             </div>
-            <Button onClick={() => navigate("/dashboard/terms")}>Go Back</Button>
+            <Button onClick={() => navigate("/terms")}>Go Back</Button>
           </div>
         </Card>
       </div>

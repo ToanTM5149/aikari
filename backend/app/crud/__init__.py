@@ -62,7 +62,7 @@ from .student_studyset import (
     get_enrollment,
 )
 
-# StudySetTerm CRUD (Phase 3.1+)
+# StudySetTerm CRUD
 from .studyset_term import (
     add_term_to_studyset,
     remove_term_from_studyset,
@@ -118,7 +118,7 @@ __all__ = [
     "get_studyset_students",
     "is_student_enrolled",
     "get_enrollment",
-    # StudySetTerm (Phase 3.1+)
+    # StudySetTerm
     "add_term_to_studyset",
     "remove_term_from_studyset",
     "get_studyset_terms",

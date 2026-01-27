@@ -153,7 +153,7 @@ export function ClassDetail() {
   const reattemptRequests = reattemptRequestsData?.data || []
 
   const handleBack = () => {
-    navigate("/dashboard/class")
+    navigate("/classes")
   }
 
   const handleEditStart = () => {
@@ -202,7 +202,7 @@ export function ClassDetail() {
     try {
       await deleteClass(classInfo.class_id).unwrap()
       toast.success("Class deleted successfully")
-      navigate("/dashboard/class")
+      navigate("/classes")
     } catch (error) {
       toast.error("Failed to delete class")
     }
@@ -341,7 +341,7 @@ export function ClassDetail() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => navigate(`/dashboard/class/${classId}/analytics`)}
+              onClick={() => navigate(`/classes/${classId}/analytics`)}
             >
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
@@ -1143,7 +1143,7 @@ export function ClassDetail() {
         isPublic={classInfo.is_public}
         onConfirm={() => {
           // Leave class logic
-          navigate("/dashboard/class")
+          navigate("/classes")
         }}
       />
 

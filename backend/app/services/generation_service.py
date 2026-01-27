@@ -52,7 +52,6 @@ class GenerationService:
             raise ValueError(f"StudySet {studyset_id} not found")
         
         # Load all terms
-        # PHASE 3.2: Read from StudySetTerm junction table
         terms_statement = (
             select(Term)
             .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
@@ -158,7 +157,6 @@ class GenerationService:
             ValueError: Nếu không tìm thấy term nào
         """
         # Load all terms
-        # PHASE 3.2: Read from StudySetTerm junction table
         terms_statement = (
             select(Term)
             .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
@@ -371,7 +369,7 @@ class GenerationService:
                     except ValueError as e:
                         logger.warning(f"Could not map term_text '{term_text}': {e}")
                         # Fallback: use first term
-                        # PHASE 3.2: Read from StudySetTerm junction table
+                        # Read from StudySetTerm junction table
                         terms = session.exec(
                             select(Term)
                             .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
@@ -382,7 +380,7 @@ class GenerationService:
 
                 # Fallback nếu không có term_text hoặc không tìm thấy
                 if not term_id:
-                    # PHASE 3.2: Read from StudySetTerm junction table
+                    # Read from StudySetTerm junction table
                     terms = session.exec(
                         select(Term)
                         .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
@@ -744,7 +742,7 @@ class GenerationService:
                 }
             else:
                 # Fallback: lưu vào tất cả terms (giữ backward compatibility)
-                # PHASE 3.2: Read from StudySetTerm junction table
+                # Read from StudySetTerm junction table
                 terms = session.exec(
                     select(Term)
                     .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)

@@ -30,7 +30,7 @@ class StudySet(SQLModel, table=True):
     owner: "User" = Relationship(back_populates="study_sets")
     category: "Category" = Relationship(back_populates="study_sets")
 
-    # PHASE 3.3: N:M relationship via junction table (single source of truth)
+    # N:M relationship via junction table (single source of truth)
     studyset_terms: list["StudySetTerm"] = Relationship(
         back_populates="studyset",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}

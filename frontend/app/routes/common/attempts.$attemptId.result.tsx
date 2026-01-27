@@ -3,4 +3,3 @@ import { AttemptResultPage } from "~/components/pages/dashboard/attempt-result-p
 export default function AttemptResultRoute() {
   return <AttemptResultPage />;
 }
-

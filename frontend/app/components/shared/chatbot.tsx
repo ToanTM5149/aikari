@@ -91,7 +91,7 @@ export function Chatbot({
       if (response.metadata?.test_id) {
         // Navigate to test page after a short delay
         setTimeout(() => {
-          navigate(`/dashboard/studysets/${studysetId}/test/${response.metadata.test_id}`);
+          navigate(`/studysets/${studysetId}/test/${response.metadata.test_id}`);
         }, 2000);
       }
       

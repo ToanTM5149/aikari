@@ -117,7 +117,6 @@ class AnalyticsService:
             mastery_percentage = 0.0
         
         # Count weak terms (terms with low recall score)
-        # PHASE 3.2: Read from StudySetTerm junction table
         weak_terms_count = sum(
             len([a for a in activities if a.term_id in [t.term_id for t in session.exec(
                 select(Term)
@@ -196,7 +195,6 @@ class AnalyticsService:
         total_studysets = len(studyset_ids)
         
         # Count total terms
-        # PHASE 3.2: Count from StudySetTerm junction table
         total_terms = 0
         for studyset_id in studyset_ids:
             terms_count = session.exec(
@@ -330,7 +328,6 @@ class AnalyticsService:
             return None
         
         # Count terms
-        # PHASE 3.2: Count from StudySetTerm junction table
         total_terms = session.exec(
             select(func.count(StudySetTerm.term_id))
             .where(StudySetTerm.studyset_id == studyset_id)
@@ -412,7 +409,6 @@ class AnalyticsService:
         average_completion_time = sum(completion_times) // len(completion_times) if completion_times else None
         
         # Find most difficult terms (highest error rate)
-        # PHASE 3.2: Read from StudySetTerm junction table
         terms = session.exec(
             select(Term)
             .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)

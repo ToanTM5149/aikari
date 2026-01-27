@@ -28,18 +28,18 @@ export default function AuthenticatedLayout() {
     const currentPath = location.pathname;
     
     // Define role-based access rules
-    const adminOnlyRoutes = ['/user-management', '/token-management', '/dashboard/admin'];
-    const studentTeacherOnlyRoutes = ['/dashboard', '/dashboard/studysets', '/dashboard/terms', '/dashboard/categories', '/dashboard/class', '/create', '/history'];
+    const adminOnlyRoutes = ['/admin', '/admin/users', '/admin/tokens'];
+    const studentTeacherOnlyRoutes = ['/home', '/studysets', '/terms', '/categories', '/classes', '/create', '/history'];
     
     // Admin trying to access student/teacher routes
     if (userRole === 'ADMIN' && studentTeacherOnlyRoutes.some(route => currentPath.startsWith(route))) {
-      navigate('/dashboard/admin', { replace: true });
+      navigate('/admin', { replace: true });
       return;
     }
     
     // Student/Teacher trying to access admin routes
     if ((userRole === 'STUDENT' || userRole === 'TEACHER') && adminOnlyRoutes.some(route => currentPath.startsWith(route))) {
-      navigate('/dashboard', { replace: true });
+      navigate('/home', { replace: true });
       return;
     }
   }, [user, location.pathname, navigate]);
@@ -47,38 +47,38 @@ export default function AuthenticatedLayout() {
   // Get current view from pathname
   const getCurrentView = () => {
     const path = location.pathname;
-    if (path === "/dashboard") return "home";
-    if (path.startsWith("/dashboard/studysets")) return "studysets";
-    if (path.startsWith("/dashboard/terms")) return "terms";
-    if (path.startsWith("/dashboard/categories")) return "categories";
-    if (path.startsWith("/dashboard/class")) return "class";
-    if (path.startsWith("/dashboard/admin")) return "admin";
+    if (path === "/home" || path === "/") return "home";
+    if (path.startsWith("/studysets")) return "studysets";
+    if (path.startsWith("/terms")) return "terms";
+    if (path.startsWith("/categories")) return "categories";
+    if (path.startsWith("/classes")) return "class";
+    if (path.startsWith("/admin")) return "admin";
     if (path.startsWith("/create")) return "create";
     if (path.startsWith("/history")) return "history";
-    if (path.startsWith("/user-management")) return "user-management";
-    if (path.startsWith("/token-management")) return "token-management";
+    if (path.startsWith("/admin/users")) return "user-management";
+    if (path.startsWith("/admin/tokens")) return "token-management";
     return "home";
   };
 
   const handleNavigate = (view: string) => {
     switch (view) {
       case "home":
-        navigate("/dashboard");
+        navigate("/home");
         break;
       case "studysets":
-        navigate("/dashboard/studysets");
+        navigate("/studysets");
         break;
       case "terms":
-        navigate("/dashboard/terms");
+        navigate("/terms");
         break;
       case "categories":
-        navigate("/dashboard/categories");
+        navigate("/categories");
         break;
       case "class":
-        navigate("/dashboard/class");
+        navigate("/classes");
         break;
       case "admin":
-        navigate("/dashboard/admin");
+        navigate("/admin");
         break;
       case "create":
         navigate("/create");
@@ -87,13 +87,13 @@ export default function AuthenticatedLayout() {
         navigate("/history");
         break;
       case "user-management":
-        navigate("/user-management");
+        navigate("/admin/users");
         break;
       case "token-management":
-        navigate("/token-management");
+        navigate("/admin/tokens");
         break;
       default:
-        navigate("/dashboard");
+        navigate("/home");
     }
   };
 

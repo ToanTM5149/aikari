@@ -94,7 +94,7 @@ class LearningService:
         3. Terms with lowest EF (hardest ones)
         """
         # Get all terms in studyset
-        # PHASE 3.2: Read from StudySetTerm junction table
+        # Read from StudySetTerm junction table
         terms_statement = (
             select(Term)
             .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
@@ -188,7 +188,7 @@ class LearningService:
         regardless of when they were last reviewed.
         """
         # Get all terms in studyset
-        # PHASE 3.2: Read from StudySetTerm junction table
+        # Read from StudySetTerm junction table
         terms_statement = (
             select(Term)
             .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)
@@ -392,7 +392,7 @@ class LearningService:
             return progress
         
         # Calculate statistics
-        # PHASE 3.2: Count from StudySetTerm junction table
+        # Count from StudySetTerm junction table
         total_terms_statement = (
             select(func.count(StudySetTerm.term_id))
             .where(StudySetTerm.studyset_id == studyset_id)

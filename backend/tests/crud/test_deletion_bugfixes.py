@@ -1,4 +1,4 @@
-"""Tests for deletion bugfixes in Phase 2
+"""Tests for deletion bugfixes
 
 Tests verify that SessionReview entries are properly deleted before Terms,
 preventing Foreign Key Constraint Violations.

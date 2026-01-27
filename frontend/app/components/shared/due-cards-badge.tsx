@@ -36,7 +36,7 @@ export function DueCardsBadge({
 
   const handleClick = () => {
     if (dueCards && dueCards.total_due > 0) {
-      navigate("/dashboard/quick-review");
+      navigate("/quick-review");
     }
   };
 

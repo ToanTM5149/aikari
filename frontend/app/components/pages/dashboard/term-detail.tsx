@@ -128,9 +128,9 @@ export function TermDetail() {
 
   const handleBack = () => {
     if (isFromTermsManagement) {
-      navigate('/dashboard/terms');
+      navigate('/terms');
     } else {
-      navigate(`/dashboard/studysets/${studysetId}`);
+      navigate(`/studysets/${studysetId}`);
     }
   };
 
@@ -223,7 +223,7 @@ export function TermDetail() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
           </Button>
-          <Button size="sm" onClick={() => navigate(`/dashboard/terms/${termId}/edit`)}>
+          <Button size="sm" onClick={() => navigate(`/terms/${termId}/edit`)}>
             <Edit2 className="w-4 h-4 mr-2" />
             Edit
           </Button>

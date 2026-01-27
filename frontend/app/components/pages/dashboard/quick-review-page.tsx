@@ -165,7 +165,7 @@ export function QuickReviewPage() {
 
   const handleCompleteSession = () => {
     toast.success("🎉 Review session completed!");
-    navigate("/dashboard");
+    navigate("/home");
   };
 
   const handleSkip = () => {
@@ -200,7 +200,7 @@ export function QuickReviewPage() {
             <p className="text-muted-foreground mb-6">
               You have no cards due for review right now. Great job!
             </p>
-            <Button onClick={() => navigate("/dashboard")}>
+            <Button onClick={() => navigate("/home")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
@@ -217,7 +217,7 @@ export function QuickReviewPage() {
         <div className="max-w-4xl mx-auto p-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+            <Button variant="ghost" onClick={() => navigate("/home")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>

@@ -51,7 +51,10 @@ class TestQuestion(SQLModel, table=True):
     # Relationships
     test: "Test" = Relationship(back_populates="questions")
     term: "Term" = Relationship()
-    answers: list["TestAnswer"] = Relationship(back_populates="question")
+    answers: list["TestAnswer"] = Relationship(
+        back_populates="question",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
 class TestAttempt(SQLModel, table=True):

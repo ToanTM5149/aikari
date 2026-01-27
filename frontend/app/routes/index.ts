@@ -13,35 +13,53 @@ export default [
   
   // Public routes (landing page)
   layout("routes/_layouts/main-layout.tsx", [
-    index("routes/home.tsx"),
+    index("components/pages/homepage/home.tsx"),
     route("redux-examples", "components/pages/homepage/redux-examples.tsx"),
   ]),
   
   // Authenticated routes 
   layout("routes/_layouts/authenticated-layout.tsx", [
-    route("dashboard", "routes/dashboard/home.tsx"),
-    route("dashboard/quick-review", "routes/dashboard/quick-review.tsx"),
-    route("dashboard/due-cards", "routes/dashboard/due-cards.tsx"),
-    route("dashboard/admin", "routes/dashboard/admin.tsx"),
-    route("dashboard/studysets", "routes/dashboard/studysets.tsx"),
-    route("dashboard/studysets/:studysetId", "routes/dashboard/studyset-detail.tsx"),
-    route("dashboard/studysets/:studysetId/terms/:termId", "routes/dashboard/term-detail.tsx"),
-    route("dashboard/studysets/:studysetId/study", "routes/dashboard/study-mode.tsx"),
-    route("dashboard/studysets/:studysetId/test/:testId", "routes/dashboard/test-attempt.tsx"),
-    route("dashboard/studysets/:studysetId/progress", "routes/dashboard/progress.tsx"),
-    route("dashboard/terms", "routes/dashboard/terms.tsx"),
-    route("dashboard/terms/:termId/edit", "routes/dashboard/terms.$termId.edit.tsx"),
-    route("dashboard/terms/:termId", "routes/dashboard/terms.$termId.tsx"),
-    route("dashboard/categories", "routes/dashboard/categories.tsx"),
-    route("dashboard/class", "routes/dashboard/class.tsx"),
-    route("dashboard/class/:classId", "routes/dashboard/class-detail.tsx"),
-    route("dashboard/class/:classId/analytics", "routes/dashboard/class.$classId.analytics.tsx"),
-    route("dashboard/class/:className/statistics", "routes/dashboard/class.$className.statistics.tsx"),
-    route("create", "routes/dashboard/create.tsx"),
+    // Home
+    route("home", "routes/home.tsx"),
+    
+    // Study Sets
+    route("studysets", "routes/studysets/index.tsx"),
+    route("studysets/:studysetId", "routes/studysets/$studysetId.tsx"),
+    route("studysets/:studysetId/terms/:termId", "routes/studysets/$studysetId.terms.$termId.tsx"),
+    route("studysets/:studysetId/study", "routes/studysets/$studysetId.study.tsx"),
+    route("studysets/:studysetId/test/:testId", "routes/studysets/$studysetId.test.$testId.tsx"),
+    route("studysets/:studysetId/progress", "routes/studysets/$studysetId.progress.tsx"),
+    
+    // Terms
+    route("terms", "routes/terms/index.tsx"),
+    route("terms/:termId", "routes/terms/$termId.tsx"),
+    route("terms/:termId/edit", "routes/terms/$termId.edit.tsx"),
+    
+    // Categories
+    route("categories", "routes/categories/index.tsx"),
+    
+    // Classes
+    route("classes", "routes/classes/index.tsx"),
+    route("classes/:classId", "routes/classes/$classId.tsx"),
+    route("classes/:classId/analytics", "routes/classes/$classId.analytics.tsx"),
+    route("classes/:className/statistics", "routes/classes/$className.statistics.tsx"),
+    
+    // History
     route("history", "routes/history.tsx"),
-    route("dashboard/attempts/:attemptId/result", "routes/dashboard/attempt-result.tsx"),
-    route("user-management", "routes/user-management.tsx"),
-    route("token-management", "routes/token-management.tsx"),
-    route("profile", "routes/dashboard/profile.tsx"),
+    
+    // Admin
+    route("admin", "routes/admin/index.tsx"),
+    route("admin/users", "routes/admin/users.tsx"),
+    route("admin/tokens", "routes/admin/tokens.tsx"),
+    
+    // Profile
+    route("profile", "routes/profile/index.tsx"),
+    
+    // Common routes
+    route("create", "routes/common/create.tsx"),
+    route("quick-review", "routes/common/quick-review.tsx"),
+    route("due-cards", "routes/common/due-cards.tsx"),
+    route("flashcard", "routes/common/flashcard.tsx"),
+    route("attempts/:attemptId/result", "routes/common/attempts.$attemptId.result.tsx"),
   ]),
 ] satisfies RouteConfig;

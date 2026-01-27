@@ -18,10 +18,6 @@ if TYPE_CHECKING:
 class StudySetTerm(SQLModel, table=True):
     """
     Junction table linking StudySets to Terms (N:M relationship).
-
-    Phase 3.1: Created during additive phase
-    Phase 3.2: Will become primary source of truth
-    Phase 3.3: Term.studyset_id will be removed
     """
     __tablename__ = "StudySetTerm"
 

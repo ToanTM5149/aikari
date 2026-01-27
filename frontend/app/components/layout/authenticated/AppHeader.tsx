@@ -34,12 +34,12 @@ export function AppHeader() {
     if (categoryId) {
       params.set('category', categoryId);
     }
-    navigate(`/dashboard/due-cards?${params.toString()}`);
+    navigate(`/due-cards?${params.toString()}`);
   };
 
   const handleReviewAll = () => {
     // Navigate to due cards review without filters
-    navigate('/dashboard/due-cards');
+    navigate('/due-cards');
   };
 
   return (

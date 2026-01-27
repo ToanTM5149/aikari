@@ -29,7 +29,7 @@ class Term(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships
-    # PHASE 3.3: N:M relationship via junction table (single source of truth)
+    # N:M relationship via junction table (single source of truth)
     studyset_terms: list["StudySetTerm"] = Relationship(
         back_populates="term",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}

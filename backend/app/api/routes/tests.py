@@ -109,7 +109,7 @@ def generate_test_questions(
 ) -> list[dict]:
     """Generate questions for a test"""
     # Get all terms from studyset
-    # PHASE 3.2: Read from StudySetTerm junction table
+    # Read from StudySetTerm junction table
     terms = session.exec(
         select(Term)
         .join(StudySetTerm, StudySetTerm.term_id == Term.term_id)

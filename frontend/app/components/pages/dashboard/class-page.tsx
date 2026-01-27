@@ -184,7 +184,7 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
     >
       <Card
         className="cursor-pointer hover:shadow-lg transition-all group overflow-hidden"
-        onClick={() => navigate(`/dashboard/class/${cls.class_id}`)}
+        onClick={() => navigate(`/classes/${cls.class_id}`)}
       >
         <CardContent className="p-6 space-y-4">
           {/* Header */}
@@ -300,7 +300,7 @@ export function ClassPage({ onStudySetClick, onStatisticsClick }: ClassPageProps
             className="w-full justify-between hover:bg-muted/50"
             onClick={(e) => {
               e.stopPropagation()
-              navigate(`/dashboard/class/${cls.class_id}`)
+              navigate(`/classes/${cls.class_id}`)
             }}
           >
             View class
