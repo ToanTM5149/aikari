@@ -46,10 +46,6 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
       detail="Could not validate credentials",
     )
   
-  # Access token có thời gian sống ngắn (15-30 phút), không cần kiểm tra blacklist
-  # Refresh token được quản lý qua RefreshToken.revoked field
-  
-  # token_data.sub contains user_id (UUID as string)
   from app.crud import get_user_by_id
 
   try:
